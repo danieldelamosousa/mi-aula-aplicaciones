@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#143833">
+  <meta name="description" content="Mi aula: portal de aplicaciones interactivas de Lengua y Matemáticas para 2.º ciclo de Primaria con práctica libre y registro docente.">
+  <title>Mi aula · Aplicaciones</title>
+  <link rel="stylesheet" href="/styles/tokens.css">
+  <link rel="stylesheet" href="/styles/portal.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="Navegación principal">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+          </svg>
+        </span>
+        <span class="brand-meta">
+          <span id="aulaName">Mi aula</span>
+          <span class="brand-sub" id="aulaSubtitle">2.º ciclo de Primaria</span>
+        </span>
+      </a>
+
+      <div class="nav-actions">
+        <button id="openCodeBtn" class="btn btn-sm" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span>Código de sesión</span>
+        </button>
+        <a id="teacherLink" class="btn btn-ghost btn-sm" href="/docente">Panel docente ↗</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="portal-main">
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>Tu aula, a un clic.</h1>
+        <p>Elige una actividad de Lengua o Matemáticas y decide cómo trabajar hoy: práctica libre a tu ritmo o sesión registrada en el aula.</p>
+      </div>
+    </section>
+
+    <div id="codeAlert" class="notice warn" style="margin-bottom: 20px;" hidden>
+      El código de sesión introducido no existe o ya ha caducado. Pide uno nuevo o elige una aplicación aquí abajo.
+    </div>
+
+    <section id="recentStrip" class="recent-strip" aria-label="Actividades recientes" hidden>
+      <span class="recent-label">Recientes</span>
+      <div id="recentList" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </section>
+
+    <section class="filters" aria-label="Buscar y filtrar aplicaciones">
+      <div class="filter-top">
+        <div>
+          <h2 class="filter-heading">Encuentra tu actividad</h2>
+          <p class="filter-caption">Filtra por área, unidad o busca por contenido (tildes, tablas, monedas…).</p>
+        </div>
+        <div class="search-box">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="10.5" cy="10.5" r="6.5"/>
+            <path d="m16 16 5 5"/>
+          </svg>
+          <label class="sr-only" for="searchInput">Buscar aplicaciones</label>
+          <input id="searchInput" type="search" placeholder="Buscar una aplicación…" autocomplete="off">
+          <button id="clearSearchBtn" class="search-clear" type="button" aria-label="Borrar búsqueda" hidden>×</button>
+        </div>
+      </div>
+
+      <div class="filter-bottom">
+        <div class="filter-pills" id="areaFilters" role="group" aria-label="Filtrar por área"></div>
+        <span id="resultCount" class="result-count" role="status" aria-live="polite" aria-atomic="true">Cargando…</span>
+      </div>
+    </section>
+
+    <div class="apps-grid" id="appsGrid"></div>
+
+    <div class="empty-state" id="emptyState" hidden>
+      <h2>No encontramos esa actividad</h2>
+      <p>Prueba con otras palabras o quita los filtros activos para ver todas las aplicaciones del aula.</p>
+      <button id="clearFiltersBtn" class="btn btn-primary" type="button">Ver todas las aplicaciones</button>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <span>Elige tu actividad. Puedes practicar libremente o registrar tu trabajo con el docente.</span>
+    <div class="footer-links">
+      <a href="/docente">Panel docente</a>
+    </div>
+  </footer>
+
+  <dialog id="codeDialog" class="aula-dialog" aria-labelledby="codeDialogTitle">
+    <div class="dialog-head">
+      <h2 id="codeDialogTitle">Entrar con código de sesión</h2>
+      <button id="closeCodeDialog" class="dialog-close" type="button" aria-label="Cerrar">×</button>
+    </div>
+    <form id="codeForm" class="code-form" novalidate>
+      <p class="code-help">Escribe el código que ha preparado tu docente para empezar directamente tu actividad en este dispositivo.</p>
+      <label class="sr-only" for="sessionCodeInput">Código de sesión</label>
+      <input id="sessionCodeInput" class="code-input" type="text" maxlength="9" placeholder="ABC-123" autocomplete="off" spellcheck="false" required>
+      <div id="codeError" class="notice error" hidden></div>
+      <button id="codeSubmitBtn" class="btn btn-primary" type="submit" style="width:100%">Abrir mi actividad →</button>
+    </form>
+  </dialog>
+
+  <script src="/scripts/portal.js"></script>
+</body>
+</html>

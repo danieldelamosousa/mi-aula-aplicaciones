@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#102858">
+<title>El número protagonista</title>
+<style>
+  :root{color-scheme:light;--ink:#142c56;--muted:#435876;--blue:#194bc7;--line:#cbd9ed;--sky:#f0f6ff;--white:#fff;--gold:#ffdb56;--green:#05613d;--red:#9e2c24;font-family:"Trebuchet MS",system-ui,sans-serif}
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 85% 10%,#dcecff 0,transparent 45%),var(--sky);color:var(--ink);line-height:1.5}
+  button,input,select{font:inherit}
+  button,select{cursor:pointer}
+  button{border:0}
+  button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #1269ed;outline-offset:3px}
+  h1,h2,p{margin:0}
+  h1,h2{letter-spacing:-.035em;line-height:1.12}
+  [hidden]{display:none!important}
+  .top{background:#102858;color:white}
+  .top-inner{width:min(1050px,calc(100% - 2rem));margin:auto;min-height:65px;display:flex;align-items:center;justify-content:space-between;gap:.8rem}
+  .brand{display:flex;align-items:center;gap:.65rem;font-weight:750}
+  .brand-icon{display:grid;place-items:center;width:32px;height:32px;background:var(--gold);color:#172950;border-radius:9px;font-size:1.35rem;line-height:1}
+  .top button{background:#253e6b;color:#fff;border:1px solid #6f84a8;padding:.45rem .7rem;border-radius:.65rem;font-size:.9rem;font-weight:720;min-height:42px}
+  .top button:hover{background:#395784}
+  main{width:min(1050px,calc(100% - 2rem));margin:clamp(1.25rem,4.5vw,3.4rem) auto 2.5rem}
+  .intro{border-radius:28px;overflow:hidden;background:#153784;color:white;display:grid;grid-template-columns:1.15fr 1fr;isolation:isolate}
+  .intro-copy{padding:clamp(1.7rem,5vw,4rem);align-self:center}
+  .intro-kicker{color:#ffe581;font-size:.92rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin-bottom:.75rem}
+  h1{font-size:clamp(2.25rem,6.1vw,4.9rem);font-weight:850}
+  .intro-copy p:last-child{font-size:clamp(1rem,2vw,1.24rem);color:#e7efff;margin-top:1.05rem;max-width:26ch}
+  .art{min-height:315px;position:relative;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 52% 46%,#2859bb,#153784 70%)}
+  .orbit{width:min(77%,320px);aspect-ratio:1;position:absolute;border-radius:50%;border:1px solid #7396da;transform:rotate(-17deg) scaleY(.79)}
+  .orbit::after,.orbit::before{position:absolute;inset:10%;border-radius:50%;border:1px solid #7396da;content:""}
+  .orbit::after{inset:20%}
+  .art .orbit:nth-child(2){transform:rotate(20deg) scaleY(.75)}
+  .art-mark{position:absolute;font-size:1.85rem;color:#ffe479;font-weight:700}
+  .mark-one{top:14%;left:17%}.mark-two{bottom:17%;right:14%;color:#a4edec}.mark-three{top:21%;right:13%;color:#a4edec}
+  .art-number{display:flex;gap:clamp(.25rem,1.2vw,.65rem);transform:rotate(-8deg);position:relative}
+  .art-number span{width:clamp(2.5rem,6vw,4.7rem);aspect-ratio:.82;display:grid;place-items:center;border-radius:.75rem;background:#e3f0ff;color:#16418f;font-size:clamp(1.6rem,4.8vw,3.6rem);font-weight:850;box-shadow:0 6px 0 #a9c9fa}
+  .art-number span:nth-child(2){background:#c8f3d6;color:#17683d;box-shadow:0 6px 0 #8bd9a7;transform:translateY(-.6rem)}
+  .art-number span:nth-child(3){background:#ffdadd;color:#a52f40;box-shadow:0 6px 0 #f39cab;transform:translateY(.25rem)}
+  .art-number span:nth-child(4){background:#ffe581;color:#624600;box-shadow:0 6px 0 #e6b737;transform:translateY(-.4rem)}
+  .choose-title{font-size:clamp(1.5rem,3.2vw,2rem);margin:1.5rem 0 .75rem}
+  .course-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .course{display:flex;align-items:center;gap:1rem;text-align:left;color:var(--ink);padding:1rem;border:1px solid var(--line);border-radius:18px;background:white;min-height:94px}
+  .course:hover{border-color:var(--blue);background:#f8fbff}
+  .course-icon{flex:none;border-radius:13px;display:grid;place-items:center;width:58px;height:58px;background:#dce9ff;color:#163f9d;font-size:1.55rem;font-weight:850}
+  .course[data-grade="4"] .course-icon{background:#d4f6eb;color:#135d50}
+  .course strong,.course small{display:block}
+  .course strong{font-size:1.15rem}.course small{font-size:.95rem;color:var(--muted)}
+  .workspace{max-width:820px;margin:auto}
+  .number-banner{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.7rem clamp(1rem,4vw,1.8rem);background:#153784;border-radius:18px;color:white}
+  .number-caption{color:#ffe581;font-weight:750}
+  .grade-label{font-size:.9rem;color:#e3eeff}
+  .target{font-size:clamp(2rem,7vw,3.65rem);font-variant-numeric:tabular-nums;font-weight:850;line-height:1.1;white-space:nowrap}
+  .progress-row{display:flex;justify-content:space-between;align-items:center;gap:.8rem;margin-top:1.15rem;font-size:.95rem;font-weight:750}
+  .progress-row span:last-child{color:var(--muted)}
+  .meter{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:.5rem 0 .9rem}
+  .meter span{height:7px;border-radius:20px;background:#d3dff0}
+  .meter .done{background:#167257}.meter .current{background:#2356d7}
+  .card{padding:clamp(1rem,4vw,2.05rem);background:white;border:1px solid var(--line);border-radius:23px;box-shadow:0 12px 36px #1a42850d}
+  .card h2{font-size:clamp(1.6rem,4vw,2.45rem)}
+  .instructions{color:var(--muted);font-size:1.06rem;margin:.55rem 0 1.15rem;max-width:64ch}
+  .entry-panel{display:grid;gap:1rem}
+  .entry-panel > *{min-width:0}
+  .answer label,.round-select label{display:block;font-weight:750;margin-bottom:.28rem}
+  .answer input,.round-select select{width:100%;min-width:0;height:47px;border:1.5px solid #8da2c0;border-radius:10px;background:#fff;color:var(--ink);padding:.45rem .65rem;font-size:1.06rem}
+  .answer input[readonly]{background:#f5f8ff}
+  .answer input[aria-invalid="true"]{border-color:#c84538;background:#fff7f5}
+  .answer input[data-correct="true"]{border-color:#278363;background:#f2fcf5}
+  .answer input[data-current="true"]{outline:2px solid var(--blue);outline-offset:1px}
+  .field-note{display:block;color:var(--red);font-size:.94rem;margin-top:.25rem}
+  .single{max-width:650px}
+  #number-answer{max-width:220px;font-size:1.35rem}
+  .place-table{display:grid;grid-template-columns:repeat(var(--columns),minmax(0,1fr));gap:clamp(.25rem,1.2vw,.7rem)}
+  .place-cell{background:var(--pale);padding:.4rem .28rem .55rem;border-radius:12px;text-align:center}
+  .place-cell label{color:var(--place);font-size:1rem}
+  .place-cell input{text-align:center;padding:.25rem;font-size:1.25rem;font-weight:750}
+  .place-cell .field-note{overflow-wrap:anywhere}
+  .place-cell .full-place{display:grid;place-items:center;min-height:2.4em;font-size:.79rem;font-weight:650;line-height:1.2;margin-bottom:.35rem}
+  .place-blue{--pale:#e6f1ff;--place:#174aaf}.place-green{--pale:#e4f6e9;--place:#126438}.place-red{--pale:#ffebed;--place:#a82836}
+  .decomposition{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,125px),1fr));gap:.55rem}
+  .value-cell{background:var(--pale);border-radius:12px;padding:.55rem .65rem}
+  .value-cell label{color:var(--place);font-size:1.1rem}
+  .round-select{max-width:325px;margin-bottom:1.15rem}
+  .number-line{margin:.5rem 0 .9rem;padding:.7rem .65rem;background:#f1f6ff;border-radius:13px}
+  .round-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto clamp(3.25rem,11vw,4.75rem) auto}
+  .round-ramp{grid-area:2/1/3/-1;position:relative}
+  .round-ramp svg{display:block;width:100%;height:100%}
+  .round-ramp path{fill:none;stroke:#4975be;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+  .ramp-dot{position:absolute;top:86%;width:11px;height:11px;border-radius:50%;background:#204790;transform:translate(-50%,-50%)}
+  .ramp-dot:first-of-type{left:calc(100% / 6)}
+  .ramp-dot:nth-of-type(2){top:14%;left:50%;background:var(--gold);border:2px solid #204790;width:14px;height:14px}
+  .ramp-dot:last-of-type{left:calc(500% / 6)}
+  .round-point{text-align:center;display:grid;font-size:.94rem;color:var(--muted)}
+  .round-point strong{color:var(--ink);font-variant-numeric:tabular-nums;font-size:clamp(1rem,3.6vw,1.36rem);white-space:nowrap}
+  .round-point-start{grid-area:3/1/4/2}
+  .round-point-middle{grid-area:1/2/2/3}
+  .round-point-end{grid-area:3/3/4/4}
+  .round-answer{max-width:295px;margin-top:.8rem}
+  .sun-board{display:grid;grid-template-columns:minmax(0,1fr) minmax(115px,.82fr) minmax(0,1fr);align-items:center;gap:.95rem}
+  .sun-fields{display:grid;gap:.6rem}
+  .sun{width:min(84%,155px);min-width:92px;aspect-ratio:1;display:grid;place-items:center;justify-self:center;position:relative;isolation:isolate;color:#553900;font-size:clamp(1.1rem,3.8vw,1.8rem);font-weight:850;white-space:nowrap}
+  .sun::before{position:absolute;inset:0;border-radius:50%;border:3px solid #edaa28;background:#ffe579;content:"";z-index:-1}
+  .sun::after{position:absolute;inset:-13%;clip-path:polygon(50% 0%,60% 15%,75% 7%,78% 23%,93% 25%,85% 40%,100% 50%,85% 60%,93% 75%,77% 77%,75% 93%,60% 85%,50% 100%,40% 85%,25% 93%,23% 77%,7% 75%,15% 60%,0% 50%,15% 40%,7% 25%,23% 23%,25% 7%,40% 15%);background:#ffbe3c;content:"";z-index:-2}
+  .keypad{width:min(100%,310px);justify-self:start;align-self:start;border-radius:15px;padding:.65rem;background:#e9f1ff;border:1px solid var(--line)}
+  .keypad-letters{width:min(100%,570px);--key-gap:clamp(.18rem,.8vw,.35rem);--letter-width:calc((100% - 9 * var(--key-gap)) / 10)}
+  .keypad-caption{font-size:.93rem;font-weight:750;margin-bottom:.45rem;color:var(--muted)}
+  .keypad-caption strong{color:var(--ink)}
+  .keypad-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.35rem}
+  .keypad-operations .keypad-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .keypad-letters .keypad-grid{grid-template-columns:minmax(0,1fr);gap:var(--key-gap)}
+  .letter-row{display:flex;justify-content:center;gap:var(--key-gap)}
+  .keypad button[data-key]{background:white;color:var(--ink);border:1px solid #b0c3df;border-bottom:2px solid #9aafd0;border-radius:8px;min-height:43px;font-size:1.15rem;font-weight:750;padding:.1rem}
+  .keypad button[data-key]:hover{background:#f4f8ff;border-color:var(--blue)}
+  .keypad button.key-special{background:#d6e6ff;color:#153f92}
+  .keypad button.key-wide{grid-column:1/-1;font-size:.94rem}
+  .keypad-operations button.key-wide{grid-column:span 3}
+  .keypad button.key-space{grid-column:span 3;font-size:.94rem}
+  .letter-row button[data-key]{flex:0 0 var(--letter-width);min-width:0;font-size:clamp(.88rem,3.4vw,1.12rem)}
+  .letter-row button[data-key="backspace"]{flex-basis:calc(1.5 * var(--letter-width))}
+  .letter-row button.key-space{flex-basis:calc(2.6 * var(--letter-width));font-size:clamp(.68rem,2.7vw,.94rem)}
+  .letters-toggle{justify-self:start}
+  .feedback{font-weight:700;margin-top:1rem;padding:.65rem .8rem;border-radius:10px}
+  .feedback.success{background:#e9f8ef;color:#05613d}
+  .feedback.retry{background:#fff2df;color:#743816}
+  details{margin-top:.85rem;color:#243f70}
+  summary{width:fit-content;cursor:pointer;font-weight:750;min-height:34px;padding:.2rem .2rem .2rem 0}
+  details p{background:#edf4ff;padding:.6rem .8rem;border-radius:.65rem;margin-top:.28rem;color:var(--muted)}
+  .actions{margin-top:1.15rem;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.6rem}
+  .actions-right{margin-left:auto}
+  .primary,.secondary{min-height:47px;border-radius:11px;font-weight:800;padding:.62rem 1rem}
+  .primary{background:var(--blue);color:white;box-shadow:0 3px 0 #0d328e}
+  .primary:hover{background:#163fa9}
+  .secondary{background:#edf3ff;color:#173e92}
+  .secondary:hover{background:#e0eaff}
+  .result{margin:0 auto;max-width:680px;text-align:center}
+  .result .sun{margin:1.2rem auto 2rem;width:130px}
+  .result .instructions{margin:1rem auto}
+  .result .actions{justify-content:center}
+  dialog{max-width: min(400px,calc(100% - 2rem));border:1px solid var(--line);border-radius:18px;padding:1.35rem;color:var(--ink);box-shadow:0 20px 80px #10285855}
+  dialog::backdrop{background:#10285891}
+  dialog form{margin:0}
+  dialog p{margin-top:.6rem}
+  @media(min-width:740px){.entry-panel[data-step="0"],.entry-panel[data-step="3"],.entry-panel[data-step="4"],.entry-panel[data-step="5"]{grid-template-columns:minmax(0,1fr) 207px;gap:1.12rem}.entry-panel[data-step="5"] .sun-board{grid-template-columns:minmax(0,1fr) 95px minmax(0,1fr);gap:.65rem}.entry-panel[data-step="5"] .sun{min-width:72px}.entry-panel[data-step="3"] .decomposition{grid-template-columns:repeat(2,minmax(0,1fr))}.entry-panel[data-step="2"] .keypad{justify-self:center;width:240px}}
+  @media(max-width:650px){.intro{grid-template-columns:1fr}.intro-copy{padding-bottom:.75rem}.art{min-height:185px}.orbit{width:195px}.course{gap:.65rem}.course-icon{width:44px;height:44px}.place-cell .full-place{display:none}}
+  @media(max-width:480px){main,.top-inner{width:calc(100% - 1.25rem)}.course-grid{grid-template-columns:1fr;gap:.55rem}.course{min-height:70px}.sun-board{grid-template-columns:repeat(2,minmax(0,1fr))}.sun-board .sun{grid-row:1;grid-column:1/-1;width:88px;min-width:0;margin:.65rem auto .45rem}.sun-fields{grid-row:2}.number-banner{gap:.35rem}.card{border-radius:17px}}
+  @media(max-width:360px){.top-inner{gap:.35rem}.brand{gap:.35rem;font-size:.88rem}.top button{font-size:.83rem;padding-inline:.45rem}.round-point{font-size:.84rem}.number-caption{font-size:.9rem}}
+</style>
+</head>
+<body>
+<script src="/registro.js"></script>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><span class="brand-icon" aria-hidden="true">✦</span> El número protagonista</div>
+    <button type="button" id="change-grade" hidden>Cambiar de curso</button>
+  </div>
+</header>
+<main>
+  <section id="home" aria-labelledby="main-heading">
+    <div class="intro">
+      <div class="intro-copy">
+        <p class="intro-kicker">Matemáticas · Primaria</p>
+        <h1 id="main-heading" tabindex="-1">El número<br>protagonista</h1>
+        <p>Descubre un número y explóralo en seis actividades.</p>
+      </div>
+      <div class="art" aria-hidden="true">
+        <div class="orbit"></div><div class="orbit"></div>
+        <span class="art-mark mark-one">✦</span><span class="art-mark mark-two">✧</span><span class="art-mark mark-three">·</span>
+        <div class="art-number"><span>2</span><span>4</span><span>0</span><span>8</span></div>
+      </div>
+    </div>
+    <h2 class="choose-title">Elige tu curso</h2>
+    <div class="course-grid">
+      <button class="course" type="button" data-grade="3"><span class="course-icon" aria-hidden="true">3.º</span><span><strong>3.º de Primaria</strong><small>Números de 4 cifras</small></span></button>
+      <button class="course" type="button" data-grade="4"><span class="course-icon" aria-hidden="true">4.º</span><span><strong>4.º de Primaria</strong><small>Números de 6 cifras</small></span></button>
+    </div>
+  </section>
+
+  <section class="workspace" id="workspace" hidden aria-labelledby="activity-title">
+    <div class="number-banner">
+      <div><p class="number-caption" id="number-caption">Número protagonista</p><p class="grade-label" id="grade-label"></p></div>
+      <p class="target" id="target"></p>
+    </div>
+    <div class="progress-row"><span id="progress-label"></span><span id="completed-label"></span></div>
+    <div class="meter" id="meter" aria-hidden="true"></div>
+    <form class="card" id="activity" novalidate>
+      <h2 id="activity-title" tabindex="-1"></h2>
+      <p class="instructions" id="instructions"></p>
+      <div class="entry-panel" id="entry-panel">
+        <div id="fields"></div>
+        <button type="button" class="secondary letters-toggle" id="letters-toggle" aria-expanded="false" aria-controls="keypad" hidden>Mostrar teclado de letras</button>
+        <div class="keypad" id="keypad" role="group" aria-label="Teclado visual" hidden>
+          <p class="keypad-caption" aria-live="polite">Casilla activa <strong id="keypad-target"></strong></p>
+          <div class="keypad-grid" id="keypad-grid"></div>
+        </div>
+      </div>
+      <p class="feedback" id="feedback" role="status" aria-atomic="true" hidden></p>
+      <details id="help"><summary>Ver pista</summary><p id="hint"></p></details>
+      <div class="actions">
+        <button type="button" class="secondary" id="previous" hidden>Anterior</button>
+        <div class="actions-right">
+          <button type="submit" class="primary" id="check">Comprobar</button>
+          <button type="button" class="primary" id="next" hidden>Siguiente actividad</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section id="result" class="result card" hidden aria-labelledby="result-title">
+    <div class="sun" id="result-number"></div>
+    <h2 id="result-title" tabindex="-1">¡Recorrido completado!</h2>
+    <p class="instructions" id="result-message"></p>
+    <div class="actions">
+      <button class="primary" id="new-number" type="button">Jugar con otro número</button>
+      <button class="secondary" id="back-home" type="button">Elegir curso</button>
+    </div>
+  </section>
+</main>
+<dialog id="leave-dialog" aria-labelledby="leave-title">
+  <form method="dialog">
+    <h2 id="leave-title">¿Cambiar de curso?</h2>
+    <p>Empezarás un recorrido nuevo al volver a elegir curso.</p>
+    <div class="actions">
+      <button class="secondary" value="continue" autofocus>Seguir jugando</button>
+      <button class="primary" value="leave">Elegir curso</button>
+    </div>
+  </form>
+</dialog>
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const placeValues = [
+  ["CM", "centenas de millar", "green", 100000],
+  ["DM", "decenas de millar", "red", 10000],
+  ["UM", "unidades de millar", "blue", 1000],
+  ["C", "centenas", "green", 100],
+  ["D", "decenas", "red", 10],
+  ["U", "unidades", "blue", 1]
+];
+const activityNames = [
+  "Escribo el número", "Lo escribo con letra", "Valor posicional",
+  "Lo descompongo según su valor", "Redondear", "Número sol"
+];
+const activityModes = ["cifras", "letra", "posicion", "descomposicion", "redondeo", "numero-sol"];
+const numberFormat = value => String(value).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f");
+const lastNumbers = {};
+let session;
+let activeField;
+
+function numberInWords(number) {
+  const small = [
+    "cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
+    "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete",
+    "dieciocho", "diecinueve", "veinte", "veintiuno", "veintidós", "veintitrés", "veinticuatro",
+    "veinticinco", "veintiséis", "veintisiete", "veintiocho", "veintinueve"
+  ];
+  const tens = ["", "", "", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+  const hundreds = ["", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
+  if (number < 30) return small[number];
+  const unit = number % 10;
+  if (number < 100) return tens[Math.floor(number / 10)] + (unit ? " y " + small[unit] : "");
+  if (number === 100) return "cien";
+  const remainder = number % 100;
+  if (number < 1000) return hundreds[Math.floor(number / 100)] + (remainder ? " " + numberInWords(remainder) : "");
+  const thousands = Math.floor(number / 1000);
+  const prefix = thousands === 1 ? "mil" : numberInWords(thousands)
+    .replace(/veintiuno$/, "veintiún").replace(/\buno$/, "un") + " mil";
+  return prefix + (number % 1000 ? " " + numberInWords(number % 1000) : "");
+}
+
+function normalWords(value) {
+  return value.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "")
+    .replace(/[.!]$/, "").trim().replace(/\s+/g, " ");
+}
+
+function wholeNumber(value) {
+  const clean = value.trim();
+  if (/^\d+$/.test(clean)) return Number(clean);
+  if (/^\d{1,3}(?:[.\u202f\u00a0 ]\d{3})+$/.test(clean)) return Number(clean.replace(/\D/g, ""));
+  return NaN;
+}
+
+function drawNumber(key, minimum) {
+  const previous = lastNumbers[key];
+  const count = minimum * 9 - (previous === undefined ? 0 : 1);
+  let value = minimum + Math.floor(Math.random() * count);
+  if (previous !== undefined && value >= previous) value++;
+  lastNumbers[key] = value;
+  return value;
+}
+
+function start(grade) {
+  session = {
+    grade,
+    target: drawNumber(grade, grade === 3 ? 1000 : 100000),
+    sunTarget: drawNumber("sun", 100),
+    step: 0,
+    pages: activityNames.map(() => ({values: {}, solved: false})),
+    scale: 10
+  };
+  showScreen("workspace");
+  $("grade-label").textContent = grade + ".º de Primaria";
+  renderActivity();
+}
+
+function showScreen(screen) {
+  for (const id of ["home", "workspace", "result"]) $(id).hidden = id !== screen;
+  $("change-grade").hidden = screen !== "workspace";
+}
+
+function focusHeading(id) {
+  $(id).focus({preventScroll: true});
+  window.scrollTo(0, 0);
+}
+
+function field(id, label, options = {}) {
+  const {placeholder = "", type = "none", max = 16, compact = ""} = options;
+  const labelText = compact
+    ? '<span aria-hidden="true">' + label + '<span class="full-place">' + compact + '</span></span>'
+    : label;
+  const accessibleName = compact ? ' aria-label="' + label + ', ' + compact + '"' : "";
+  return '<div class="answer"><label for="' + id + '">' + labelText + '</label>' +
+    '<input id="' + id + '" type="text" inputmode="' + type + '" maxlength="' + max + '" placeholder="' + placeholder +
+    '" data-field-name="' + label + '" autocomplete="off" spellcheck="false"' + accessibleName + ' aria-describedby="' + id + '-note">' +
+    '<span class="field-note" id="' + id + '-note" hidden></span></div>';
+}
+
+function selectField(input) {
+  if (activeField) delete activeField.dataset.current;
+  activeField = input;
+  if (!input || $("keypad").hidden) return;
+  input.dataset.current = "true";
+  $("keypad-target").textContent = input.dataset.fieldName;
+}
+
+function keypadButton(key) {
+  const special = {
+    backspace: ["⌫", "Borrar una cifra, letra o signo"],
+    clear: ["C", "Borrar toda la casilla"],
+    space: ["Espacio", "Insertar espacio"],
+    next: ["Siguiente casilla", "Seleccionar la siguiente casilla"],
+    "÷": ["÷", "Dividir"], "×": ["×", "Multiplicar"],
+    "−": ["−", "Restar"], "+": ["+", "Sumar"], "=": ["=", "Igual"]
+  };
+  const [text, name] = special[key] ?? [key.toUpperCase(), key];
+  const className = key === "next" ? "key-special key-wide" :
+    key === "space" ? "key-special key-space" : special[key] ? "key-special" : "";
+  return '<button type="button" data-key="' + key + '" class="' + className +
+    '" aria-label="' + name + '">' + text + "</button>";
+}
+
+function renderKeypad(step, solved) {
+  const inputs = [...$("fields").querySelectorAll("input")];
+  const letters = step === 1;
+  const operations = step === 5;
+  const keypad = $("keypad");
+  const toggle = $("letters-toggle");
+  toggle.hidden = !letters || solved;
+  toggle.textContent = "Mostrar teclado de letras";
+  toggle.setAttribute("aria-expanded", "false");
+  keypad.hidden = solved || letters;
+  keypad.className = "keypad" + (letters ? " keypad-letters" : operations ? " keypad-operations" : "");
+  keypad.setAttribute("aria-label", letters ? "Teclado QWERTY español" : "Teclado de calculadora");
+  const keys = operations ? ["7","8","9","÷","4","5","6","×","1","2","3","−","clear","0","backspace","+","="] :
+    ["7","8","9","4","5","6","1","2","3","clear","0","backspace"];
+  if (inputs.length > 1) keys.push("next");
+  const letterRows = [
+    [..."qwertyuiop"],
+    [..."asdfghjklñ"],
+    [..."zxcvbnm", "backspace"],
+    [..."áéíóúü", "space", "clear"]
+  ];
+  $("keypad-grid").innerHTML = solved ? "" : letters
+    ? letterRows.map(row => '<div class="letter-row">' + row.map(keypadButton).join("") + "</div>").join("")
+    : keys.map(keypadButton).join("");
+  selectField(solved ? null : inputs[0]);
+}
+
+function useKey(key) {
+  const input = activeField;
+  if (!input || input.readOnly) return;
+  if (key === "next") {
+    const inputs = [...$("fields").querySelectorAll("input")];
+    const next = inputs[(inputs.indexOf(input) + 1) % inputs.length];
+    selectField(next);
+    next.focus({preventScroll: true});
+    return;
+  }
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? start;
+  if (key === "clear") input.value = "";
+  else if (key === "backspace") input.setRangeText("", start === end ? Math.max(0, start - 1) : start, end, "end");
+  else if (input.maxLength === 1) input.value = key;
+  else if (input.value.length - (end - start) < input.maxLength) {
+    input.setRangeText(key === "space" ? " " : key, start, end, "end");
+  }
+  markField(input, "", false);
+  clearFeedback();
+}
+
+function renderActivity() {
+  const {step, grade, target, sunTarget, pages} = session;
+  const solvedCount = pages.filter(page => page.solved).length;
+  const activePage = pages[step];
+  const places = placeValues.slice(grade === 3 ? 2 : 0);
+  const layout = buildActivity(step, places, target);
+  const displayedNumber = step === 5 ? sunTarget : target;
+
+  $("number-caption").textContent = step === 5 ? "Número del sol" : "Número protagonista";
+  $("target").textContent = numberFormat(displayedNumber);
+  $("target").setAttribute("aria-label", String(displayedNumber));
+  $("activity-title").textContent = activityNames[step];
+  $("instructions").textContent = layout.instruction;
+  $("entry-panel").dataset.step = String(step);
+  $("fields").innerHTML = layout.html;
+  $("hint").textContent = layout.hint;
+  $("help").open = false;
+  $("help").hidden = activePage.solved;
+  $("progress-label").textContent = "Actividad " + (step + 1) + " de " + activityNames.length;
+  $("completed-label").textContent = solvedCount + (solvedCount === 1 ? " completada" : " completadas");
+  $("meter").innerHTML = pages.map((page, index) =>
+    '<span class="' + (index === step ? "current" : page.solved ? "done" : "") + '"></span>').join("");
+
+  if (step === 4) {
+    $("scale").value = String(session.scale);
+    $("scale").disabled = activePage.solved;
+  }
+  for (const input of $("fields").querySelectorAll("input")) {
+    input.value = activePage.values[input.id] ?? "";
+    input.readOnly = activePage.solved;
+  }
+  renderKeypad(step, activePage.solved);
+  $("previous").hidden = step === 0;
+  $("check").hidden = activePage.solved;
+  $("next").hidden = !activePage.solved;
+  $("next").textContent = step === activityNames.length - 1 ? "Terminar" : "Siguiente actividad";
+  if (activePage.solved) showFeedback("success", "Actividad completada.");
+  else clearFeedback();
+  const mode = activityModes[step];
+  if (!activePage.tracked) {
+    window.Aula?.begin(mode, activityNames[step] + " · " + numberFormat(displayedNumber), grade + ".º de Primaria");
+    activePage.tracked = true;
+  }
+  window.Aula?.activate(mode);
+  focusHeading("activity-title");
+}
+
+function buildActivity(step, places, target) {
+  switch (step) {
+    case 0:
+      return {
+        instruction: "Copia con cifras el número que aparece arriba.",
+        html: '<div class="single">' + field("number-answer", "Mi número") + "</div>",
+        hint: "Empieza por la primera cifra y sigue de izquierda a derecha."
+      };
+    case 1:
+      return {
+        instruction: "Escribe el número completo con palabras.",
+        html: '<div class="single">' + field("words-answer", "Número con letra", {type: "text", max: 175}) + "</div>",
+        hint: "Lee primero la parte de los miles y después lo que queda. Por ejemplo, 5 024 se lee cinco mil veinticuatro."
+      };
+    case 2:
+      return {
+        instruction: "Coloca cada cifra del número en su casilla.",
+        html: '<div class="place-table" style="--columns:' + places.length + '">' + places.map(([abbr, name, color]) =>
+          '<div class="place-cell place-' + color + '">' + field("pos-" + abbr, abbr, {max: 1, compact: name}) + "</div>").join("") + "</div>",
+        hint: "Empieza por la derecha. La última cifra ocupa el lugar de las unidades (U)."
+      };
+    case 3:
+      return {
+        instruction: "¿Qué valor tiene cada cifra? Escribe un valor en cada casilla.",
+        html: '<div class="decomposition">' + places.map(([abbr, , color], index) =>
+          '<div class="value-cell place-' + color + '">' +
+          field("value-" + abbr, String(target)[index] + " " + abbr + " =", {max: 9}) + "</div>").join("") + "</div>",
+        hint: "Multiplica cada cifra por el valor de su posición. Por ejemplo, 2 C = 200. Si la cifra es 0, escribe 0."
+      };
+    case 4: {
+      const choices = places.slice(0, -1).reverse();
+      return {
+        instruction: "Elige a qué posición redondear. Mira los números de la rampa y escribe el número redondeado.",
+        html: '<div class="round-select"><label for="scale">Redondeo a</label><select id="scale">' +
+          choices.map(([abbr, name, , value]) => '<option value="' + value + '">' + name[0].toUpperCase() + name.slice(1) + " (" + abbr + ")</option>").join("") +
+          '</select></div><div class="number-line"><div class="round-grid" aria-live="polite" aria-atomic="true" id="round-points">' +
+          roundingClues(target, session.scale) + '</div></div><div class="round-answer">' +
+          field("round-answer", "Número redondeado") + "</div>",
+        hint: "Si el número queda antes del punto medio, elige el inicio. Si coincide con el punto medio o queda después, elige el final."
+      };
+    }
+    case 5: {
+      const rays = Array.from({length: 6}, (_, index) => field("ray-" + (index + 1), "Operación " + (index + 1), {
+        max: 65, placeholder: index === 0 ? "Ej. 120 + 30" : ""
+      }));
+      return {
+        instruction: "Escribe seis operaciones distintas que den el número del centro. Puedes usar +, −, × o ÷.",
+        html: '<div class="sun-board"><div class="sun-fields">' + rays.slice(0, 3).join("") +
+          '</div><div class="sun" aria-label="' + session.sunTarget + '">' + numberFormat(session.sunTarget) +
+          '</div><div class="sun-fields">' + rays.slice(3).join("") + "</div></div>",
+        hint: "Para encontrar una suma, separa el número en dos partes. Para una resta, suma una cantidad al número y luego réstala. Cambia los números para crear otras operaciones."
+      };
+    }
+  }
+}
+
+function roundingClues(target, scale) {
+  const lower = Math.floor(target / scale) * scale;
+  const points = [
+    ["start", "Inicio", lower],
+    ["middle", "Punto medio", lower + scale / 2],
+    ["end", "Final", lower + scale]
+  ];
+  const labels = points.map(([key, label, value]) =>
+    '<span class="round-point round-point-' + key + '"><span>' + label + '</span><strong>' + numberFormat(value) + "</strong></span>"
+  ).join("");
+  return labels + '<span class="round-ramp" aria-hidden="true">' +
+    '<svg viewBox="0 0 600 100" preserveAspectRatio="none" focusable="false"><path d="M100 86 L300 14 L500 86"/></svg>' +
+    '<i class="ramp-dot"></i><i class="ramp-dot"></i><i class="ramp-dot"></i></span>';
+}
+
+function operation(value, target) {
+  const parts = value.trim().split("=");
+  if (parts.length > 2 || (parts.length === 2 && wholeNumber(parts[1]) !== target)) return {error: "Revisa el resultado escrito."};
+  const match = parts[0].match(/^([\d.\s]+?)\s*([+\-−×xX*÷/:])\s*([\d.\s]+)$/u);
+  if (!match) return {error: "Escribe dos números unidos por un signo."};
+  const left = wholeNumber(match[1]);
+  const right = wholeNumber(match[3]);
+  if (!Number.isSafeInteger(left) || !Number.isSafeInteger(right)) return {error: "Revisa los números de la operación."};
+  const aliases = {"−": "-", "×": "*", x: "*", X: "*", "÷": "/", ":": "/"};
+  const operator = aliases[match[2]] ?? match[2];
+  let result;
+  switch (operator) {
+    case "+": result = left + right; break;
+    case "-": result = left - right; break;
+    case "*": result = left * right; break;
+    case "/":
+      if (right === 0) return {error: "Elige un divisor distinto de cero."};
+      result = left / right;
+      break;
+  }
+  if (result !== target) return {error: "El resultado debe ser " + numberFormat(target) + "."};
+  const operands = operator === "+" || operator === "*" ? [Math.min(left, right), Math.max(left, right)] : [left, right];
+  return {key: operands.join(operator)};
+}
+
+function checkAnswers(values) {
+  const {step, target, grade, scale, sunTarget} = session;
+  const errors = {};
+  const places = placeValues.slice(grade === 3 ? 2 : 0);
+  const expectNumber = (id, expected, message) => {
+    if (wholeNumber(values[id]) !== expected) errors[id] = message;
+  };
+  switch (step) {
+    case 0:
+      expectNumber("number-answer", target, "Revisa las cifras y su orden.");
+      break;
+    case 1:
+      if (normalWords(values["words-answer"]) !== normalWords(numberInWords(target))) {
+        errors["words-answer"] = "Revisa cómo has escrito los miles y el resto del número.";
+      }
+      break;
+    case 2:
+      places.forEach(([abbr], index) => {
+        expectNumber("pos-" + abbr, Number(String(target)[index]), "Revisa.");
+      });
+      break;
+    case 3:
+      places.forEach(([abbr, , , factor], index) => {
+        expectNumber("value-" + abbr, Number(String(target)[index]) * factor, "Revisa el valor de esta cifra.");
+      });
+      break;
+    case 4:
+      expectNumber("round-answer", Math.round(target / scale) * scale, "Elige el extremo más cercano.");
+      break;
+    case 5: {
+      const seen = new Set();
+      for (const [id, value] of Object.entries(values)) {
+        const {error, key} = operation(value, sunTarget);
+        if (error) errors[id] = error;
+        else if (seen.has(key)) errors[id] = "Busca otra operación. Cambiar el orden no cuenta en una suma o multiplicación.";
+        else seen.add(key);
+      }
+      break;
+    }
+  }
+  return errors;
+}
+
+function showFeedback(kind, message) {
+  const feedback = $("feedback");
+  feedback.className = "feedback " + kind;
+  feedback.hidden = false;
+  feedback.textContent = message;
+}
+
+function clearFeedback() {
+  $("feedback").textContent = "";
+  $("feedback").hidden = true;
+}
+
+function markField(input, message, checked) {
+  const note = $(input.id + "-note");
+  input.setAttribute("aria-invalid", String(Boolean(message)));
+  input.dataset.correct = String(checked && !message);
+  note.textContent = message ?? "";
+  note.hidden = !message;
+}
+
+function saveAnswers() {
+  const page = session.pages[session.step];
+  page.values = Object.fromEntries(Array.from($("fields").querySelectorAll("input"), input => [input.id, input.value]));
+  return page;
+}
+
+$("activity").addEventListener("submit", event => {
+  event.preventDefault();
+  const page = saveAnswers();
+  if (page.solved) return;
+  const errors = checkAnswers(page.values);
+  for (const input of $("fields").querySelectorAll("input")) {
+    const message = input.value.trim() ? errors[input.id] : "Completa esta casilla.";
+    markField(input, message, true);
+  }
+  const invalid = $("fields").querySelector('[aria-invalid="true"]');
+  const answers = [...$("fields").querySelectorAll("input")].map(input =>
+    input.dataset.fieldName.replace(/ =$/, "") + ": " + (input.value.trim() || "—"));
+  if (session.step === 4) answers.unshift("Redondeo a " + $("scale").selectedOptions[0].textContent);
+  window.Aula?.attempt(activityModes[session.step], !invalid, answers.join(" · "));
+  if (invalid) {
+    showFeedback("retry", "Revisa las casillas marcadas y vuelve a comprobar.");
+    invalid.focus();
+    return;
+  }
+  page.solved = true;
+  renderActivity();
+  showFeedback("success", "¡Correcto! Has completado esta actividad.");
+  $("next").focus();
+});
+
+$("fields").addEventListener("input", event => {
+  if (event.target.matches("input")) {
+    markField(event.target, "", false);
+    clearFeedback();
+  }
+});
+$("help").addEventListener("toggle", () => {
+  if ($("help").open) window.Aula?.hint(activityModes[session.step]);
+});
+$("fields").addEventListener("focusin", event => {
+  if (event.target.matches("input") && !event.target.readOnly) selectField(event.target);
+});
+$("fields").addEventListener("click", event => {
+  if (event.target.matches("input") && !event.target.readOnly) selectField(event.target);
+});
+$("keypad").addEventListener("mousedown", event => {
+  if (event.target.closest("[data-key]")) event.preventDefault();
+});
+$("keypad").addEventListener("click", event => {
+  const key = event.target.closest("[data-key]");
+  if (key) useKey(key.dataset.key);
+});
+$("letters-toggle").addEventListener("click", () => {
+  const toggle = $("letters-toggle");
+  const keypad = $("keypad");
+  keypad.hidden = !keypad.hidden;
+  toggle.textContent = keypad.hidden ? "Mostrar teclado de letras" : "Ocultar teclado de letras";
+  toggle.setAttribute("aria-expanded", String(!keypad.hidden));
+  $("words-answer").inputMode = keypad.hidden ? "text" : "none";
+  selectField($("words-answer"));
+});
+$("fields").addEventListener("change", event => {
+  if (event.target.id !== "scale") return;
+  session.scale = Number(event.target.value);
+  session.pages[session.step].values = {};
+  $("round-points").innerHTML = roundingClues(session.target, session.scale);
+  $("round-answer").value = "";
+  markField($("round-answer"), "", false);
+  clearFeedback();
+});
+
+$("previous").addEventListener("click", () => {
+  saveAnswers();
+  session.step--;
+  renderActivity();
+});
+$("next").addEventListener("click", () => {
+  if (session.step === activityNames.length - 1) {
+    showScreen("result");
+    $("result-number").textContent = numberFormat(session.sunTarget);
+    $("result-message").textContent = "Has completado las seis actividades de " + session.grade + ".º de Primaria.";
+    focusHeading("result-title");
+    return;
+  }
+  session.step++;
+  renderActivity();
+});
+
+function goHome() {
+  showScreen("home");
+  focusHeading("main-heading");
+}
+
+document.querySelectorAll("[data-grade]").forEach(button =>
+  button.addEventListener("click", () => start(Number(button.dataset.grade))));
+$("new-number").addEventListener("click", () => start(session.grade));
+$("back-home").addEventListener("click", goHome);
+$("change-grade").addEventListener("click", () => {
+  const dialog = $("leave-dialog");
+  dialog.returnValue = "";
+  dialog.showModal();
+});
+$("leave-dialog").addEventListener("close", event => {
+  if (event.currentTarget.returnValue === "leave") goHome();
+});
+</script>
+</body>
+</html>

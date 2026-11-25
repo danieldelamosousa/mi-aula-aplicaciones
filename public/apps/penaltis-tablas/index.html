@@ -1,0 +1,1201 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101e20">
+<meta name="description" content="Practica las tablas del 1 al 9 con penaltis y grupos de pelotas para formar sumas repetidas.">
+<title>Penaltis de las tablas</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #eff5e9;
+    --muted: #b6c8bf;
+    --lime: #d5f96d;
+    --gold: #ffce70;
+    --pink: #ff8b88;
+    --line: #37514b;
+    font-family: 'Trebuchet MS', system-ui, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    color: var(--ink);
+    background: radial-gradient(ellipse at 50% 0, #243c38, #101e20 55%, #0b1619);
+  }
+  button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 5px; }
+  [hidden] { display: none !important; }
+  .shell { width: min(100% - 40px, 1000px); margin: auto; padding: 36px 0 25px; }
+  .mast { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
+  .title-group { display: flex; align-items: center; gap: 15px; }
+  .mark {
+    display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px;
+    border-radius: 14px; background: var(--lime); color: #1a2d20; font-size: 23px; font-weight: 900;
+    transform: rotate(-6deg); box-shadow: 0 4px 0 #718744;
+  }
+  h1, h2, p { margin: 0; }
+  h1 { font-size: clamp(1.65rem, 4.15vw, 2.65rem); line-height: 1.03; letter-spacing: -.045em; }
+  .subtitle { color: var(--muted); margin-top: 6px; font-size: 1rem; }
+  .restart {
+    padding: 9px 14px; background: #1c302e; border: 1px solid #4e665e; border-radius: 10px;
+    font-size: .9rem; font-weight: 700; white-space: nowrap;
+  }
+  .restart:hover { background: #2d4640; }
+  .scoreboard {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; margin: 0 0 13px;
+    padding: 1px; overflow: hidden; background: var(--line); border-radius: 15px;
+  }
+  .stat { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 11px 17px; background: #182b2a; }
+  .stat:first-child { border-radius: 14px 0 0 14px; }
+  .stat:last-child { border-radius: 0 14px 14px 0; }
+  .stat dt { color: var(--muted); font-size: .875rem; font-weight: 700; }
+  .stat dd { margin: 0; font-size: 1.35rem; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; }
+  #level { color: var(--lime); }
+  .hearts { display: flex; gap: 4px; white-space: nowrap; color: var(--pink); }
+  .heart { font-size: 1.4rem; }
+  .heart.lost { color: #60756e; }
+  .arena {
+    position: relative; overflow: hidden; isolation: isolate;
+    min-height: 464px; border: 1px solid #426952; border-radius: 22px;
+    background: #163d32; box-shadow: 0 16px 50px #0713109c;
+  }
+  .stands {
+    position: absolute; inset: 0 0 auto; height: 36%;
+    background:
+      radial-gradient(ellipse at 19% 7%, #f7ffd82b, transparent 44%),
+      radial-gradient(ellipse at 81% 7%, #f7ffd82b, transparent 44%),
+      linear-gradient(#111f25, #20363d 79%, #253e3b 80%, #142d2b);
+  }
+  .stands::before {
+    content: ''; position: absolute; inset: 31% 0 6%;
+    background:
+      radial-gradient(circle, #bfd0aa 1px, transparent 1.7px) 0 4px / 23px 15px,
+      radial-gradient(circle, #7daf9f 1.5px, transparent 2px) 8px 0 / 19px 12px,
+      repeating-linear-gradient(0deg, #0d202b 0 3px, transparent 3px 13px);
+    opacity: .36;
+    mask-image: linear-gradient(90deg, #000, transparent 46%, transparent 54%, #000);
+  }
+  .lamps {
+    position: absolute; top: 12px; width: clamp(35px, 10vw, 98px); height: 6px; border-radius: 10px;
+    background: repeating-linear-gradient(90deg, #f2f9d9 0 7px, #637c71 7px 10px);
+    box-shadow: 0 1px 12px #ebf8b8a1, 0 4px 36px 8px #eff9c53d;
+  }
+  .lamps.left { left: 6%; transform: rotate(-6deg); }
+  .lamps.right { right: 6%; transform: rotate(6deg); }
+  .turf {
+    position: absolute; inset: 33% 0 0;
+    background:
+      linear-gradient(180deg, #101c2842, transparent 35%, #06302658),
+      repeating-linear-gradient(0deg, #216044 0 14%, #27694a 14% 28%);
+    border-top: 2px solid #669275;
+  }
+  .turf::before {
+    content: ''; position: absolute; width: 85%; height: 95%; left: 7.5%; top: 4%;
+    border: 2px solid #daebbe77; transform: perspective(260px) rotateX(42deg); transform-origin: top center;
+  }
+  .turf::after {
+    content: ''; position: absolute; top: 6%; left: 28%; width: 44%; height: 40%; border: 2px solid #daebbe66;
+    transform: perspective(260px) rotateX(46deg); transform-origin: top center;
+  }
+  .goal {
+    position: absolute; top: 34px; left: 50%; width: min(65%, 469px); height: 206px; transform: translateX(-50%);
+    border: 6px solid #e9f3e3; border-bottom-width: 3px; border-radius: 9px 9px 5px 5px;
+    background:
+      linear-gradient(135deg, #0f272d1f, #112a2ca8),
+      repeating-linear-gradient(0deg, transparent 0 14px, #daeac659 14px 15px),
+      repeating-linear-gradient(90deg, transparent 0 16px, #daeac664 16px 17px), #19393782;
+    box-shadow: 0 5px 14px #0b211e78, 0 -2px 0 #fbfff4, inset 0 2px 1px #ffffffe0;
+  }
+  .goal::before, .goal::after {
+    content: ''; position: absolute; inset: 0 auto 0 7%; width: 2px;
+    background: #e0efcb59; transform: skewX(8deg); transform-origin: bottom;
+  }
+  .goal::after { left: auto; right: 7%; transform: skewX(-8deg); }
+  .problem {
+    position: absolute; z-index: 3; top: 20px; left: 50%; transform: translateX(-50%); margin: 0;
+    width: max-content; max-width: calc(100% - 10px); border: 1px solid #a3bfa3; border-radius: 12px;
+    padding: 6px clamp(11px, 3vw, 28px) 8px; text-align: center; background: #132b2e;
+    box-shadow: 0 6px 0 #091d2273; font-size: clamp(2rem, 6vw, 3.65rem); line-height: 1.02;
+    font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -.055em;
+  }
+  .problem .unknown { color: var(--lime); }
+  .goal.scored { animation: net .45s ease-out; }
+  @keyframes net { 35% { box-shadow: inset 0 0 32px #e3fd7ec2, 0 0 25px #d8ed7c75; } }
+  .keeper {
+    position: absolute; z-index: 4; left: 50%; top: 139px; width: 133px; height: 108px;
+    transform: translateX(-50%); transform-origin: 50% 80%;
+  }
+  .keeper canvas { display: block; width: 100%; height: 100%; filter: drop-shadow(0 6px 4px #132c2a99); }
+  .choices {
+    position: absolute; z-index: 5; bottom: 92px; left: 50%; transform: translateX(-50%);
+    width: min(94%, 550px); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: clamp(2px, 1.4vw, 14px); align-items: start;
+  }
+  .answer {
+    display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 5px;
+    border: 0; background: none; padding: 0 2px 3px;
+    min-width: 0; border-radius: 12px; touch-action: manipulation;
+  }
+  .answer .ball { width: min(100%, 91px); }
+  .answer[aria-disabled="true"] { cursor: default; }
+  .ball {
+    position: relative; width: var(--ball-size, clamp(58px, 12vw, 91px)); aspect-ratio: 1;
+    display: grid; place-items: center; isolation: isolate; overflow: hidden;
+    border-radius: 50%; color: #122126;
+    background: radial-gradient(circle at 35% 26%, #fffdf2 10%, #eff1da 50%, #c1c9ad 86%);
+    border: 1px solid #dde6ce; box-shadow: 0 6px 0 #0d3429, 0 10px 14px #092a28a6;
+    transition: transform .16s ease, box-shadow .16s ease;
+  }
+  .ball::before {
+    content: ''; position: absolute; inset: 0; z-index: -1;
+    background: #27403d;
+    clip-path: polygon(31% 0, 50% 14%, 69% 0, 83% 8%, 75% 24%, 100% 38%, 100% 55%, 85% 62%, 92% 83%, 77% 97%, 61% 86%, 37% 86%, 22% 100%, 9% 85%, 15% 64%, 0 53%, 0 37%, 25% 24%, 16% 8%, 31% 0, 25% 24%, 16% 62%, 38% 85%, 60% 85%, 84% 61%, 74% 24%, 50% 15%, 25% 24%);
+  }
+  .ball strong { font-size: clamp(1.3rem, 5vw, 2.36rem); line-height: 1; letter-spacing: -.065em; font-variant-numeric: tabular-nums; }
+  .answer:hover:not([aria-disabled="true"]) .ball, .answer:focus-visible .ball {
+    transform: translateY(-5px); box-shadow: 0 8px 0 #0d3429, 0 0 0 3px var(--lime), 0 12px 15px #092a2875;
+  }
+  .answer .shortcut {
+    display: grid; place-items: center; width: 24px; height: 22px; border-radius: 6px;
+    font: 700 .8rem system-ui, sans-serif; color: #f2f6e9; background: #0f322ae8; border: 1px solid #88a38a8c;
+  }
+  .answer.kicked .ball { opacity: .27; }
+  .flying { position: absolute; z-index: 6; pointer-events: none; transform-origin: center; box-shadow: 0 4px 11px #061d29b0; }
+  .result {
+    position: absolute; z-index: 7; inset: auto 0 0; min-height: 73px;
+    display: flex; align-items: center; justify-content: center; text-align: center; gap: 20px;
+    padding: 9px 17px; color: var(--ink); background: #142f2cf5; border-top: 1px solid #508167;
+  }
+  .result strong { display: block; font-size: 1.15rem; }
+  .result.goal-message strong { color: var(--lime); }
+  .result.save-message strong { color: var(--gold); }
+  #detail { display: block; color: #dfebdf; font-size: .95rem; }
+  .continue {
+    border: 0; border-radius: 10px; background: var(--lime); color: #192a1a; padding: 10px 15px;
+    font-weight: 900; min-height: 43px; flex-shrink: 0;
+  }
+  .continue:hover { background: #eafca7; }
+  .rules {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 7px 18px;
+    padding: 12px 3px 0; font-size: .9rem; color: var(--muted);
+  }
+  .rules p:first-child { display: flex; align-items: baseline; gap: 8px; }
+  .rules .life-icon { color: var(--pink); }
+  .mode-tabs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+    width: min(100%, 420px); margin-bottom: 14px; padding: 5px;
+    border: 1px solid var(--line); border-radius: 13px; background: #152726;
+  }
+  .mode-tab {
+    min-height: 42px; padding: 8px 10px; border: 0; border-radius: 8px;
+    color: var(--muted); background: transparent; font-weight: 800;
+  }
+  .mode-tab:hover { background: #29413b; color: var(--ink); }
+  .mode-tab[aria-selected="true"] { background: var(--lime); color: #192a1a; }
+  .shot-settings {
+    margin-bottom: 12px; border: 1px solid var(--line); border-radius: 13px;
+    background: #182b2a;
+  }
+  .shot-settings summary {
+    padding: 12px 15px; cursor: pointer; color: var(--ink); font-weight: 800;
+  }
+  .shot-settings summary span { color: var(--lime); overflow-wrap: anywhere; }
+  .shot-settings summary:focus-visible, .shot-mode-choice:focus-within, .table-pick:focus-within {
+    outline: 2px solid var(--gold); outline-offset: 2px;
+  }
+  .shots-settings-body {
+    display: grid; justify-items: start; gap: 12px; padding: 4px 15px 14px;
+  }
+  .shots-settings-body fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  .shots-settings-body legend { margin-bottom: 6px; padding: 0; font-weight: 700; }
+  .shot-mode-choices, .table-picks {
+    display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  }
+  .shot-mode-choice, .table-pick {
+    min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 5px 9px; border: 1px solid #628379; border-radius: 8px;
+    font-weight: 700; background: #233d37; cursor: pointer;
+  }
+  .shot-mode-choice:has(input:checked), .table-pick:has(input:checked) { border-color: var(--lime); color: var(--lime); }
+  .shot-settings input { accent-color: #b8ed55; margin: 0; }
+  .shot-settings .continue:disabled { background: #304943; color: #cbdad0; cursor: default; }
+  .sums-panel {
+    display: grid; gap: 17px; grid-template-columns: minmax(0, 1fr) minmax(224px, 265px);
+    align-items: start; padding: clamp(12px, 3vw, 24px); border: 1px solid #426952;
+    border-radius: 22px; background: #14322a; box-shadow: 0 16px 50px #07131070;
+  }
+  .sums-task { grid-column: 1 / -1; display: flex; align-items: center; gap: 13px 20px; flex-wrap: wrap; }
+  .sums-equation {
+    min-width: 151px; padding: 8px 17px; border-radius: 11px; background: #112b2d;
+    border: 1px solid #749181; font-size: clamp(1.7rem, 4.7vw, 2.45rem); font-weight: 900;
+    line-height: 1.04; letter-spacing: -.04em; text-align: center; white-space: nowrap;
+  }
+  .sums-task p { color: #e6f0e3; font-size: clamp(1rem, 2.6vw, 1.14rem); }
+  .sums-board {
+    min-width: 0; display: grid; justify-items: center; gap: 13px; padding: clamp(10px, 2vw, 18px);
+    border: 1px solid #5d8d70; border-radius: 15px;
+    background: repeating-linear-gradient(0deg, #235740 0 58px, #285d44 58px 116px);
+  }
+  .groups-field {
+    position: relative; width: min(100%, 430px); aspect-ratio: 1; border: 2px solid #8fb599;
+    container-type: inline-size; --tray-size: clamp(36px, 15cqi, 63px);
+    border-radius: 50%; background:
+      radial-gradient(circle closest-side, transparent 20%, #b4d8b780 20.4% 21%, transparent 21.4%),
+      linear-gradient(90deg, transparent calc(50% - .5px), #b4d8b76b calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)),
+      repeating-linear-gradient(0deg, #285e45 0 60px, #2d684c 60px 120px);
+    box-shadow: inset 0 0 0 5px #193e30, 0 5px 0 #183c2f;
+  }
+  .group-circle {
+    position: absolute; left: var(--ring-x); top: var(--ring-y); transform: translate(-50%, -50%);
+    display: grid; place-items: center; width: var(--ring-width); aspect-ratio: 1; border-radius: 50%;
+    border: 2px solid #e0eddc; background: #14382c; padding: 0; touch-action: manipulation;
+    box-shadow: inset 0 -4px 0 #132f25, 0 3px 0 #17392b;
+  }
+  .group-circle.checked { border-color: var(--lime); }
+  .group-circle:hover:not([aria-disabled="true"]), .group-circle.drag-over { background: #395f35; border-color: var(--gold); }
+  .group-circle[aria-pressed="true"] { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .group-circle:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+  .group-circle[aria-disabled="true"] { cursor: default; }
+  .ring-index {
+    position: absolute; left: 50%; top: 0; transform: translate(-50%, -42%); padding: 0 5px;
+    min-width: 15px; border-radius: 8px; background: #122c27; color: #e8f4e7;
+    font-size: .73rem; font-weight: 800; line-height: 1.12; pointer-events: none;
+  }
+  .group-balls {
+    display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
+    width: 72%; max-width: calc(var(--ball-columns, 1) * 29px); pointer-events: none;
+  }
+  .group-ball {
+    display: grid; place-items: center; flex: 0 0 calc(100% / var(--ball-columns, 1));
+    aspect-ratio: 1;
+  }
+  .group-ball .ball { width: 85%; border: 0; box-shadow: 0 1px 2px #091b14c4; }
+  .group-actions {
+    display: grid; justify-items: center; gap: 7px; width: 100%; padding: 9px;
+    border-radius: 11px; background: #132e28; text-align: center;
+  }
+  .group-actions p { font-weight: 700; font-size: .91rem; }
+  .group-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .group-buttons button {
+    min-height: 40px; padding: 5px 9px; border: 1px solid #84a795; border-radius: 8px;
+    background: #294943; font-weight: 700; font-size: .89rem; touch-action: manipulation;
+  }
+  .group-buttons button:hover:not(:disabled) { background: #41685e; }
+  .group-buttons button:disabled { opacity: .67; cursor: default; }
+  .drag-source {
+    position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    display: grid; place-items: center; width: var(--tray-size); aspect-ratio: 1; border-radius: 50%;
+    background: #163d33; box-shadow: 0 0 0 2px #a1c09a, 0 3px 6px #122f26ac;
+    cursor: grab; touch-action: none; user-select: none;
+  }
+  .drag-source.is-dragging { cursor: grabbing; }
+  .drag-source.is-dragging .ball { opacity: .34; }
+  .batch-balls {
+    display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
+    width: 78%; pointer-events: none;
+  }
+  .batch-balls .ball {
+    flex: 0 0 calc(100% / var(--batch-columns, 1)); width: auto; min-width: 0;
+    border-width: .5px; box-shadow: 0 1px 2px #0d3429;
+  }
+  .drag-ball { position: fixed; z-index: 30; pointer-events: none; transform: translate(-50%, -50%); }
+  .batch-controls {
+    position: absolute; z-index: 2; left: 50%; top: calc(50% + var(--tray-size) / 2 + 5px);
+    transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 2px 3px;
+    background: #152f28; border: 1px solid #9cbaa3; border-radius: 10px;
+  }
+  .batch-controls button {
+    display: grid; place-items: center; width: clamp(28px, 9cqi, 40px); height: clamp(28px, 9cqi, 40px);
+    padding: 0; border: 0; border-radius: 6px; background: #34584a;
+    color: #eff5e9; font-size: 1.25rem; font-weight: 800; line-height: 1;
+  }
+  .batch-controls button:hover:not(:disabled) { background: #4b785d; }
+  .batch-controls button:disabled { opacity: .52; cursor: default; }
+  #batch-count {
+    min-width: 2ch; color: var(--lime); text-align: center; font-weight: 800; font-variant-numeric: tabular-nums;
+  }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .sums-tools { display: grid; justify-items: center; gap: 8px; width: 100%; }
+  .addition {
+    width: 100%; padding: 9px 8px; border-radius: 8px; background: #132e28;
+    color: var(--lime); text-align: center; font-size: clamp(.91rem, 2.6vw, 1.13rem);
+    line-height: 1.35; font-weight: 800; overflow-wrap: anywhere;
+  }
+  .sums-progress { min-height: 1.25em; color: #ecf5e8; font-size: .9rem; text-align: center; }
+  .sums-progress.wrong { color: var(--gold); }
+  .sums-calculator { display: grid; gap: 9px; padding: 13px; border: 1px solid #507166; border-radius: 14px; background: #1a302f; }
+  .sums-calculator h2 { font-size: 1rem; }
+  .sums-display {
+    display: block; min-height: 48px; padding: 6px 12px; border: 1px solid #658977; border-radius: 7px;
+    background: #0d2423; text-align: right; color: var(--lime); font: 800 1.8rem/1.15 system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .sums-pad {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; min-width: 0; padding: 0; margin: 0; border: 0;
+  }
+  .sums-pad button {
+    min-height: 42px; border: 1px solid #628379; border-radius: 8px; background: #294943;
+    color: var(--ink); font-size: 1.15rem; font-weight: 800; touch-action: manipulation;
+  }
+  .sums-pad button:hover:not(:disabled) { background: #41685e; }
+  .sums-pad button:disabled { opacity: .57; cursor: default; }
+  .sums-calculator .continue { width: 100%; padding-inline: 7px; }
+  .sums-calculator .continue:disabled { background: #304943; color: #cbdad0; cursor: default; }
+  .sums-feedback { min-height: 2.65em; color: #e0ece3; font-size: .94rem; }
+  .sums-feedback.wrong { color: var(--gold); }
+  .sums-feedback.correct { color: var(--lime); font-weight: 800; }
+  @media (max-width: 670px) {
+    .sums-panel { grid-template-columns: minmax(0, 1fr); gap: 11px; }
+    .sums-calculator { width: min(100%, 360px); justify-self: center; }
+    .sums-task { gap: 7px 12px; }
+  }
+  @media (max-width: 580px) {
+    .shell { width: min(100% - 24px, 1000px); padding: 19px 0 16px; }
+    .mast { align-items: flex-start; margin-bottom: 16px; gap: 10px; }
+    .title-group { gap: 10px; }
+    .mark { flex-basis: 36px; width: 36px; height: 36px; font-size: 19px; border-radius: 10px; }
+    .subtitle { font-size: .88rem; }
+    .restart { padding: 7px 8px; font-size: .8rem; }
+    .stat { justify-content: center; flex-wrap: wrap; gap: 6px; padding: 9px 4px; }
+    .stat dt { font-size: .82rem; }
+    .stat dd { font-size: 1.125rem; }
+    .heart { font-size: 1.08rem; }
+    .hearts { gap: 2px; }
+    .arena { min-height: 425px; border-radius: 17px; }
+    .goal { width: 79%; top: 35px; height: 180px; }
+    .problem { top: 20px; }
+    .keeper { top: 119px; width: 121px; height: 100px; }
+    .result { min-height: 87px; gap: 6px; }
+    .result:has(.continue:not([hidden])) { flex-direction: column; padding: 6px 11px 8px; }
+    .result strong { font-size: 1rem; }
+    #detail { font-size: .875rem; }
+    .continue { min-height: 35px; padding: 6px 12px; font-size: .88rem; }
+    .choices { bottom: 118px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<script src="/registro.js"></script>
+<main class="shell">
+  <header class="mast">
+    <div class="title-group">
+      <div class="mark" aria-hidden="true">×</div>
+      <div>
+        <h1>Penaltis de las tablas</h1>
+        <p class="subtitle">Practica las tablas de multiplicar</p>
+      </div>
+    </div>
+    <button class="restart" id="restart" type="button">Reiniciar</button>
+  </header>
+
+  <div class="mode-tabs" role="tablist" aria-label="Modos de práctica">
+    <button class="mode-tab" id="tab-shots" type="button" role="tab" aria-selected="true" aria-controls="panel-shots">Penaltis</button>
+    <button class="mode-tab" id="tab-sums" type="button" role="tab" aria-selected="false" aria-controls="panel-sums" tabindex="-1">Sumas repetidas</button>
+  </div>
+
+  <div id="panel-shots" role="tabpanel" aria-labelledby="tab-shots">
+  <details class="shot-settings" id="shot-settings">
+    <summary>Modo de juego <span id="active-shot-mode">· Desafío (tablas del 1 al 10)</span></summary>
+    <div class="shots-settings-body">
+      <fieldset aria-label="Modo de Penaltis">
+        <div class="shot-mode-choices">
+          <label class="shot-mode-choice"><input type="radio" name="shot-mode" id="mode-challenge" checked>Desafío</label>
+          <label class="shot-mode-choice"><input type="radio" name="shot-mode" id="mode-practice">Elegir tablas</label>
+        </div>
+      </fieldset>
+      <fieldset id="shot-table-picker" hidden>
+        <legend>Selecciona una o varias tablas</legend>
+        <div class="table-picks">
+          <label class="table-pick"><input type="checkbox" value="1">1</label>
+          <label class="table-pick"><input type="checkbox" value="2">2</label>
+          <label class="table-pick"><input type="checkbox" value="3">3</label>
+          <label class="table-pick"><input type="checkbox" value="4">4</label>
+          <label class="table-pick"><input type="checkbox" value="5">5</label>
+          <label class="table-pick"><input type="checkbox" value="6">6</label>
+          <label class="table-pick"><input type="checkbox" value="7">7</label>
+          <label class="table-pick"><input type="checkbox" value="8">8</label>
+          <label class="table-pick"><input type="checkbox" value="9">9</label>
+          <label class="table-pick"><input type="checkbox" value="10">10</label>
+        </div>
+      </fieldset>
+      <button type="button" class="continue" id="start-shot-mode">Empezar partida</button>
+    </div>
+  </details>
+  <dl class="scoreboard">
+    <div class="stat"><dt>Nivel</dt><dd id="level">1</dd></div>
+    <div class="stat"><dt>Goles</dt><dd id="goals">0</dd></div>
+    <div class="stat"><dt>Vidas</dt><dd class="hearts" id="lives" aria-label="3 de 3 vidas">
+      <span class="heart" aria-hidden="true">♥</span><span class="heart" aria-hidden="true">♥</span><span class="heart" aria-hidden="true">♥</span>
+    </dd></div>
+  </dl>
+
+  <section class="arena" id="arena" aria-label="Campo de penaltis">
+    <div class="stands" aria-hidden="true"><i class="lamps left"></i><i class="lamps right"></i></div>
+    <div class="turf" aria-hidden="true"></div>
+    <div class="goal" id="goal">
+      <h2 class="problem" id="problem" tabindex="-1" aria-live="polite"></h2>
+    </div>
+    <div class="keeper" id="keeper" aria-hidden="true"><canvas id="keeper-art" width="266" height="216"></canvas></div>
+    <div class="choices" id="choices" role="group" aria-label="Resultados posibles"></div>
+    <div class="result" id="result">
+      <div role="status" aria-live="polite" aria-atomic="true">
+        <strong id="message">Chuta la pelota con el resultado correcto</strong>
+        <span id="detail">También puedes usar las teclas del 1 al 5.</span>
+      </div>
+      <button type="button" class="continue" id="continue" hidden>Siguiente tiro</button>
+    </div>
+  </section>
+
+  <div class="rules">
+    <p><span class="life-icon" aria-hidden="true">♥</span><span>Recuperas 1 vida al superar cada 5 niveles, hasta un máximo de 3.</span></p>
+    <p>Cada gol te lleva al siguiente nivel.</p>
+  </div>
+  </div>
+
+  <section class="sums-panel" id="panel-sums" role="tabpanel" aria-labelledby="tab-sums" hidden>
+    <header class="sums-task">
+      <h2 class="sums-equation" id="sums-equation" tabindex="-1"></h2>
+      <p id="sums-instruction"></p>
+    </header>
+    <div class="sums-board">
+      <p class="sr-only" id="rings-keyboard">Si usas el teclado, pulsa la tecla más en un aro para colocar las pelotas del centro.</p>
+      <div class="groups-field" id="sums-groups" role="group" aria-label="Campo de reparto">
+        <span class="drag-source" id="ball-tray" aria-hidden="true"><span class="batch-balls"></span></span>
+        <div class="batch-controls" id="batch-controls" role="group" aria-label="Pelotas para arrastrar">
+          <button id="batch-minus" type="button" aria-label="Quitar una pelota del centro" disabled>−</button>
+          <output id="batch-count" aria-label="Pelotas en el centro">1</output>
+          <button id="batch-plus" type="button" aria-label="Añadir una pelota en el centro">+</button>
+        </div>
+      </div>
+      <div class="group-actions" id="group-actions" role="group" aria-label="Editar un aro">
+        <p id="ring-selection" role="status">Selecciona un aro para editarlo.</p>
+        <div class="group-buttons">
+          <button type="button" id="remove-group-ball" disabled>Quitar una pelota</button>
+          <button type="button" id="clear-group" disabled>Vaciar grupo</button>
+        </div>
+      </div>
+      <div class="sums-tools">
+        <button type="button" class="continue" id="sums-check-groups">Comprobar grupos</button>
+        <p class="sums-progress" id="sums-progress" role="status"></p>
+        <p class="addition" id="sums-addition" hidden></p>
+      </div>
+    </div>
+    <div class="sums-calculator">
+      <h2 id="sums-total">¿Cuántas pelotas hay en total?</h2>
+      <output class="sums-display" id="sums-display" aria-labelledby="sums-total">—</output>
+      <fieldset class="sums-pad" id="sums-pad" aria-label="Teclado de calculadora" disabled>
+        <button type="button" data-key="7">7</button>
+        <button type="button" data-key="8">8</button>
+        <button type="button" data-key="9">9</button>
+        <button type="button" data-key="4">4</button>
+        <button type="button" data-key="5">5</button>
+        <button type="button" data-key="6">6</button>
+        <button type="button" data-key="1">1</button>
+        <button type="button" data-key="2">2</button>
+        <button type="button" data-key="3">3</button>
+        <button type="button" data-key="clear" aria-label="Borrar todo">C</button>
+        <button type="button" data-key="0">0</button>
+        <button type="button" data-key="back" aria-label="Borrar última cifra">⌫</button>
+      </fieldset>
+      <button type="button" class="continue" id="sums-check" disabled>Comprobar total</button>
+      <p class="sums-feedback" id="sums-feedback" role="status" aria-atomic="true">Comprueba los aros para usar el teclado.</p>
+      <button type="button" class="continue" id="sums-next" hidden>Otra multiplicación</button>
+    </div>
+  </section>
+</main>
+<script>
+  'use strict';
+
+  const byId = (id) => document.getElementById(id);
+  const levelDisplay = byId('level');
+  const goalsDisplay = byId('goals');
+  const livesDisplay = byId('lives');
+  const problem = byId('problem');
+  const choices = byId('choices');
+  const arena = byId('arena');
+  const goal = byId('goal');
+  const keeper = byId('keeper');
+  const result = byId('result');
+  const message = byId('message');
+  const detail = byId('detail');
+  const continueButton = byId('continue');
+  const shotsPanel = byId('panel-shots');
+  const shotSettings = byId('shot-settings');
+  const challengeRadio = byId('mode-challenge');
+  const practiceRadio = byId('mode-practice');
+  const tablePicker = byId('shot-table-picker');
+  const tableCheckboxes = Array.from(tablePicker.querySelectorAll('input'));
+  const startShotMode = byId('start-shot-mode');
+  const activeShotMode = byId('active-shot-mode');
+  const challengeTables = tableNumbers(10);
+  let activeShotTables = challengeTables;
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const maxLives = 3;
+  let lives, goals, question, deck, lastQuestion;
+  let phase, animations = [], shotBall, revision = 0;
+
+  function drawKeeper() {
+    const context = byId('keeper-art').getContext('2d');
+    if (!context) return;
+    context.scale(2, 2);
+
+    const outline = '#152c31';
+    function shape(color, stroke, width, draw) {
+      context.beginPath();
+      draw(context);
+      if (color) { context.fillStyle = color; context.fill(); }
+      if (stroke) { context.strokeStyle = stroke; context.lineWidth = width; context.stroke(); }
+    }
+    function ellipse(x, y, rx, ry, color, stroke = null) {
+      shape(color, stroke, 2, (c) => c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2));
+    }
+    function line(points, color, width) {
+      context.lineCap = 'round'; context.lineJoin = 'round';
+      shape(null, color, width, (c) => {
+        c.moveTo(...points[0]);
+        points.slice(1).forEach((point) => c.lineTo(...point));
+      });
+    }
+
+    ellipse(67, 102, 44, 5, '#092f2c8c');
+    const leftLeg = [[59, 69], [52, 86], [39, 96]];
+    const rightLeg = [[73, 69], [81, 86], [94, 96]];
+    line(leftLeg, outline, 14); line(rightLeg, outline, 14);
+    line(leftLeg, '#33475b', 10); line(rightLeg, '#33475b', 10);
+    line([[47, 90], [40, 96]], '#e1e6cf', 7); line([[87, 90], [93, 96]], '#e1e6cf', 7);
+    ellipse(35, 99, 10, 4, '#ecf0d9', outline); ellipse(99, 99, 10, 4, '#ecf0d9', outline);
+
+    const leftArm = [[52, 39], [36, 51], [18, 49]];
+    const rightArm = [[82, 39], [98, 51], [115, 49]];
+    line(leftArm, outline, 15); line(rightArm, outline, 15);
+    line(leftArm, '#ee9a3d', 11); line(rightArm, '#ee9a3d', 11);
+    ellipse(13, 47, 9, 8, '#dbeade', outline); ellipse(120, 47, 9, 8, '#dbeade', outline);
+    line([[8, 44], [12, 43]], '#8baa9e', 2); line([[119, 43], [123, 44]], '#8baa9e', 2);
+
+    shape('#203744', outline, 2.4, (c) => {
+      c.moveTo(50, 61); c.lineTo(83, 61); c.lineTo(86, 77); c.lineTo(70, 80);
+      c.lineTo(66, 73); c.lineTo(63, 80); c.lineTo(47, 77); c.closePath();
+    });
+    shape('#ffc469', outline, 2.5, (c) => {
+      c.moveTo(53, 34); c.quadraticCurveTo(67, 29, 80, 34); c.lineTo(90, 42);
+      c.lineTo(82, 53); c.lineTo(81, 67); c.quadraticCurveTo(67, 70, 51, 67);
+      c.lineTo(51, 54); c.lineTo(44, 43); c.closePath();
+    });
+    line([[59, 38], [60, 61]], '#e69542', 2.5); line([[75, 38], [74, 61]], '#e69542', 2.5);
+    ellipse(66.5, 20.5, 14, 15, '#c88155', outline);
+    shape('#233335', outline, 1.5, (c) => {
+      c.moveTo(53, 19); c.quadraticCurveTo(49, 4, 66, 4); c.quadraticCurveTo(83, 4, 81, 17);
+      c.quadraticCurveTo(73, 16, 70, 11); c.quadraticCurveTo(66, 16, 53, 19); c.closePath();
+    });
+    ellipse(61.5, 22, 1.45, 1.65, outline); ellipse(71.5, 22, 1.45, 1.65, outline);
+    line([[63, 28], [66.5, 29], [70, 28]], '#713e32', 1.6);
+  }
+
+  function shuffled(items) {
+    const copy = [...items];
+    for (let index = copy.length - 1; index > 0; index--) {
+      const swap = Math.floor(Math.random() * (index + 1));
+      [copy[index], copy[swap]] = [copy[swap], copy[index]];
+    }
+    return copy;
+  }
+
+  function tableNumbers(maximum) {
+    return Array.from({ length: maximum }, (_, index) => index + 1);
+  }
+
+  function multiplicationPairs(maximum = 9, tables = tableNumbers(maximum)) {
+    const factors = tableNumbers(maximum);
+    return tables.flatMap((a) => factors.map((b) => ({ a, b })));
+  }
+
+  function nextQuestion() {
+    if (!deck.length) {
+      deck = shuffled(multiplicationPairs(10, activeShotTables));
+      const finalIndex = deck.length - 1;
+      const next = deck[finalIndex];
+      if (lastQuestion && next.a === lastQuestion.a && next.b === lastQuestion.b) {
+        [deck[0], deck[finalIndex]] = [deck[finalIndex], deck[0]];
+      }
+    }
+
+    const { a, b } = deck.pop();
+    lastQuestion = { a, b };
+    const product = a * b;
+    const nearby = shuffled([
+      a * (b - 1), a * (b + 1), (a - 1) * b, (a + 1) * b, product - 1, product + 1,
+    ]);
+    const backup = [2, 3, 4].flatMap((offset) => [product + offset, product - offset]);
+    const wrong = [...new Set([...nearby, ...backup])]
+      .filter((value) => value >= 1 && value <= 100 && value !== product);
+    const choices = shuffled([product, ...wrong.slice(0, 4)]);
+    return { a, b, product, choices };
+  }
+
+  function updateScore() {
+    levelDisplay.textContent = phase === 'ready' ? goals + 1 : question.level;
+    goalsDisplay.textContent = goals;
+    livesDisplay.setAttribute('aria-label', lives + ' de ' + maxLives + ' vidas');
+    Array.from(livesDisplay.children).forEach((heart, index) => {
+      const active = index < lives;
+      heart.textContent = active ? '♥' : '♡';
+      heart.classList.toggle('lost', !active);
+    });
+  }
+
+  function clearShot() {
+    animations.forEach((animation) => animation.cancel());
+    animations = [];
+    shotBall?.remove();
+    shotBall = null;
+    goal.classList.remove('scored');
+  }
+
+  function showQuestion(focusProblem) {
+    clearShot();
+    phase = 'ready';
+    question = { ...nextQuestion(), level: goals + 1 };
+    const modeLabel = activeShotMode.textContent.replace(/^\s*·\s*/, '');
+    window.Aula?.begin('tiros', question.a + ' × ' + question.b + ' = ?', modeLabel);
+    window.Aula?.activate('tiros');
+    problem.innerHTML = question.a + ' × ' + question.b + ' = <span class="unknown">?</span>';
+    problem.setAttribute('aria-label', '¿Cuánto es ' + question.a + ' por ' + question.b + '?');
+    choices.replaceChildren();
+    question.choices.forEach((value, index) => {
+      const button = document.createElement('button');
+      button.className = 'answer';
+      button.type = 'button';
+      button.setAttribute('aria-label', 'Chutar el ' + value + ', tecla ' + (index + 1));
+      button.innerHTML = '<span class="ball"><strong>' + value + '</strong></span><kbd class="shortcut" aria-hidden="true">' + (index + 1) + '</kbd>';
+      button.addEventListener('click', () => shoot(button, value));
+      choices.append(button);
+    });
+    result.classList.remove('goal-message', 'save-message');
+    message.textContent = 'Chuta la pelota con el resultado correcto';
+    detail.textContent = 'También puedes usar las teclas del 1 al 5.';
+    continueButton.hidden = true;
+    updateScore();
+    if (focusProblem) problem.focus({ preventScroll: true });
+  }
+
+  function animateShot(ball, correct) {
+    const field = arena.getBoundingClientRect();
+    const original = ball.getBoundingClientRect();
+    const frame = goal.getBoundingClientRect();
+    const goalie = keeper.getBoundingClientRect();
+    const travel = Math.min(72, frame.width * .22);
+    const side = original.left + original.width / 2 < frame.left + frame.width / 2 ? -1 : 1;
+    const targetX = frame.left + frame.width / 2 + side * (correct ? frame.width * .34 : travel + 11);
+    const targetY = correct ? frame.bottom - 26 : goalie.top + goalie.height * .48;
+    const dx = targetX - original.left - original.width / 2;
+    const dy = targetY - original.top - original.height / 2;
+
+    shotBall = ball.cloneNode(true);
+    shotBall.classList.add('flying');
+    shotBall.setAttribute('aria-hidden', 'true');
+    shotBall.style.left = original.left - field.left - arena.clientLeft + 'px';
+    shotBall.style.top = original.top - field.top - arena.clientTop + 'px';
+    shotBall.style.setProperty('--ball-size', original.width + 'px');
+    arena.append(shotBall);
+
+    const duration = reducedMotion.matches ? 20 : 580;
+    const direction = correct ? -side : side;
+    const dive = 'translateX(calc(-50% + ' + direction * travel + 'px)) rotate(' + direction * 24 + 'deg)';
+    animations.push(keeper.animate([
+      { transform: 'translateX(-50%)', offset: 0 },
+      { transform: 'translateX(-50%)', offset: .2 },
+      { transform: dive, offset: .74 },
+      { transform: dive, offset: 1 },
+    ], { duration, easing: 'ease-out', fill: 'forwards' }));
+    const flight = shotBall.animate([
+      { transform: 'translate(0, 0) scale(1)' },
+      { transform: 'translate(' + dx + 'px, ' + dy + 'px) scale(.32) rotate(' + side * 135 + 'deg)' },
+    ], { duration, easing: 'cubic-bezier(.24,.64,.43,1)', fill: 'forwards' });
+    animations.push(flight);
+    return flight.finished;
+  }
+
+  async function shoot(button, value) {
+    if (phase !== 'ready') return;
+    phase = 'shooting';
+    const thisShot = revision;
+    const correct = value === question.product;
+    window.Aula?.attempt('tiros', correct, value);
+    Array.from(choices.children).forEach((choice) => choice.setAttribute('aria-disabled', 'true'));
+    button.classList.add('kicked');
+
+    try {
+      await animateShot(button.querySelector('.ball'), correct);
+    } catch (error) {
+      if (thisShot !== revision) return;
+      console.warn('No se pudo animar el tiro.', error);
+    }
+    if (thisShot !== revision) return;
+    if (!correct) window.Aula?.reveal('tiros');
+    finishShot(correct);
+  }
+
+  function finishShot(correct) {
+    let recovered = false;
+    if (correct) {
+      goals++;
+      if (goals % 5 === 0 && lives < maxLives) {
+        lives++;
+        recovered = true;
+      }
+      goal.classList.add('scored');
+    } else {
+      lives--;
+    }
+
+    phase = lives ? 'feedback' : 'over';
+    updateScore();
+    result.classList.toggle('goal-message', correct);
+    result.classList.toggle('save-message', !correct);
+    message.textContent = correct ? '¡Gol!' : '¡Lo para el portero!';
+    const equation = question.a + ' × ' + question.b + ' = ' + question.product + '.';
+    const ending = goals === 1 ? 'Fin de la partida. Has marcado 1 gol.' : 'Fin de la partida. Has marcado ' + goals + ' goles.';
+    if (phase === 'over') {
+      detail.textContent = ending + ' ' + equation;
+    } else if (recovered) {
+      detail.textContent = equation + ' ¡Recuperas 1 vida!';
+    } else {
+      detail.textContent = equation + (correct ? '' : ' Pierdes 1 vida.');
+    }
+    continueButton.textContent = phase === 'over' ? 'Jugar de nuevo' : 'Siguiente tiro';
+    continueButton.hidden = false;
+    if (choices.contains(document.activeElement)) continueButton.focus({ preventScroll: true });
+  }
+
+  function startGame(focusProblem = true) {
+    revision++;
+    lives = maxLives;
+    goals = 0;
+    deck = [];
+    lastQuestion = null;
+    showQuestion(focusProblem);
+  }
+
+  function updateShotSettings() {
+    tablePicker.hidden = !practiceRadio.checked;
+    startShotMode.disabled = practiceRadio.checked && !tableCheckboxes.some((box) => box.checked);
+  }
+
+  shotSettings.addEventListener('change', updateShotSettings);
+  startShotMode.addEventListener('click', () => {
+    if (startShotMode.disabled) return;
+    activeShotTables = challengeRadio.checked
+      ? challengeTables
+      : tableCheckboxes.filter((box) => box.checked).map((box) => Number(box.value));
+    if (challengeRadio.checked) {
+      activeShotMode.textContent = '· Desafío (tablas del 1 al 10)';
+    } else {
+      const label = activeShotTables.length === 1 ? 'Tabla del ' : 'Tablas del ';
+      activeShotMode.textContent = '· ' + label + activeShotTables.join(', ');
+    }
+    shotSettings.open = false;
+    startGame();
+  });
+
+  byId('restart').addEventListener('click', () => startGame());
+  continueButton.addEventListener('click', () => {
+    if (phase === 'over') startGame();
+    if (phase === 'feedback') showQuestion(true);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (shotsPanel.hidden || shotSettings.open || event.repeat || event.altKey || event.ctrlKey || event.metaKey || phase !== 'ready') return;
+    if (!/^[1-5]$/.test(event.key)) return;
+    event.preventDefault();
+    choices.children[Number(event.key) - 1].click();
+  });
+
+  drawKeeper();
+  updateShotSettings();
+  startGame(false);
+</script>
+<script>
+  (() => {
+    'use strict';
+
+    const tabs = [byId('tab-shots'), byId('tab-sums')];
+    const sumsPanel = byId('panel-sums');
+    const equation = byId('sums-equation');
+    const instruction = byId('sums-instruction');
+    const circles = byId('sums-groups');
+    const addition = byId('sums-addition');
+    const checkGroups = byId('sums-check-groups');
+    const progress = byId('sums-progress');
+    const tray = byId('ball-tray');
+    const batchBalls = tray.firstElementChild;
+    const batchControls = byId('batch-controls');
+    const batchCount = byId('batch-count');
+    const batchMinus = byId('batch-minus');
+    const batchPlus = byId('batch-plus');
+    const groupActions = byId('group-actions');
+    const selection = byId('ring-selection');
+    const removeBall = byId('remove-group-ball');
+    const clearGroup = byId('clear-group');
+    const pad = byId('sums-pad');
+    const display = byId('sums-display');
+    const check = byId('sums-check');
+    const feedback = byId('sums-feedback');
+    const next = byId('sums-next');
+    let remaining = shuffled(multiplicationPairs());
+    let exercise = remaining.pop();
+    let groups, answer, solved, groupsChecked, selectedGroup, batchSize;
+    let sumsStarted = false;
+
+    function registerGroups() {
+      window.Aula?.begin('aros', equation.textContent, 'Sumas repetidas');
+      window.Aula?.activate('aros');
+      sumsStarted = true;
+    }
+    let drag = null;
+
+    function switchTab(index) {
+      tabs.forEach((tab, position) => {
+        const selected = position === index;
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      });
+      shotsPanel.hidden = index !== 0;
+      sumsPanel.hidden = index !== 1;
+      byId('restart').hidden = index !== 0;
+      if (sumsPanel.hidden) {
+        endDrag();
+        window.Aula?.activate('tiros');
+      } else {
+        if (!sumsStarted) registerGroups();
+        const stage = groupsChecked ? 'total-pelotas' : 'aros';
+        window.Aula?.activate(stage);
+      }
+      tabs[index].focus();
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => switchTab(index));
+      tab.addEventListener('keydown', (event) => {
+        const positions = { ArrowLeft: 1 - index, ArrowRight: 1 - index, Home: 0, End: 1 };
+        if (!Object.hasOwn(positions, event.key)) return;
+        event.preventDefault();
+        switchTab(positions[event.key]);
+      });
+    });
+
+    function makeGroup(index, total) {
+      const circle = document.createElement('button');
+      circle.type = 'button';
+      circle.className = 'group-circle';
+      circle.dataset.group = String(index);
+      circle.setAttribute('aria-describedby', 'rings-keyboard');
+      const start = total === 2 ? Math.PI : -Math.PI / 2;
+      const angle = start + (index / total) * Math.PI * 2;
+      const radius = 36.25;
+      circle.style.setProperty('--ring-x', (50 + radius * Math.cos(angle)) + '%');
+      circle.style.setProperty('--ring-y', (50 + radius * Math.sin(angle)) + '%');
+      circle.addEventListener('click', () => {
+        if (solved) return;
+        selectedGroup = index;
+        updateSelection();
+      });
+      circle.addEventListener('keydown', (event) => {
+        if (event.key !== '+' || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+        event.preventDefault();
+        addBalls(index, batchSize);
+      });
+
+      const balls = document.createElement('span');
+      balls.className = 'group-balls';
+      balls.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('span');
+      label.className = 'ring-index';
+      label.textContent = index + 1;
+      label.setAttribute('aria-hidden', 'true');
+      circle.append(balls, label);
+      circles.append(circle);
+      return { circle, balls };
+    }
+
+    function showExercise(moveFocus = false) {
+      const { a, b } = exercise;
+      endDrag();
+      answer = '';
+      solved = false;
+      groupsChecked = false;
+      selectedGroup = null;
+      equation.textContent = a + ' × ' + b + ' = ?';
+      if (!sumsPanel.hidden) registerGroups();
+      equation.setAttribute('aria-label', '¿Cuánto es ' + a + ' por ' + b + '?');
+      instruction.textContent = 'Pon ' + a + (a === 1 ? ' pelota' : ' pelotas') + ' en cada aro. Ajusta la cantidad con + y − y arrástrala desde el centro.';
+      circles.replaceChildren(tray, batchControls);
+      tray.hidden = false;
+      batchControls.hidden = false;
+      setBatchSize(1);
+      circles.style.setProperty('--ring-width', b > 7 ? '19%' : '22%');
+      groups = Array.from({ length: b }, (_, index) => makeGroup(index, b));
+      groups.forEach(updateGroup);
+      updateSelection();
+      groupActions.hidden = false;
+      checkGroups.hidden = false;
+      next.hidden = true;
+      check.hidden = false;
+      setGroupStatus('');
+      updateSum();
+      if (moveFocus) equation.focus();
+    }
+
+    function updateGroup(group, index) {
+      const { circle, balls } = group;
+      const filled = balls.childElementCount;
+      circle.classList.toggle('checked', groupsChecked);
+      circle.setAttribute('aria-disabled', String(solved));
+      circle.setAttribute('aria-label', 'Aro ' + (index + 1) + ', ' + filled + (filled === 1 ? ' pelota' : ' pelotas'));
+      const columns = filled === 3 ? 3 : Math.max(1, Math.ceil(Math.sqrt(filled)));
+      balls.style.setProperty('--ball-columns', columns);
+    }
+
+    function updateSelection() {
+      groups.forEach(({ circle }, index) => circle.setAttribute('aria-pressed', String(index === selectedGroup)));
+      const selected = groups[selectedGroup];
+      const description = selected ? 'Aro ' + (selectedGroup + 1) + ' seleccionado' : 'Selecciona un aro para editarlo.';
+      if (selection.textContent !== description) selection.textContent = description;
+      const canRemove = !solved && Boolean(selected?.balls.childElementCount);
+      removeBall.disabled = !canRemove;
+      clearGroup.disabled = !canRemove;
+    }
+
+    function makeBall() {
+      const ball = document.createElement('span');
+      ball.className = 'ball';
+      return ball;
+    }
+
+    function setBatchSize(size) {
+      batchSize = Math.max(1, size);
+      while (batchBalls.childElementCount < batchSize) batchBalls.append(makeBall());
+      while (batchBalls.childElementCount > batchSize) batchBalls.lastElementChild.remove();
+      batchBalls.style.setProperty('--batch-columns', Math.ceil(Math.sqrt(batchSize)));
+      batchCount.textContent = batchSize;
+      if (batchSize === 1 && document.activeElement === batchMinus) batchPlus.focus({ preventScroll: true });
+      batchMinus.disabled = batchSize === 1;
+    }
+
+    batchMinus.addEventListener('click', () => {
+      if (!solved && !drag) setBatchSize(batchSize - 1);
+    });
+    batchPlus.addEventListener('click', () => {
+      if (!solved && !drag) setBatchSize(batchSize + 1);
+    });
+
+    function addBalls(index, quantity) {
+      if (solved) return;
+      const { balls } = groups[index];
+      for (let added = 0; added < quantity; added++) {
+        const spot = document.createElement('span');
+        spot.className = 'group-ball';
+        spot.append(makeBall());
+        balls.append(spot);
+      }
+      selectedGroup = index;
+      groupChanged(index);
+    }
+
+    function removeFromSelectedGroup(all) {
+      if (removeBall.disabled) return;
+      const { circle, balls } = groups[selectedGroup];
+      if (all) balls.replaceChildren();
+      else balls.lastElementChild.remove();
+      if (!balls.childElementCount && [removeBall, clearGroup].includes(document.activeElement)) {
+        circle.focus({ preventScroll: true });
+      }
+      groupChanged(selectedGroup);
+    }
+
+    function groupChanged(index) {
+      answer = '';
+      if (groupsChecked) {
+        groupsChecked = false;
+        groups.forEach(updateGroup);
+      } else {
+        updateGroup(groups[index], index);
+      }
+      updateSelection();
+      setGroupStatus('');
+      updateSum();
+    }
+
+    removeBall.addEventListener('click', () => removeFromSelectedGroup(false));
+    clearGroup.addEventListener('click', () => removeFromSelectedGroup(true));
+
+    function setGroupStatus(text, wrong = false) {
+      progress.classList.toggle('wrong', wrong);
+      if (progress.textContent !== text) progress.textContent = text;
+    }
+
+    checkGroups.addEventListener('click', () => {
+      if (solved || groupsChecked) return;
+      const amounts = groups.map(({ balls }) => balls.childElementCount);
+      const correct = amounts.every(amount => amount === exercise.a);
+      window.Aula?.attempt('aros', correct, amounts.join(' + '));
+      if (!correct) {
+        setGroupStatus('Revisa el reparto. Hay aros con pelotas de más o de menos.', true);
+        return;
+      }
+      groupsChecked = true;
+      window.Aula?.begin('total-pelotas', Array(exercise.b).fill(exercise.a).join(' + ') + ' = ?', 'Sumas repetidas');
+      window.Aula?.activate('total-pelotas');
+      groups.forEach(updateGroup);
+      setGroupStatus('¡Grupos correctos! Cuenta todas las pelotas.');
+      updateSum();
+    });
+
+    function setFeedback(text, state = '') {
+      feedback.classList.toggle('wrong', state === 'wrong');
+      feedback.classList.toggle('correct', state === 'correct');
+      feedback.textContent = text;
+    }
+
+    function updateSum() {
+      const { a, b } = exercise;
+      addition.hidden = !groupsChecked;
+      if (groupsChecked) addition.textContent = Array(b).fill(a).join(' + ') + ' = ?';
+      pad.disabled = !groupsChecked;
+      setFeedback(groupsChecked ? 'Escribe el total.' : 'Comprueba los aros para usar el teclado.');
+      updateAnswer();
+    }
+
+    function updateAnswer() {
+      display.textContent = answer || '—';
+      check.disabled = pad.disabled || !answer;
+    }
+
+    function enterKey(key) {
+      if (pad.disabled) return;
+      if (key === 'clear') {
+        answer = '';
+      } else if (key === 'back') {
+        answer = answer.slice(0, -1);
+      } else if (answer.length < 2) {
+        answer = answer === '0' ? key : answer + key;
+      }
+      setFeedback('Escribe el total.');
+      updateAnswer();
+    }
+
+    function checkAnswer() {
+      if (check.disabled) return;
+      const correct = Number(answer) === exercise.a * exercise.b;
+      window.Aula?.attempt('total-pelotas', correct, answer);
+      if (!correct) {
+        setFeedback('El total es diferente. Cuenta de nuevo las pelotas.', 'wrong');
+        return;
+      }
+
+      solved = true;
+      endDrag();
+      selectedGroup = null;
+      updateSelection();
+      groupActions.hidden = true;
+      tray.hidden = true;
+      batchControls.hidden = true;
+      const sum = addition.textContent.replace('?', answer);
+      addition.textContent = sum;
+      equation.textContent = exercise.a + ' × ' + exercise.b + ' = ' + answer;
+      equation.setAttribute('aria-label', exercise.a + ' por ' + exercise.b + ' es ' + answer);
+      groups.forEach(updateGroup);
+      setFeedback('¡Correcto! Hay ' + answer + (answer === '1' ? ' pelota en total.' : ' pelotas en total.'), 'correct');
+      checkGroups.hidden = true;
+      pad.disabled = true;
+      check.disabled = true;
+      check.hidden = true;
+      next.hidden = false;
+      next.focus();
+    }
+
+    pad.addEventListener('click', (event) => {
+      const key = event.target.dataset.key;
+      if (key) enterKey(key);
+    });
+    check.addEventListener('click', checkAnswer);
+    next.addEventListener('click', () => {
+      if (!solved) return;
+      if (!remaining.length) {
+        remaining = shuffled(multiplicationPairs());
+        const last = remaining.at(-1);
+        if (last.a === exercise.a && last.b === exercise.b) {
+          [remaining[0], remaining[80]] = [remaining[80], remaining[0]];
+        }
+      }
+      exercise = remaining.pop();
+      showExercise(true);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (sumsPanel.hidden || pad.disabled || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+      if (event.key === '=') {
+        event.preventDefault();
+        checkAnswer();
+      } else if (/^\d$/.test(event.key) || event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault();
+        const key = event.key === 'Backspace' ? 'back' : event.key === 'Delete' ? 'clear' : event.key;
+        enterKey(key);
+      }
+    });
+
+    function endDrag() {
+      if (!drag) return;
+      const { pointer, ball, target } = drag;
+      drag = null;
+      tray.classList.remove('is-dragging');
+      ball.remove();
+      target?.circle.classList.remove('drag-over');
+      if (tray.hasPointerCapture(pointer)) tray.releasePointerCapture(pointer);
+    }
+
+    function moveDrag(event) {
+      if (drag?.pointer !== event.pointerId) return;
+      drag.ball.style.left = event.clientX + 'px';
+      drag.ball.style.top = event.clientY + 'px';
+      const destination = document.elementFromPoint(event.clientX, event.clientY)?.closest('.group-circle');
+      const group = destination ? groups[Number(destination.dataset.group)] : null;
+      drag.target?.circle.classList.remove('drag-over');
+      drag.target = group;
+      drag.target?.circle.classList.add('drag-over');
+    }
+
+    tray.addEventListener('pointerdown', (event) => {
+      if (solved || drag || !event.isPrimary || event.button !== 0) return;
+      const ball = batchBalls.cloneNode(true);
+      ball.classList.add('drag-ball');
+      ball.style.width = batchBalls.getBoundingClientRect().width + 'px';
+      ball.setAttribute('aria-hidden', 'true');
+      tray.setPointerCapture(event.pointerId);
+      document.body.append(ball);
+      tray.classList.add('is-dragging');
+      drag = { pointer: event.pointerId, ball, target: null, quantity: batchSize };
+      moveDrag(event);
+    });
+    tray.addEventListener('pointermove', moveDrag);
+    tray.addEventListener('pointerup', (event) => {
+      if (drag?.pointer !== event.pointerId) return;
+      moveDrag(event);
+      const { target, quantity } = drag;
+      endDrag();
+      if (target) addBalls(Number(target.circle.dataset.group), quantity);
+    });
+    function cancelDrag(event) {
+      if (drag?.pointer === event.pointerId) endDrag();
+    }
+    tray.addEventListener('pointercancel', cancelDrag);
+    tray.addEventListener('lostpointercapture', cancelDrag);
+
+    showExercise();
+  })();
+</script>
+</body>
+</html>

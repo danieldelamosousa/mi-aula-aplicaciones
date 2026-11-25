@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#102348">
+<title>Taller de multiplicación · Matemáticas U3</title>
+<style>
+:root{font-family:"Trebuchet MS",Arial,sans-serif;color:#13264a;background:#f4f6fa;font-synthesis:none;--ink:#13264a;--navy:#102348;--faint:#50627e;--line:#dce4ef;--accent:#186343;--soft:#e7f7ed;--glow:#beeed1;--wash:#f0faf4;--white:#fff}
+*{box-sizing:border-box}
+body{margin:0;min-width:275px}
+body[data-grade="4"]{--accent:#744012;--soft:#fff0d6;--glow:#ffdb96;--wash:#fff8e9}
+button,select,input{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #2766c1;outline-offset:3px}
+[hidden]{display:none!important}
+.top{background:#fff;border-bottom:1px solid var(--line)}
+.top-inner,.layout{max-width:1150px;margin:auto;padding:0 30px}
+.top-inner{min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.brand{display:flex;align-items:center;gap:11px;font-weight:800;white-space:nowrap}
+.brand-icon{width:36px;height:36px;border-radius:11px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:1.6rem;line-height:1}
+.grade-control{display:flex;align-items:center;gap:10px}
+.grade-label{font-size:.88rem;color:var(--faint);font-weight:700}
+.grades{display:flex;gap:3px;padding:4px;background:#e9edf4;border-radius:12px}
+.grade-btn{padding:8px 14px;border:0;border-radius:9px;color:var(--ink);background:transparent;font-size:.95rem;font-weight:800;min-height:38px;white-space:nowrap}
+.grade-btn[aria-pressed="true"]{background:var(--navy);color:#fff}
+.welcome{min-height:100vh;min-height:100svh;display:grid;place-items:center;padding:20px}
+.welcome-panel{width:min(100%,640px);padding:clamp(20px,6vw,44px);border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:0 12px 36px #10234812}
+.welcome-panel h1{margin:15px 0 8px}
+.welcome-panel p{margin:0 0 22px;color:var(--faint);font-size:1.08rem}
+.welcome-courses{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.welcome-course{display:grid;gap:6px;text-align:left;min-height:91px;padding:15px;border:1px solid #b6dec6;border-radius:13px;background:#e7f7ed;color:#186343}
+.welcome-course[data-grade="4"]{border-color:#ecc98f;background:#fff0d6;color:#744012}
+.welcome-course:hover{border-color:currentColor;box-shadow:inset 0 0 0 1px currentColor}
+.welcome-course strong{font-size:clamp(1.13rem,3vw,1.4rem)}
+.welcome-course span{font-size:.95rem}
+@media(max-width:460px){.welcome-courses{grid-template-columns:1fr}}
+.layout{padding-top:27px;padding-bottom:30px}
+.hero{display:grid;grid-template-columns:1.5fr 1fr;min-height:217px;isolation:isolate;position:relative;background:var(--navy);color:#fff;border-radius:24px;overflow:hidden;align-items:center}
+.hero::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 88% 82%,#304e75,transparent 56%)}
+.hero-copy{padding:30px 38px;z-index:1}
+.eyebrow{margin:0;color:var(--glow);font-weight:800;font-size:.86rem;letter-spacing:.065em;text-transform:uppercase}
+h1{margin:9px 0 8px;font-size:clamp(2rem,4.8vw,3.5rem);line-height:1.04;letter-spacing:-.055em}
+.hero-note{margin:14px 0 0;color:#dce7f6;font-size:1rem;line-height:1.5}
+.hero-art{align-self:stretch;position:relative;display:grid;place-items:center;padding:12px 30px 12px 0;min-width:0}
+.art-grid{position:absolute;inset:0;opacity:.12;background:linear-gradient(#a3bcd8 1px,transparent 1px),linear-gradient(90deg,#a3bcd8 1px,transparent 1px);background-size:28px 28px;mask-image:radial-gradient(ellipse at center,#000 17%,transparent 76%)}
+.art-card{position:relative;display:flex;align-items:center;gap:24px;padding:20px 22px;background:var(--glow);color:var(--navy);border-radius:17px;box-shadow:10px 10px 0 #486181;transform:rotate(-6deg)}
+.art-array{display:grid;grid-template-columns:repeat(4,12px);gap:7px}
+.art-array i{width:12px;height:12px;background:#286048;border-radius:4px}
+body[data-grade="4"] .art-array i{background:#905721}
+.art-expression{font-weight:800;font-size:clamp(1.7rem,3.2vw,2.6rem);letter-spacing:-.06em;white-space:nowrap}
+.workspace{display:grid;grid-template-columns:250px minmax(0,1fr);gap:21px;margin-top:22px;align-items:start}
+.sidebar,.exercise{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 4px 12px #10234808}
+.sidebar{padding:17px 12px}
+.menu-heading{margin:0 9px 12px;font-size:1rem;font-weight:800}
+.tabs{display:grid;gap:5px}
+.tab{border:1px solid transparent;border-radius:11px;background:transparent;color:var(--ink);display:flex;align-items:center;gap:9px;text-align:left;min-height:46px;width:100%;padding:7px 9px;font-weight:700;font-size:.95rem;line-height:1.18}
+.tab:hover{background:#f4f7fb}
+.tab[aria-selected="true"]{border-color:var(--glow);background:var(--soft);color:var(--accent)}
+.tab-icon{border-radius:8px;background:#eef2f8;display:grid;place-items:center;width:28px;min-width:28px;height:28px;font-size:.91rem;font-weight:900;white-space:nowrap}
+.tab[aria-selected="true"] .tab-icon{background:var(--glow)}
+.tab-name{flex:1}
+.tab-count{color:var(--accent);font-size:.8rem}
+.exercise{overflow:hidden;min-height:470px}
+.exercise-header{padding:22px 27px 17px;border-bottom:1px solid var(--line);display:flex;gap:12px;justify-content:space-between;align-items:flex-start}
+.topic{font-size:clamp(1.45rem,3.4vw,1.95rem);letter-spacing:-.04em;line-height:1.1;margin:0 0 6px}
+.topic-meta{margin:0;color:var(--faint);font-size:.87rem}
+.score{min-height:34px;padding:7px 11px;border-radius:9px;background:var(--soft);color:var(--accent);display:flex;gap:7px;align-items:center;white-space:nowrap;font-size:.88rem;font-weight:800}
+.exercise-body{padding:20px 27px 23px}
+.mode-row{display:flex;align-items:center;gap:10px;margin:0 0 18px;color:var(--faint);font-size:.91rem;font-weight:700}
+.mode-row select{appearance:none;color:var(--ink);min-height:40px;padding:7px 34px 7px 11px;max-width:100%;border:1px solid var(--line);border-radius:9px;background:linear-gradient(45deg,transparent 50%,var(--faint) 50%) calc(100% - 14px) 50%/5px 5px no-repeat,linear-gradient(135deg,var(--faint) 50%,transparent 50%) calc(100% - 9px) 50%/5px 5px no-repeat,#fff}
+.question-area{padding:18px 20px;border:1px solid var(--glow);background:var(--wash);border-radius:13px}
+.question{margin:0;font-weight:800;font-size:1.14rem;line-height:1.4}
+.display{margin-top:10px;font-size:clamp(1.35rem,4vw,2.35rem);font-weight:800;line-height:1.22;letter-spacing:-.025em;font-variant-numeric:tabular-nums;overflow-wrap:break-word}
+.dots{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.dot-group{display:flex;gap:4px;padding:7px;border:1px solid var(--glow);border-radius:8px;background:#fff}
+.dot{width:12px;height:12px;border-radius:3px;background:#23714e}
+.dot:nth-child(odd){background:#438c67}
+body[data-grade="4"] .dot{background:#a66122}
+body[data-grade="4"] .dot:nth-child(odd){background:#bd793a}
+.number-work{width:max-content;max-width:100%;margin-top:8px;display:grid;justify-items:end;font-family:Consolas,monospace;letter-spacing:.12em;font-size:clamp(1.6rem,5vw,2.15rem);line-height:1.18;font-weight:700;padding:0 8px 5px;border-bottom:3px solid var(--ink);font-variant-numeric:tabular-nums}
+.answers{margin-top:16px}
+.answer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:9px}
+.option{min-height:48px;padding:8px 10px;border:1px solid #b7c4d7;border-radius:10px;background:#fff;color:var(--ink);font-size:1.04rem;font-weight:800;text-align:center}
+.option:hover,.button-subtle:hover{background:#edf4fb}
+.option[aria-pressed="true"],.cell[aria-pressed="true"]{background:var(--soft);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--accent)}
+.option.is-right,.cell.is-right{background:#d5f3df;border-color:#21613e;color:#15492d}
+.option.is-wrong,.cell.is-wrong{background:#fff2e7;border-color:#a24c1b;color:#7d3510}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:12px}
+.answer-field{display:grid;gap:5px;font-size:.91rem;font-weight:800;color:var(--ink)}
+.answer-input{width:100%;max-width:245px;min-height:49px;border:1px solid #aebfd5;border-radius:9px;padding:8px 11px;background:#fff;color:var(--ink);font-size:1.22rem;font-weight:800;font-variant-numeric:tabular-nums}
+.answer-input[aria-invalid="true"]{border-color:#a24c1b;background:#fff7ee}
+.answer-input:read-only{background:#eaf8ef;border-color:#258054}
+.numeric-workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(152px,186px);gap:15px;align-items:start}
+.answer-input.is-active:not(:read-only){border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.keypad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:8px;border:1px solid var(--line);border-radius:11px;background:#edf2f8}
+.keypad-target{grid-column:1/-1;min-height:2.5em;margin:0 1px 2px;color:var(--ink);font-weight:800;font-size:.87rem}
+.keypad-key{min-height:44px;padding:3px;border:1px solid #b7c4d7;border-radius:7px;background:#fff;color:var(--ink);font-size:1.14rem;font-weight:800;touch-action:manipulation}
+.keypad-key:hover:not(:disabled){background:var(--soft);border-color:var(--accent)}
+.keypad-key.is-utility{background:#dce5f1}
+.keypad-key:disabled{opacity:.63}
+.keypad-next{grid-column:1/-1;font-size:.86rem}
+@media(max-width:490px){.numeric-workspace{grid-template-columns:1fr;gap:10px}.keypad{width:min(100%,260px)}.keypad-target{min-height:0}}
+.table-wrapper{overflow-x:auto;padding:3px 3px 8px;max-width:100%}
+.pythagorean{table-layout:fixed;border-collapse:separate;border-spacing:3px;font-variant-numeric:tabular-nums}
+.pythagorean th{color:var(--accent);background:var(--soft);font-weight:800;border-radius:5px}
+.pythagorean th,.pythagorean td{min-width:36px;height:36px;text-align:center;padding:0}
+.cell{border:1px solid var(--line);width:100%;height:100%;min-height:36px;border-radius:5px;padding:0;color:var(--ink);background:#fff;font-weight:800}
+.cell:hover{background:#e9f1fc}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:17px}
+.button{border:1px solid transparent;border-radius:10px;padding:10px 14px;min-height:43px;font-weight:800;white-space:nowrap}
+.button-primary{background:var(--navy);color:#fff}
+.button-primary:hover{background:#274272}
+.button-subtle{background:#fff;color:var(--ink);border-color:#c8d3e2}
+.feedback:not(:empty),.hint:not(:empty){margin-top:12px;padding:9px 12px;border-radius:9px;font-size:.96rem;line-height:1.45}
+.feedback.good{background:#e7f8ed;color:#12522e}
+.feedback.try{background:#fff0de;color:#753409}
+.hint{background:#edf3fb;color:#243e62}
+.site-footer{padding:15px 2px 0;color:var(--faint);font-size:.84rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:805px){.workspace{grid-template-columns:197px minmax(0,1fr);gap:13px}.tab{font-size:.88rem}.top-inner,.layout{padding-left:18px;padding-right:18px}.exercise-header,.exercise-body{padding-left:19px;padding-right:19px}.hero-copy{padding-left:26px}}
+@media(max-width:670px){.workspace{grid-template-columns:minmax(0,1fr);gap:12px;margin-top:14px}.sidebar{padding:11px 10px}.menu-heading{margin:0 4px 8px}.tabs{grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr));gap:4px}.hero-copy{padding:21px 17px}.hero{min-height:156px}.hero-art{padding-right:13px}.art-card{padding:14px;gap:9px}.art-array{grid-template-columns:repeat(4,8px);gap:4px}.art-array i{width:8px;height:8px}.top-inner{min-height:60px}.layout{padding-top:15px}}
+@media(max-width:430px){.brand{font-size:.88rem;gap:6px}.brand-icon{width:30px;height:30px}.grade-label,.long-grade{display:none}.top-inner,.layout{padding-left:11px;padding-right:11px}.grade-btn{padding:6px 10px}.hero{grid-template-columns:1fr}.hero-art{display:none}.exercise-header,.exercise-body{padding:15px 12px}.question-area{padding:13px 12px}.score{padding:6px 8px}.pythagorean th,.pythagorean td{min-width:27px;height:34px}.cell{min-height:34px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<script src="/registro.js"></script>
+<main class="welcome" id="welcome" aria-labelledby="welcome-title" hidden>
+  <div class="welcome-panel">
+    <span class="brand-icon" aria-hidden="true">×</span>
+    <h1 id="welcome-title">Taller de multiplicación</h1>
+    <p id="welcome-prompt">Elige tu curso para empezar.</p>
+    <div class="welcome-courses" role="group" aria-labelledby="welcome-prompt">
+      <button type="button" class="welcome-course" data-grade="3">
+        <strong>3.º de Primaria</strong><span>Multiplica tu salud</span>
+      </button>
+      <button type="button" class="welcome-course" data-grade="4">
+        <strong>4.º de Primaria</strong><span>Cuida el agua</span>
+      </button>
+    </div>
+  </div>
+</main>
+<header class="top" id="practice-header" hidden>
+  <div class="top-inner">
+    <div class="brand"><span class="brand-icon" aria-hidden="true">×</span> Aula de Matemáticas</div>
+    <div class="grade-control">
+      <span class="grade-label" id="grade-label">Curso</span>
+      <div class="grades" role="group" aria-labelledby="grade-label">
+        <button class="grade-btn" type="button" data-grade="3" aria-label="3.º de Primaria" aria-pressed="false">3.º<span class="long-grade"> Primaria</span></button>
+        <button class="grade-btn" type="button" data-grade="4" aria-label="4.º de Primaria" aria-pressed="false">4.º<span class="long-grade"> Primaria</span></button>
+      </div>
+    </div>
+  </div>
+</header>
+<main class="layout" id="practice" hidden>
+  <section class="hero" aria-labelledby="title">
+    <div class="hero-copy">
+      <p class="eyebrow" id="unit">Unidad 3 · 3.º de Primaria</p>
+      <h1 id="title" tabindex="-1">Taller de multiplicación</h1>
+      <p class="hero-note" id="unit-note">Multiplica tu salud · Elige un contenido y practica a tu ritmo.</p>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="art-grid"></div>
+      <div class="art-card">
+        <div class="art-array"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="art-expression">4 × 3</div>
+      </div>
+    </div>
+  </section>
+  <div class="workspace">
+    <aside class="sidebar">
+      <h2 class="menu-heading" id="menu-heading">Contenidos</h2>
+      <div class="tabs" id="tabs" role="tablist" aria-labelledby="menu-heading" aria-orientation="vertical"></div>
+    </aside>
+    <section class="exercise" id="exercise" role="tabpanel">
+      <header class="exercise-header">
+        <div><h2 class="topic" id="topic"></h2><p class="topic-meta" id="topic-meta"></p></div>
+        <div class="score" aria-live="polite"><span aria-hidden="true">✓</span><span id="score">0 aciertos</span></div>
+      </header>
+      <div class="exercise-body">
+        <label class="mode-row"><span>Practica</span><select id="mode"></select></label>
+        <form id="form" novalidate>
+          <div class="question-area">
+            <p class="question" id="question" tabindex="-1"></p>
+            <div id="visual"></div>
+          </div>
+          <div class="answers" id="answers" role="group" aria-labelledby="question"></div>
+          <div class="actions">
+            <button class="button button-primary" id="check" type="submit">Comprobar</button>
+            <button class="button button-subtle" id="hint-btn" type="button" aria-controls="hint" aria-expanded="false">Ver pista</button>
+            <button class="button button-subtle" id="next" type="button">Otro reto</button>
+          </div>
+          <div class="hint" id="hint" aria-live="polite"></div>
+          <div class="feedback" id="feedback" role="status"></div>
+        </form>
+      </div>
+    </section>
+  </div>
+  <footer class="site-footer">Los aciertos se cuentan por contenido durante esta sesión.</footer>
+</main>
+<noscript>Activa JavaScript en el navegador para resolver los retos.</noscript>
+<script>
+"use strict";
+
+const random = (min,max) => Math.floor(Math.random() * (max-min+1)) + min;
+const pick = items => items[random(0,items.length-1)];
+const format = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g,"\u202f");
+const times = (a,b) => `${format(a)} × ${format(b)}`;
+const product = (a,b) => `${times(a,b)} = ${format(a*b)}`;
+const sumOfGroups = (groups,size) => Array(groups).fill(String(size)).join(" + ");
+const numeric = (label,answer) => ({label,answer});
+const shuffle = items => {
+  const copy = [...items];
+  for (let i=copy.length-1;i>0;i--) {
+    const j = random(0,i);
+    [copy[i],copy[j]] = [copy[j],copy[i]];
+  }
+  return copy;
+};
+
+function choose(prompt,display,answer,alternatives,hint,explanation,visual) {
+  return {
+    prompt,display,hint,explanation,visual,answer,
+    options:shuffle([...new Set([answer,...alternatives])])
+  };
+}
+
+function write(prompt,display,fields,hint,explanation,visual) {
+  return {prompt,display,fields,hint,explanation,visual};
+}
+
+function groups() {
+  const size=random(2,8), count=random(2,5);
+  const repeated=sumOfGroups(count,size);
+  const reversed=size===count ? null : times(count,size);
+  const exercise=choose("¿Qué multiplicación representa esta suma?",repeated,times(size,count),
+    [times(size+1,count),times(size,count+1),reversed ?? `${size} + ${count}`],
+    "Primero escribe el número que se repite. Después, cuántas veces aparece.",
+    `Hay ${count} grupos de ${size}. ${repeated} = ${product(size,count)}.`,
+    {type:"dots",count,size});
+  return {...exercise,reversed};
+}
+
+function factorNames() {
+  const a=random(2,9), b=random(2,9);
+  const answer=pick(["El producto","Un factor"]);
+  const highlighted=answer==="El producto" ? a*b : pick([a,b]);
+  return choose(`¿Qué nombre recibe el ${highlighted} en esta multiplicación?`,product(a,b),answer,
+    ["El producto","Un factor","Un sumando"],
+    "Los números que multiplicamos son factores. El resultado es el producto.",
+    `${a} y ${b} son los factores. ${a*b} es el producto.`);
+}
+
+function tables(tablesSet) {
+  const size=pick(tablesSet), count=random(0,10);
+  const hints={
+    2:"Cuenta de dos en dos tantas veces como indica el segundo factor.",
+    4:"Calcula primero por 2 y dobla el resultado.",
+    5:"Cuenta de cinco en cinco. Los resultados terminan en 0 o en 5.",
+    8:"Calcula primero por 4 y dobla el resultado.",
+    10:"Cada grupo aporta una decena."
+  };
+  const hint=count===0?"Cero grupos aportan cero elementos.":(hints[size]||`Piensa en ${count} grupos de ${size}.`);
+  return write("Calcula el producto.",`${times(size,count)} = ?`,[numeric("Resultado",size*count)],
+    hint,`${product(size,count)}.`);
+}
+
+function series(stepSet) {
+  const step=pick(stepSet), start=random(0,5), empty=random(1,3);
+  const values=Array.from({length:5},(_,i)=>(start+i)*step);
+  return write("Escribe el número que falta.",values.map((n,i)=>i===empty?"?":n).join(" · "),
+    [numeric("Número",values[empty])],`En cada salto se suma ${step}. Mira el número anterior al hueco.`,
+    `${values[empty-1]} + ${step} = ${values[empty]}.`);
+}
+
+function evenOrOdd() {
+  const a=random(0,10), extra=random(0,1), n=a*2+extra;
+  const shown=extra ? `(${times(2,a)}) + 1 = ${n}` : product(2,a);
+  return choose("¿El resultado es par o impar?",shown,extra?"Impar":"Par",["Par","Impar"],
+    "Un número par puede repartirse en parejas sin que sobre ningún elemento.",
+    extra ? `${n} es impar. Al añadir uno al número par ${a*2}, queda un elemento sin pareja.`
+      : `${n} es par. Todos los resultados de la tabla del 2 son pares, incluido el 0.`);
+}
+
+function zero() {
+  const a=random(2,10);
+  const [left,right]=pick([[a,0],[0,a]]);
+  return write("¿Qué ocurre al multiplicar por cero?",`${times(left,right)} = ?`,
+    [numeric("Producto",0)],"Imagina grupos con cero objetos en cada uno o que tienes cero grupos.",
+    `${product(left,right)}. Si uno de los factores es 0, el producto es 0.`);
+}
+
+function double() {
+  const a=random(2,32), b=a*2;
+  return write(`¿Cuál es el doble de ${a}?`,`${a} + ${a} = ?`,[numeric("Doble",b)],
+    "Suma el mismo número dos veces.",`${a} + ${a} = ${product(a,2)}.`);
+}
+
+function doublesInTables(halfSet) {
+  const b=pick(halfSet), a=random(2,10);
+  return write("Usa el doble del resultado para completar la segunda multiplicación.",
+    `${product(b,a)} · ${times(2*b,a)} = ?`,[numeric("Producto",2*a*b)],
+    `Si un factor se dobla, el resultado también se dobla. Suma ${a*b} dos veces.`,
+    `El doble de ${a*b} es ${2*a*b}. ${product(2*b,a)}.`);
+}
+
+function compare() {
+  const a=random(2,10), b=pick([2,4,5,8,10]);
+  const d=pick([2,4,5,8,10]);
+  const c=pick([Math.min(10,Math.max(1,Math.round(a*b/d))),random(1,10)]);
+  const left=a*b, right=c*d;
+  const answer=left===right?"=":left<right?"<":">";
+  return choose("Compara los dos productos.",`${times(b,a)} ? ${times(d,c)}`,answer,["<","=",">"],
+    "Calcula cada multiplicación por separado. Compara los resultados.",
+    `A la izquierda sale ${left} y a la derecha sale ${right}. ${left} ${answer} ${right}.`);
+}
+
+function problem3() {
+  const a=random(2,10), b=pick([2,4,5,8,10]);
+  const scenario=pick([
+    [`En el recreo hay ${a} equipos de ${b} jugadores. ¿Cuántos jugadores hay en total?`,"Jugadores"],
+    [`Hay ${a} cajas con ${b} manzanas en cada caja. ¿Cuántas manzanas hay?`,"Manzanas"],
+    [`En el gimnasio hay ${a} cestas con ${b} pelotas en cada cesta. ¿Cuántas pelotas hay?`,"Pelotas"],
+    [`Llenamos ${a} bolsas con ${b} botellas de agua en cada una. ¿Cuántas botellas usamos?`,"Botellas"]
+  ]);
+  return write(scenario[0],"",[numeric(scenario[1],a*b)],
+    "Multiplica lo que hay en cada grupo por el número de grupos.",
+    `${product(b,a)}. En total hay ${a*b} ${scenario[1].toLowerCase()}.`);
+}
+
+function pythagorean() {
+  const a=random(2,10), b=random(2,10);
+  return {
+    prompt:"Selecciona la casilla que cruza la fila y la columna indicadas.",
+    display:`Fila ${a} · Columna ${b}`,answer:`${a}-${b}`,
+    visual:{type:"table"},
+    hint:`Busca el ${a} en el margen izquierdo y el ${b} arriba. Sigue la fila y la columna hasta donde se juntan.`,
+    explanation:`La casilla contiene ${a*b}. ${product(a,b)}.`
+  };
+}
+
+function commutative() {
+  const a=random(2,10), b=pick(Array.from({length:9},(_,i)=>i+2).filter(n=>n!==a));
+  return write("Cambia el orden de los factores. Escribe el número que falta.",
+    `${times(a,b)} = ${b} × ?`,[numeric("Factor",a)],
+    "Puedes intercambiar los factores y el producto se conserva.",
+    `${times(a,b)} = ${product(b,a)}. Es la propiedad conmutativa.`);
+}
+
+function associative() {
+  const a=random(2,8), b=random(2,6), c=random(2,5);
+  const factorFirst=pick([true,false]);
+  const display=factorFirst
+    ? `(${times(a,b)}) × ${c} = ${a} × (? × ${c})`
+    : `${a} × (${times(b,c)}) = (${a} × ?) × ${c}`;
+  return write("Cambia la agrupación. Escribe el factor que falta.",display,[numeric("Factor",b)],
+    "Los tres factores siguen en el mismo orden. Solo cambian los paréntesis.",
+    `(${times(a,b)}) × ${c} = ${a} × (${times(b,c)}) = ${a*b*c}. Es la propiedad asociativa.`);
+}
+
+function order() {
+  const a=random(2,12), b=random(2,9), c=random(2,8);
+  const tasks=[
+    [`${a} + ${times(b,c)}`,a+b*c,`Primero multiplica ${times(b,c)}. Después suma ${a}.`,`${a} + ${b*c}`],
+    [`(${a} + ${b}) × ${c}`,(a+b)*c,"Resuelve primero lo que está entre paréntesis.",times(a+b,c)],
+    [`${times(a,b)} − ${c}`,a*b-c,"Haz primero la multiplicación. Luego resta.",`${a*b} − ${c}`],
+    [`${c} × (${a+b} − ${b})`,c*a,"Resuelve primero la resta que está entre paréntesis.",times(c,a)]
+  ];
+  const [expression,answer,hint,step]=pick(tasks.filter(task=>task[1]>=0));
+  return write("Resuelve la operación siguiendo el orden correcto.",`${expression} = ?`,
+    [numeric("Resultado",answer)],hint,`${expression} = ${step} = ${answer}.`);
+}
+
+function distributive(sign) {
+  const a=random(2,8), b=random(4,12), c=sign==="+"?random(2,8):random(1,b-1);
+  const total=a*(sign==="+"?b+c:b-c);
+  return write("Multiplica por separado y completa los dos productos y el resultado.",
+    `${a} × (${b} ${sign} ${c}) = ${times(a,b)} ${sign} ${times(a,c)}`,
+    [numeric("Primer producto",a*b),numeric("Segundo producto",a*c),numeric("Resultado",total)],
+    `Multiplica ${a} por ${b} y ${a} por ${c}. Después ${sign==="+"?"suma":"resta"} los dos productos.`,
+    `${a*b} ${sign} ${a*c} = ${total}.`);
+}
+
+function powers(pure) {
+  const a=random(2,178), exponent=random(1,3), digit=pure?1:random(2,9);
+  const b=digit*10**exponent;
+  return write("Calcula la multiplicación.",`${times(a,b)} = ?`,[numeric("Resultado",a*b)],
+    pure?`Multiplica por ${format(b)} añadiendo ${exponent} ${exponent===1?"cero":"ceros"} al final del número.`
+      :`Multiplica ${a} por ${digit}. Después añade ${exponent} ${exponent===1?"cero":"ceros"} al resultado.`,
+    pure?`${product(a,b)}.`:`${times(a,digit)} = ${format(a*digit)}. ${product(a,b)}.`);
+}
+
+function vertical(digitCount,guided) {
+  const a=random(digitCount===1?24:31,digitCount===1?4295:digitCount===2?920:520);
+  const b=digitCount===1 ? random(2,9) : digitCount===2 ? random(12,98) : random(105,498);
+  const digits=String(b).split("").reverse().map(Number);
+  const placeNames=["unidades","decenas","centenas"];
+  const partial=digits.map((d,i)=>a*d*10**i);
+  const fields=guided ? partial.map((n,i)=>numeric(`Parcial de ${placeNames[i]}`,n)) : [];
+  fields.push(numeric("Producto final",a*b));
+  const visual={type:"vertical",a,b};
+  const hint=digitCount===1
+    ? "Multiplica de derecha a izquierda. Si obtienes 10 o más, escribe la cifra de las unidades y lleva las decenas a la columna siguiente."
+    : `Calcula un producto parcial por cada cifra de abajo. El de las decenas vale × 10${digitCount===3?" y el de las centenas vale × 100":""}. Suma los parciales.`;
+  const explanation=digitCount===1 ? `${product(a,b)}.`
+    : `${a} × (${digits.map((d,i)=>format(d*10**i)).reverse().join(" + ")}) = ${partial.map(format).reverse().join(" + ")} = ${format(a*b)}.`;
+  return write("Resuelve la multiplicación en vertical.","",fields,hint,explanation,visual);
+}
+
+function problem4() {
+  const a=random(112,410), b=pick([random(12,35),random(101,145)]);
+  const [prompt,unit]=pick([
+    [`Un depósito tiene ${a} litros de agua. ¿Cuántos litros tienen ${b} depósitos iguales?`,"Litros"],
+    [`El almacén prepara ${b} lotes de ${a} botellas cada uno. ¿Cuántas botellas hay?`,"Botellas"],
+    [`Un huerto recoge ${a} litros de agua de lluvia cada semana. ¿Cuántos litros recoge en ${b} semanas si la cantidad es siempre la misma?`,"Litros"]
+  ]);
+  return write(prompt,"",[numeric(unit,a*b)],
+    "Multiplica lo que hay en un grupo por el número de grupos. Puedes colocar la operación en vertical.",
+    `${product(a,b)} ${unit.toLowerCase()}.`);
+}
+
+const activity = (name,make) => ({name,make});
+const tab = (title,icon,pages,activities) => ({title,icon,pages,activities});
+const courses = {
+  3: {
+    name:"Multiplica tu salud",
+    tabs:[
+      tab("Grupos iguales","•••","págs. 46–47",[
+        activity("De suma a multiplicación",groups),activity("Factores y producto",factorNames)
+      ]),
+      tab("Tabla del 2","2×","págs. 48–49",[
+        activity("Productos del 2",()=>tables([2])),activity("Series de 2 en 2",()=>series([2])),
+        activity("Pares e impares",evenOrOdd),activity("Multiplica por cero",zero),activity("Dobles",double)
+      ]),
+      tab("Tablas del 5 y del 10","5×","págs. 50–51",[
+        activity("Tabla del 5",()=>tables([5])),activity("Tabla del 10",()=>tables([10])),
+        activity("Completa la serie",()=>series([5,10])),activity("Del 5 al 10",()=>doublesInTables([5])),
+        activity("Problemas de las tablas",()=>tableWordProblem([5,10]))
+      ]),
+      tab("Tablas del 4 y del 8","8×","págs. 52–53",[
+        activity("Tabla del 4",()=>tables([4])),activity("Tabla del 8",()=>tables([8])),
+        activity("Usa el doble",()=>doublesInTables([2,4]))
+      ]),
+      tab("Práctica de las tablas","↔","págs. 54–55",[
+        activity("Tablas mezcladas",()=>tables([2,4,5,8,10])),
+        activity("Completa la serie",()=>series([2,4,5,8,10])),
+        activity("Compara los resultados",compare),activity("Problemas de grupos iguales",problem3)
+      ]),
+      tab("Repaso","✓","pág. 58",[
+        activity("Tablas mezcladas",()=>tables([2,4,5,8,10])),
+        activity("Factores y producto",factorNames),activity("Cambia el orden",commutative),
+        activity("Dobles",double),activity("Problemas",problem3)
+      ])
+    ]
+  },
+  4: {
+    name:"Cuida el agua",
+    tabs:[
+      tab("La multiplicación","×","págs. 42–43",[
+        activity("De suma a multiplicación",groups),activity("Factores y producto",factorNames),
+        activity("Tabla pitagórica",pythagorean),activity("Repasa las tablas",()=>tables([1,2,3,4,5,6,7,8,9,10]))
+      ]),
+      tab("Conmutativa y asociativa","(×)","págs. 44–45",[
+        activity("Conmutativa",commutative),activity("Asociativa",associative)
+      ]),
+      tab("Orden y distributiva","±","págs. 46–47",[
+        activity("Orden de las operaciones",order),activity("Distributiva con suma",()=>distributive("+")),
+        activity("Distributiva con resta",()=>distributive("−"))
+      ]),
+      tab("Decenas, centenas y millares","10","págs. 48–49",[
+        activity("Por 10, 100 y 1 000",()=>powers(true)),activity("Por 20, 300, 4 000…",()=>powers(false))
+      ]),
+      tab("En vertical","×1","págs. 50–51",[
+        activity("Multiplicador de una cifra",()=>vertical(1,false))
+      ]),
+      tab("Por varias cifras","×2","págs. 52–53",[
+        activity("Multiplicador de dos cifras",()=>vertical(2,false)),
+        activity("Multiplicador de tres cifras",()=>vertical(3,false)),
+        activity("Productos parciales",()=>vertical(pick([2,3]),true)),
+        activity("Problemas",problem4)
+      ]),
+      tab("Repaso","✓","pág. 56",[
+        activity("Tablas",()=>tables([1,2,3,4,5,6,7,8,9,10])),
+        activity("Propiedades",()=>pick([commutative,associative,()=>distributive(pick(["+","−"]))])()),
+        activity("Orden de las operaciones",order),activity("Decenas, centenas y millares",()=>powers(pick([true,false]))),
+        activity("Multiplicación en vertical",()=>vertical(pick([1,2,3]),false)),activity("Problemas",problem4)
+      ])
+    ]
+  }
+};
+
+function tableWordProblem(tableSet) {
+  const a=random(2,10), b=pick(tableSet);
+  return write(`En la clase hay ${a} cajas con ${b} lápices en cada una. ¿Cuántos lápices hay?`,"",
+    [numeric("Lápices",a*b)],`Hay ${b} lápices en cada caja y ${a} cajas. Multiplica la cantidad de lápices por el número de cajas.`,
+    `${product(b,a)}. Hay ${a*b} lápices.`);
+}
+
+const byId = id => document.getElementById(id);
+const tabsElement = byId("tabs");
+const grades = [...document.querySelectorAll(".grade-btn")];
+const mode = byId("mode");
+const answers = byId("answers");
+const question = byId("question");
+const visual = byId("visual");
+const feedback = byId("feedback");
+const hint = byId("hint");
+const hintButton = byId("hint-btn");
+const checkButton = byId("check");
+const nextButton = byId("next");
+
+const makeState = () => ({
+  selectedTab:0,
+  tabs:[]
+});
+const gradeState = {3:makeState(),4:makeState()};
+let grade = null;
+
+function activeTopic() {
+  return courses[grade].tabs[gradeState[grade].selectedTab];
+}
+
+function activeProgress() {
+  const state = gradeState[grade];
+  return state.tabs[state.selectedTab] ??= {
+    total:0, mode:"all", mix:[], round:null
+  };
+}
+
+function makeRound(progress) {
+  const activities = activeTopic().activities;
+  if (progress.mode==="all" && !progress.mix.length) {
+    progress.mix=activities.map((_,i)=>i);
+  }
+  const activity = activities[progress.mode==="all" ? progress.mix.shift() : Number(progress.mode)];
+  const previous = progress.round?.exercise;
+  let exercise = activity.make();
+  for (let tries=0; tries<6 && previous && exercise.prompt===previous.prompt &&
+    exercise.display===previous.display && exercise.visual?.a===previous.visual?.a &&
+    exercise.visual?.b===previous.visual?.b; tries++) {
+    exercise=activity.make();
+  }
+  const topic = `${grade}.º · ${activeTopic().title}`;
+  const operation = exercise.visual?.type === "vertical"
+    ? times(exercise.visual.a, exercise.visual.b) : exercise.display;
+  window.Aula?.begin(topic, [exercise.prompt, operation].filter(Boolean).join(" · "), activity.name);
+  progress.round = {
+    exercise, topic, values:[], activeField:0, selected:null, wrong:[],
+    hintOpen:false, solved:false, message:"", tone:""
+  };
+}
+
+function node(tag,className,text) {
+  const item=document.createElement(tag);
+  if (className) item.className=className;
+  if (text!==undefined) item.textContent=text;
+  return item;
+}
+
+function setGrade(nextGrade) {
+  grade=nextGrade;
+  document.body.dataset.grade=grade;
+  byId("unit").textContent=`Unidad 3 · ${grade}.º de Primaria`;
+  byId("unit-note").textContent=`${courses[grade].name} · Elige un contenido y practica a tu ritmo.`;
+  grades.forEach(button=>button.setAttribute("aria-pressed",Number(button.dataset.grade)===grade));
+  renderTabs();
+  renderTopic();
+}
+
+function renderTabs() {
+  const buttons = courses[grade].tabs.map((tab,index)=>{
+    const button=node("button","tab");
+    button.type="button";
+    button.id=`tab-${grade}-${index}`;
+    button.setAttribute("role","tab");
+    button.setAttribute("aria-controls","exercise");
+    const icon=node("span","tab-icon",tab.icon);
+    icon.setAttribute("aria-hidden","true");
+    button.append(icon,node("span","tab-name",tab.title),node("span","tab-count"));
+    button.addEventListener("click",()=>selectTopic(index));
+    button.addEventListener("keydown",event=>{
+      const offsets={ArrowDown:1,ArrowRight:1,ArrowUp:-1,ArrowLeft:-1};
+      const count=courses[grade].tabs.length;
+      const target=event.key==="Home" ? 0 : event.key==="End" ? count-1
+        : event.key in offsets ? (index+offsets[event.key]+count)%count : null;
+      if (target===null) return;
+      event.preventDefault();
+      selectTopic(target);
+      tabsElement.children[target].focus();
+    });
+    return button;
+  });
+  tabsElement.replaceChildren(...buttons);
+  updateTabLabels();
+}
+
+function updateTabLabels() {
+  const state=gradeState[grade];
+  [...tabsElement.children].forEach((button,index)=>{
+    const active=index===state.selectedTab;
+    const count=state.tabs[index]?.total ?? 0;
+    button.tabIndex=active ? 0 : -1;
+    button.setAttribute("aria-selected",active);
+    const countLabel=button.lastElementChild;
+    countLabel.textContent=count ? `✓ ${count}` : "";
+    countLabel.setAttribute("aria-hidden","true");
+    button.setAttribute("aria-label",count ? `${courses[grade].tabs[index].title}, ${count} ${count===1?"acierto":"aciertos"}` : courses[grade].tabs[index].title);
+  });
+}
+
+function selectTopic(index) {
+  if (gradeState[grade].selectedTab===index) return;
+  gradeState[grade].selectedTab=index;
+  updateTabLabels();
+  renderTopic();
+}
+
+function renderTopic() {
+  const current=activeTopic();
+  const progress=activeProgress();
+  byId("exercise").setAttribute("aria-labelledby",tabsElement.children[gradeState[grade].selectedTab].id);
+  byId("topic").textContent=current.title;
+  byId("topic-meta").textContent=`Libro · ${current.pages}`;
+  const options=current.activities.map((item,i)=>new Option(item.name,String(i)));
+  if (options.length>1) options.unshift(new Option("Tipos de reto variados","all"));
+  mode.replaceChildren(...options);
+  if (options.length===1) progress.mode="0";
+  mode.value=progress.mode;
+  if (!progress.round) makeRound(progress);
+  renderRound();
+}
+
+function updateScore() {
+  const n=activeProgress().total;
+  byId("score").textContent=`${n} ${n===1?"acierto":"aciertos"}`;
+}
+
+function renderRound() {
+  const round=activeProgress().round;
+  const exercise=round.exercise;
+  window.Aula?.activate(round.topic);
+  question.textContent=exercise.prompt;
+  visual.replaceChildren();
+  answers.replaceChildren();
+  if (exercise.display) visual.append(node("div","display",exercise.display));
+  if (exercise.visual?.type==="dots") drawDots(exercise.visual);
+  if (exercise.visual?.type==="vertical") drawVertical(exercise.visual);
+  if (exercise.visual?.type==="table") drawPythagorean(round);
+  if (exercise.options) {
+    const grid=node("div","answer-grid");
+    exercise.options.forEach(value=>grid.append(choiceButton(value,value,"option",round)));
+    answers.append(grid);
+  }
+  if (exercise.fields) drawFields(round);
+  updateRoundControls();
+  updateScore();
+}
+
+function drawDots({count,size}) {
+  const dots=node("div","dots");
+  dots.setAttribute("role","img");
+  dots.setAttribute("aria-label",`${count} grupos de ${size} cuadrados cada uno`);
+  for (let i=0;i<count;i++) {
+    const group=node("span","dot-group");
+    for (let n=0;n<size;n++) group.append(node("span","dot"));
+    dots.append(group);
+  }
+  visual.append(dots);
+}
+
+function drawVertical({a,b}) {
+  const work=node("div","number-work");
+  work.setAttribute("role","img");
+  work.setAttribute("aria-label",times(a,b));
+  work.append(node("span","",a),node("span","",`× ${b}`));
+  visual.append(work);
+}
+
+function drawPythagorean(round) {
+  const wrapper=node("div","table-wrapper");
+  const table=node("table","pythagorean");
+  const caption=node("caption","sr-only","Tabla pitagórica del 1 al 10");
+  const header=node("thead");
+  const headRow=node("tr");
+  headRow.append(node("th","","×"));
+  for (let n=1;n<=10;n++) {
+    const th=node("th","",n);
+    th.scope="col";
+    headRow.append(th);
+  }
+  header.append(headRow);
+  const body=node("tbody");
+  for (let row=1;row<=10;row++) {
+    const tr=node("tr"), heading=node("th","",row);
+    heading.scope="row";
+    tr.append(heading);
+    for (let col=1;col<=10;col++) {
+      const cell=node("td");
+      const button=choiceButton(`${row}-${col}`,String(row*col),"cell",round);
+      button.setAttribute("aria-label",`Fila ${row}, columna ${col}, producto ${row*col}`);
+      tr.append(cell);
+      cell.append(button);
+    }
+    body.append(tr);
+  }
+  table.append(caption,header,body);
+  wrapper.append(table);
+  answers.append(wrapper);
+}
+
+function choiceButton(value,label,className,round) {
+  const button=node("button",className,label);
+  button.type="button";
+  button.dataset.value=value;
+  button.addEventListener("click",()=>{
+    if (round.solved) return;
+    round.selected=value;
+    round.wrong=[];
+    round.message="";
+    updateRoundControls();
+  });
+  return button;
+}
+
+function drawFields(round) {
+  const workspace=node("div","numeric-workspace");
+  const fields=node("div","fields");
+  const inputs=round.exercise.fields.map((field,index)=>{
+    const label=node("label","answer-field");
+    const input=node("input","answer-input");
+    input.type="text";
+    input.inputMode="none";
+    input.autocomplete="off";
+    input.spellcheck=false;
+    input.maxLength=14;
+    input.value=round.values[index] ?? "";
+    input.addEventListener("focus",()=>{
+      round.activeField=index;
+      updateRoundControls();
+    });
+    input.addEventListener("input",()=>setFieldValue(round,index,input,input.value));
+    label.append(node("span","",field.label),input);
+    fields.append(label);
+    return input;
+  });
+  workspace.append(fields,drawKeypad(round,inputs));
+  answers.append(workspace);
+}
+
+function setFieldValue(round,index,input,value) {
+  if (round.solved || round.values[index]===value) return;
+  if (input.value!==value) input.value=value;
+  round.values[index]=value;
+  round.wrong=round.wrong.filter(item=>item!==index);
+  round.message="";
+  updateRoundControls();
+}
+
+function drawKeypad(round,inputs) {
+  const keypad=node("div","keypad");
+  keypad.setAttribute("role","group");
+  keypad.setAttribute("aria-label","Teclado de calculadora");
+  if (inputs.length>1) {
+    const target=node("p","keypad-target");
+    target.setAttribute("aria-live","polite");
+    keypad.append(target);
+  }
+  const keys=["7","8","9","4","5","6","1","2","3","C","0","⌫"];
+  for (const key of keys) {
+    const label={C:"Borrar todo","⌫":"Borrar la última cifra"}[key];
+    const button=node("button",label?"keypad-key is-utility":"keypad-key",key);
+    button.type="button";
+    if (label) {
+      button.setAttribute("aria-label",label);
+      button.title=label;
+    }
+    button.addEventListener("click",()=>{
+      const index=round.activeField;
+      const input=inputs[index];
+      const current=input.value;
+      const value=key==="C" ? "" : key==="⌫" ? current.slice(0,-1) : (current+key).slice(0,input.maxLength);
+      setFieldValue(round,index,input,value);
+    });
+    keypad.append(button);
+  }
+  if (inputs.length>1) {
+    const next=node("button","keypad-key keypad-next","Siguiente casilla");
+    next.type="button";
+    next.addEventListener("click",()=>inputs[(round.activeField+1)%inputs.length].focus());
+    keypad.append(next);
+  }
+  return keypad;
+}
+
+function updateRoundControls() {
+  const round=activeProgress().round;
+  answers.querySelectorAll("button[data-value]").forEach(button=>{
+    const selected=button.dataset.value===round.selected;
+    button.setAttribute("aria-pressed",selected);
+    button.classList.toggle("is-right",selected && round.solved);
+    button.classList.toggle("is-wrong",selected && round.wrong.length>0);
+    button.disabled=round.solved;
+  });
+  answers.querySelectorAll("input").forEach((input,index)=>{
+    input.readOnly=round.solved;
+    input.classList.toggle("is-active",index===round.activeField);
+    input.setAttribute("aria-invalid",round.wrong.includes(index));
+  });
+  answers.querySelectorAll(".keypad-key").forEach(button=>{button.disabled=round.solved;});
+  const target=answers.querySelector(".keypad-target");
+  if (target) {
+    const text=`Casilla activa · ${round.exercise.fields[round.activeField].label}`;
+    if (target.textContent!==text) target.textContent=text;
+  }
+  feedback.className=`feedback ${round.tone}`;
+  if (feedback.textContent!==round.message) feedback.textContent=round.message;
+  const hintText=round.hintOpen ? round.exercise.hint : "";
+  if (hint.textContent!==hintText) hint.textContent=hintText;
+  hintButton.setAttribute("aria-expanded",round.hintOpen);
+  hintButton.textContent=round.hintOpen ? "Ocultar pista" : "Ver pista";
+  checkButton.hidden=round.solved;
+  nextButton.textContent=round.solved ? "Siguiente reto" : "Otro reto";
+}
+
+function parseAnswer(raw) {
+  const value=String(raw ?? "").trim();
+  if (!/^(?:\d+|\d{1,3}(?:[.\s]\d{3})+)$/u.test(value)) return null;
+  return Number(value.replace(/[.\s]/gu,""));
+}
+
+function checkAnswer(event) {
+  event.preventDefault();
+  const progress=activeProgress(), round=progress.round;
+  if (round.solved) return;
+  const exercise=round.exercise;
+  let message;
+  let submitted;
+  if (exercise.fields) {
+    const parsed=exercise.fields.map((_,i)=>parseAnswer(round.values[i]));
+    if (parsed.includes(null)) {
+      round.wrong=parsed.flatMap((value,index)=>value===null?[index]:[]);
+      message=parsed.some((value,i)=>value===null && String(round.values[i] ?? "").trim())
+        ? "Escribe números enteros en las casillas marcadas."
+        : "Completa todas las casillas para comprobar.";
+    } else {
+      round.wrong=exercise.fields.flatMap((field,i)=>field.answer===parsed[i]?[]:[i]);
+      submitted = exercise.fields.map((field, i) => `${field.label}: ${parsed[i]}`).join(" · ");
+    }
+  } else {
+    if (round.selected===null) message="Selecciona una respuesta para comprobar.";
+    if (round.selected !== null) {
+      submitted = String(round.selected);
+      if (exercise.visual?.type === "table") {
+        const [row, column] = submitted.split("-");
+        submitted = `Fila ${row}, columna ${column} (${Number(row) * Number(column)})`;
+      }
+    }
+    round.wrong=round.selected!==null && round.selected!==exercise.answer ? [0] : [];
+    if (exercise.reversed && round.selected===exercise.reversed) {
+      message="El producto coincide. Para representar esa suma, escribe primero el número que se repite.";
+    }
+  }
+  if (submitted !== undefined) window.Aula?.attempt(round.topic, !message && !round.wrong.length, submitted);
+  if (message || round.wrong.length) {
+    round.tone="try";
+    round.message=message ?? (exercise.fields?.length>1
+      ? "Revisa los resultados de las casillas marcadas. Puedes mirar la pista."
+      : "Prueba otra vez. Si te hace falta, abre la pista.");
+  } else {
+    round.solved=true;
+    round.tone="good";
+    round.message=`¡Correcto! ${exercise.explanation}`;
+    progress.total++;
+    updateScore();
+    updateTabLabels();
+  }
+  updateRoundControls();
+  if (round.solved) nextButton.focus();
+  else if (message && exercise.fields) answers.querySelectorAll("input")[round.wrong[0]]?.focus();
+}
+
+function nextRound() {
+  makeRound(activeProgress());
+  renderRound();
+  question.focus();
+}
+
+document.querySelectorAll(".welcome-course").forEach(button=>button.addEventListener("click",()=>{
+  setGrade(Number(button.dataset.grade));
+  byId("welcome").hidden=true;
+  byId("practice-header").hidden=false;
+  byId("practice").hidden=false;
+  window.scrollTo(0,0);
+  byId("title").focus({preventScroll:true});
+}));
+grades.forEach(button=>button.addEventListener("click",()=>{
+  if (Number(button.dataset.grade)!==grade) setGrade(Number(button.dataset.grade));
+}));
+mode.addEventListener("change",()=>{
+  const progress=activeProgress();
+  progress.mode=mode.value;
+  if (mode.value==="all") progress.mix=[];
+  makeRound(progress);
+  renderRound();
+});
+byId("form").addEventListener("submit",checkAnswer);
+hintButton.addEventListener("click",()=>{
+  const round=activeProgress().round;
+  round.hintOpen=!round.hintOpen;
+  if (round.hintOpen) window.Aula?.hint(round.topic);
+  updateRoundControls();
+});
+nextButton.addEventListener("click",nextRound);
+byId("welcome").hidden=false;
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+node_modules/
+.wrangler/
+data/*.json
+data/*.tmp
+.DS_Store
+mi-aula-offline.html

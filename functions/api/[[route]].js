@@ -1,0 +1,564 @@
+import {
+  ensureDb,
+  getConfig,
+  getApps,
+  getStudents,
+  hashPin,
+  randomHex,
+  randomToken,
+  generateShortCode,
+  parseCookies,
+  isTeacherAuthenticated,
+  jsonResponse,
+  safeExternalUrl,
+  csvEscape,
+  summarizeSessionRow,
+  buildTasksFromDbEvents
+} from '../_lib/db.js';
+
+async function readJson(request) {
+  try {
+    return await request.json();
+  } catch {
+    return {};
+  }
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  const db = env.DB;
+
+  try {
+    await ensureDb(db);
+
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+    const method = request.method.toUpperCase();
+    const isSecure = url.protocol === 'https:';
+    const cookieFlags = `HttpOnly; Path=/; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+
+    // ---- PUBLIC API ----
+    if (method === 'GET' && pathname === '/api/apps') {
+      const cfg = await getConfig(db);
+      const showAll = url.searchParams.get('all') === '1' && await isTeacherAuthenticated(db, request, cfg);
+      const apps = await getApps(db, !showAll);
+      return jsonResponse({
+        aulaName: cfg.aulaName,
+        subtitle: cfg.subtitle,
+        apps
+      });
+    }
+
+    if (method === 'GET' && pathname === '/api/profile') {
+      const cfg = await getConfig(db);
+      const roster = await getStudents(db);
+      return jsonResponse({
+        aulaName: cfg.aulaName,
+        sessionTtlHours: cfg.sessionTtlHours,
+        students: roster.map(s => s.name),
+        roster
+      });
+    }
+
+    if (method === 'POST' && pathname === '/api/sessions') {
+      const body = await readJson(request);
+      const appId = String(body.app || '').trim();
+      const appRow = await db.prepare('SELECT id, title, built_in FROM apps WHERE id = ?').bind(appId).first();
+      if (!appRow || !appRow.built_in) {
+        return jsonResponse({ error: 'Aplicación no válida.' }, 400);
+      }
+
+      const students = Array.isArray(body.students)
+        ? [...new Set(body.students.map(s => String(s).trim()).filter(Boolean))].slice(0, 12)
+        : [];
+      if (!students.length) {
+        return jsonResponse({ error: 'Selecciona al menos un alumno o alumna.' }, 400);
+      }
+
+      const cfg = await getConfig(db);
+      const token = randomToken(18);
+      const code = await generateShortCode(db);
+      const now = new Date();
+      const ttlHours = cfg.sessionTtlHours || 8;
+      const expiresAt = new Date(now.getTime() + ttlHours * 3600 * 1000).toISOString();
+      const nowIso = now.toISOString();
+
+      await db.prepare(
+        `INSERT INTO sessions (token, code, app_id, app_title, students_json, created_at, expires_at, last_activity_at, ended_at, active_ms)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0)`
+      ).bind(token, code, appRow.id, appRow.title, JSON.stringify(students), nowIso, expiresAt, nowIso).run();
+
+      return jsonResponse({
+        token,
+        code,
+        app: appRow.id,
+        appTitle: appRow.title,
+        students,
+        expiresAt,
+        ttlHours
+      }, 201);
+    }
+
+    if (method === 'GET' && pathname === '/api/sessions/resolve') {
+      const rawCode = String(url.searchParams.get('code') || '').trim().toUpperCase().replace(/\s+/g, '');
+      const normalized = rawCode.includes('-')
+        ? rawCode
+        : (rawCode.length === 6 ? `${rawCode.slice(0, 3)}-${rawCode.slice(3)}` : rawCode);
+
+      const session = await db.prepare('SELECT * FROM sessions WHERE code = ?').bind(normalized).first();
+      if (!session) {
+        return jsonResponse({ error: 'No encontramos ninguna sesión con ese código.' }, 404);
+      }
+      if (session.ended_at) {
+        return jsonResponse({ error: 'Esta sesión ya ha terminado.' }, 410);
+      }
+      if (new Date(session.expires_at).getTime() < Date.now()) {
+        return jsonResponse({ error: 'Este código ha caducado. Pide uno nuevo al docente.' }, 410);
+      }
+
+      let students = [];
+      try { students = JSON.parse(session.students_json || '[]'); } catch {}
+
+      return jsonResponse({
+        code: session.code,
+        app: session.app_id,
+        appTitle: session.app_title,
+        students,
+        url: `/apps/${encodeURIComponent(session.app_id)}/index.html?aula=1#sesion=${encodeURIComponent(session.token)}`
+      });
+    }
+
+    if (method === 'GET' && pathname === '/api/sessions/info') {
+      const token = String(url.searchParams.get('token') || '').trim();
+      const session = await db.prepare('SELECT code, app_id, app_title, students_json, expires_at, ended_at FROM sessions WHERE token = ?').bind(token).first();
+      if (!session) {
+        return jsonResponse({ error: 'Sesión no encontrada.' }, 404);
+      }
+      let students = [];
+      try { students = JSON.parse(session.students_json || '[]'); } catch {}
+
+      return jsonResponse({
+        code: session.code,
+        app: session.app_id,
+        appTitle: session.app_title,
+        students,
+        expiresAt: session.expires_at,
+        endedAt: session.ended_at || null
+      });
+    }
+
+    if (method === 'POST' && pathname === '/api/events') {
+      const body = await readJson(request);
+      const token = String(body.token || '').trim();
+      const incoming = Array.isArray(body.events) ? body.events : [];
+
+      const session = await db.prepare('SELECT token, expires_at, ended_at, active_ms FROM sessions WHERE token = ?').bind(token).first();
+      if (!session) {
+        return jsonResponse({ error: 'La sesión no existe o ha sido eliminada.' }, 403);
+      }
+      if (session.ended_at) {
+        return jsonResponse({ error: 'Esta sesión ya se cerró.' }, 403);
+      }
+      if (new Date(session.expires_at).getTime() < Date.now()) {
+        return jsonResponse({ error: 'El tiempo de la sesión ha expirado.' }, 403);
+      }
+
+      const nowIso = new Date().toISOString();
+      let maxActiveMs = Number(session.active_ms) || 0;
+      let endedAt = null;
+      const saved = [];
+      const statements = [];
+
+      for (const ev of incoming.slice(0, 50)) {
+        if (!ev || !ev.id) continue;
+        const id = String(ev.id).slice(0, 100);
+        saved.push(id);
+
+        const kind = String(ev.kind || 'heartbeat').slice(0, 32);
+        const activeMs = Math.max(0, Number(ev.activeMs) || 0);
+        if (activeMs > maxActiveMs) maxActiveMs = activeMs;
+        if (kind === 'end') endedAt = nowIso;
+
+        if (kind !== 'heartbeat') {
+          statements.push(
+            db.prepare(
+              `INSERT OR IGNORE INTO events
+               (id, session_token, kind, task_id, mode, level, prompt, answer, correct, assisted, task_ms, active_ms, client_at, received_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).bind(
+              id,
+              token,
+              kind,
+              String(ev.taskId || 'session').slice(0, 100),
+              String(ev.mode || '').slice(0, 64),
+              String(ev.level || '').slice(0, 120),
+              String(ev.prompt || '').slice(0, 500),
+              String(ev.answer || '').slice(0, 1200),
+              ev.correct === null || ev.correct === undefined ? null : (ev.correct ? 1 : 0),
+              ev.assisted ? 1 : 0,
+              Math.max(0, Number(ev.taskMs) || 0),
+              activeMs,
+              String(ev.clientAt || nowIso),
+              nowIso
+            )
+          );
+        }
+      }
+
+      statements.push(
+        db.prepare(
+          `UPDATE sessions
+           SET active_ms = ?, last_activity_at = ?, ended_at = COALESCE(?, ended_at)
+           WHERE token = ?`
+        ).bind(maxActiveMs, nowIso, endedAt, token)
+      );
+
+      if (statements.length) {
+        await db.batch(statements);
+      }
+
+      return jsonResponse({ saved });
+    }
+
+    // ---- TEACHER AUTH ----
+    if (method === 'GET' && pathname === '/api/teacher/status') {
+      const cfg = await getConfig(db);
+      const authenticated = await isTeacherAuthenticated(db, request, cfg);
+      return jsonResponse({
+        authenticated,
+        pinEnabled: cfg.pinEnabled,
+        isDefaultPin: cfg.isDefaultPin,
+        aulaName: cfg.aulaName
+      });
+    }
+
+    if (method === 'POST' && pathname === '/api/teacher/login') {
+      const cfg = await getConfig(db);
+      const body = await readJson(request);
+      const pin = String(body.pin || '').trim();
+      const provided = await hashPin(pin, cfg.pinSalt);
+
+      if (cfg.pinEnabled && provided !== cfg.pinHash) {
+        return jsonResponse({ error: 'PIN incorrecto. Inténtalo de nuevo.' }, 401);
+      }
+
+      const sid = randomToken(24);
+      const expiresAt = Date.now() + 12 * 3600 * 1000;
+      await db.batch([
+        db.prepare('DELETE FROM teacher_tokens WHERE expires_at < ?').bind(Date.now()),
+        db.prepare('INSERT INTO teacher_tokens (sid, expires_at) VALUES (?, ?)').bind(sid, expiresAt)
+      ]);
+
+      return jsonResponse(
+        { ok: true },
+        200,
+        { 'Set-Cookie': `aula_docente=${sid}; ${cookieFlags}; Max-Age=43200` }
+      );
+    }
+
+    if (method === 'POST' && pathname === '/api/teacher/logout') {
+      const cookies = parseCookies(request);
+      if (cookies.aula_docente) {
+        await db.prepare('DELETE FROM teacher_tokens WHERE sid = ?').bind(cookies.aula_docente).run();
+      }
+      return jsonResponse(
+        { ok: true },
+        200,
+        { 'Set-Cookie': `aula_docente=; ${cookieFlags}; Max-Age=0` }
+      );
+    }
+
+    // ---- PROTECTED TEACHER ENDPOINTS ----
+    if (pathname.startsWith('/api/teacher/')) {
+      const cfg = await getConfig(db);
+      const authed = await isTeacherAuthenticated(db, request, cfg);
+      if (!authed) {
+        return jsonResponse({ error: 'Inicia sesión con el PIN docente.' }, 401);
+      }
+
+      if (method === 'GET' && pathname === '/api/teacher/dashboard') {
+        const [students, apps, sessionsRes, eventsRes] = await Promise.all([
+          getStudents(db),
+          getApps(db, false),
+          db.prepare('SELECT * FROM sessions ORDER BY created_at DESC LIMIT 300').all(),
+          db.prepare('SELECT session_token, kind, task_id, correct FROM events').all()
+        ]);
+
+        const eventsByToken = new Map();
+        for (const ev of eventsRes.results || []) {
+          if (!eventsByToken.has(ev.session_token)) eventsByToken.set(ev.session_token, []);
+          eventsByToken.get(ev.session_token).push(ev);
+        }
+
+        const summaries = (sessionsRes.results || []).map(row =>
+          summarizeSessionRow(row, eventsByToken.get(row.token) || [])
+        );
+
+        let totalAttempts = 0, totalCorrect = 0, totalActiveMs = 0, activeSessions = 0;
+        const byApp = {};
+        const byStudent = {};
+
+        for (const st of students) {
+          byStudent[st.name] = { name: st.name, course: st.course, sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} };
+        }
+
+        for (const s of summaries) {
+          totalAttempts += s.attempts;
+          totalCorrect += s.correct;
+          totalActiveMs += s.activeMs;
+          if (s.status === 'activa') activeSessions++;
+
+          if (!byApp[s.app]) {
+            byApp[s.app] = { app: s.app, title: s.appTitle, sessions: 0, attempts: 0, correct: 0, activeMs: 0 };
+          }
+          byApp[s.app].sessions++;
+          byApp[s.app].attempts += s.attempts;
+          byApp[s.app].correct += s.correct;
+          byApp[s.app].activeMs += s.activeMs;
+
+          for (const studentName of s.students) {
+            if (!byStudent[studentName]) {
+              byStudent[studentName] = { name: studentName, course: '', sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} };
+            }
+            const rec = byStudent[studentName];
+            rec.sessions++;
+            rec.attempts += s.attempts;
+            rec.correct += s.correct;
+            rec.hints += s.hints;
+            rec.activeMs += s.activeMs;
+            if (!rec.apps[s.app]) rec.apps[s.app] = { title: s.appTitle, attempts: 0, correct: 0 };
+            rec.apps[s.app].attempts += s.attempts;
+            rec.apps[s.app].correct += s.correct;
+          }
+        }
+
+        return jsonResponse({
+          config: {
+            aulaName: cfg.aulaName,
+            subtitle: cfg.subtitle,
+            pinEnabled: cfg.pinEnabled,
+            isDefaultPin: cfg.isDefaultPin,
+            sessionTtlHours: cfg.sessionTtlHours
+          },
+          metrics: {
+            totalSessions: summaries.length,
+            activeSessions,
+            totalAttempts,
+            totalCorrect,
+            accuracy: totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : null,
+            totalActiveMs
+          },
+          byApp: Object.values(byApp),
+          byStudent: Object.values(byStudent),
+          students,
+          apps,
+          sessions: summaries
+        });
+      }
+
+      if (method === 'GET' && pathname.startsWith('/api/teacher/sessions/')) {
+        const token = decodeURIComponent(pathname.slice('/api/teacher/sessions/'.length));
+        const session = await db.prepare('SELECT * FROM sessions WHERE token = ?').bind(token).first();
+        if (!session) return jsonResponse({ error: 'Sesión no encontrada.' }, 404);
+        const { results: evs } = await db.prepare('SELECT * FROM events WHERE session_token = ? ORDER BY rowid ASC').bind(token).all();
+        return jsonResponse({
+          summary: summarizeSessionRow(session, evs || []),
+          tasks: buildTasksFromDbEvents(evs || [])
+        });
+      }
+
+      if (method === 'DELETE' && pathname.startsWith('/api/teacher/sessions/')) {
+        const token = decodeURIComponent(pathname.slice('/api/teacher/sessions/'.length));
+        const exists = await db.prepare('SELECT 1 FROM sessions WHERE token = ?').bind(token).first();
+        if (!exists) return jsonResponse({ error: 'Sesión no encontrada.' }, 404);
+        await db.batch([
+          db.prepare('DELETE FROM events WHERE session_token = ?').bind(token),
+          db.prepare('DELETE FROM sessions WHERE token = ?').bind(token)
+        ]);
+        return jsonResponse({ ok: true });
+      }
+
+      if (method === 'PUT' && pathname === '/api/teacher/students') {
+        const body = await readJson(request);
+        if (!Array.isArray(body.students)) {
+          return jsonResponse({ error: 'Lista de alumnado no válida.' }, 400);
+        }
+        const seen = new Set();
+        const cleaned = [];
+        for (const item of body.students) {
+          const name = String(typeof item === 'string' ? item : item?.name || '').trim().slice(0, 60);
+          const course = String(typeof item === 'string' ? '' : item?.course || '').trim().slice(0, 20);
+          if (!name) continue;
+          const key = name.toLocaleLowerCase('es');
+          if (seen.has(key)) continue;
+          seen.add(key);
+          cleaned.push({ name, course });
+        }
+
+        const stmts = [db.prepare('DELETE FROM students')];
+        cleaned.forEach((st, idx) => {
+          stmts.push(db.prepare('INSERT INTO students (name, course, position) VALUES (?, ?, ?)').bind(st.name, st.course, idx));
+        });
+        await db.batch(stmts);
+        return jsonResponse({ students: cleaned });
+      }
+
+      if (method === 'POST' && pathname === '/api/teacher/apps') {
+        const body = await readJson(request);
+        const title = String(body.title || '').trim().slice(0, 80);
+        const area = String(body.area || 'Otras áreas').trim().slice(0, 40);
+        const cycle = String(body.cycle || '2.º ciclo').trim().slice(0, 30);
+        const unit = String(body.unit || '').trim().slice(0, 30);
+        const description = String(body.description || '').trim().slice(0, 240);
+        if (!title) return jsonResponse({ error: 'Escribe el nombre de la aplicación.' }, 400);
+
+        let externalUrl;
+        try {
+          externalUrl = safeExternalUrl(body.externalUrl);
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
+
+        const id = 'custom-' + randomHex(5);
+        await db.prepare(
+          `INSERT INTO apps (id, title, area, cycle, unit, description, cover_type, external_url, visible, built_in, position)
+           VALUES (?, ?, ?, ?, ?, ?, 'custom', ?, 1, 0, 100)`
+        ).bind(id, title, area, cycle, unit, description || 'Recurso externo añadido por el docente.', externalUrl).run();
+
+        return jsonResponse({
+          app: {
+            id,
+            title,
+            area,
+            cycle,
+            unit,
+            description: description || 'Recurso externo añadido por el docente.',
+            coverType: 'custom',
+            externalUrl,
+            visible: true,
+            builtIn: false
+          }
+        }, 201);
+      }
+
+      if (method === 'PATCH' && pathname.startsWith('/api/teacher/apps/')) {
+        const id = decodeURIComponent(pathname.slice('/api/teacher/apps/'.length));
+        const appRow = await db.prepare('SELECT * FROM apps WHERE id = ?').bind(id).first();
+        if (!appRow) return jsonResponse({ error: 'Aplicación no encontrada.' }, 404);
+        const body = await readJson(request);
+        const visible = typeof body.visible === 'boolean' ? (body.visible ? 1 : 0) : appRow.visible;
+        await db.prepare('UPDATE apps SET visible = ? WHERE id = ?').bind(visible, id).run();
+        return jsonResponse({ app: { ...appRow, visible: Boolean(visible) } });
+      }
+
+      if (method === 'DELETE' && pathname.startsWith('/api/teacher/apps/')) {
+        const id = decodeURIComponent(pathname.slice('/api/teacher/apps/'.length));
+        const appRow = await db.prepare('SELECT id, built_in FROM apps WHERE id = ?').bind(id).first();
+        if (!appRow) return jsonResponse({ error: 'Aplicación no encontrada.' }, 404);
+        if (appRow.built_in) {
+          return jsonResponse({ error: 'Las aplicaciones integradas solo se pueden ocultar, no eliminar.' }, 400);
+        }
+        await db.prepare('DELETE FROM apps WHERE id = ?').bind(id).run();
+        return jsonResponse({ ok: true });
+      }
+
+      if (method === 'PUT' && pathname === '/api/teacher/config') {
+        const body = await readJson(request);
+        const updates = [];
+
+        if (typeof body.aulaName === 'string' && body.aulaName.trim()) {
+          updates.push(['aulaName', body.aulaName.trim().slice(0, 60)]);
+        }
+        if (typeof body.subtitle === 'string') {
+          updates.push(['subtitle', body.subtitle.trim().slice(0, 80)]);
+        }
+        if (typeof body.pinEnabled === 'boolean') {
+          updates.push(['pinEnabled', body.pinEnabled ? 'true' : 'false']);
+        }
+        if (body.sessionTtlHours !== undefined) {
+          updates.push(['sessionTtlHours', String(Math.max(1, Math.min(24, Number(body.sessionTtlHours) || 8)))]);
+        }
+        if (typeof body.newPin === 'string' && body.newPin.trim().length >= 4) {
+          const newSalt = randomHex(16);
+          const newHash = await hashPin(body.newPin.trim(), newSalt);
+          updates.push(['pinSalt', newSalt], ['pinHash', newHash], ['isDefaultPin', 'false']);
+        }
+
+        if (updates.length) {
+          await db.batch(updates.map(([k, v]) =>
+            db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').bind(k, v)
+          ));
+        }
+
+        const nextCfg = await getConfig(db);
+        return jsonResponse({
+          ok: true,
+          config: {
+            aulaName: nextCfg.aulaName,
+            subtitle: nextCfg.subtitle,
+            pinEnabled: nextCfg.pinEnabled,
+            isDefaultPin: nextCfg.isDefaultPin,
+            sessionTtlHours: nextCfg.sessionTtlHours
+          }
+        });
+      }
+
+      if (method === 'GET' && pathname === '/api/teacher/export.csv') {
+        const studentFilter = url.searchParams.get('student') || '';
+        const appFilter = url.searchParams.get('app') || '';
+
+        const { results: sessions } = await db.prepare('SELECT * FROM sessions ORDER BY created_at DESC').all();
+        const { results: allEvents } = await db.prepare(
+          `SELECT * FROM events WHERE kind IN ('attempt', 'reveal') ORDER BY rowid ASC`
+        ).all();
+
+        const eventsByToken = new Map();
+        for (const ev of allEvents || []) {
+          if (!eventsByToken.has(ev.session_token)) eventsByToken.set(ev.session_token, []);
+          eventsByToken.get(ev.session_token).push(ev);
+        }
+
+        const rows = [
+          ['Fecha', 'Código sesión', 'Aplicación', 'Participantes', 'Modo', 'Nivel', 'Actividad', 'Respuesta', 'Acierto', 'Con ayuda', 'Tiempo (s)'].join(';')
+        ];
+
+        for (const s of sessions || []) {
+          if (appFilter && s.app_id !== appFilter) continue;
+          let students = [];
+          try { students = JSON.parse(s.students_json || '[]'); } catch {}
+          if (studentFilter && !students.includes(studentFilter)) continue;
+
+          for (const ev of eventsByToken.get(s.token) || []) {
+            rows.push([
+              ev.client_at || s.created_at,
+              s.code,
+              s.app_title,
+              students.join(' + '),
+              ev.mode,
+              ev.level,
+              ev.prompt,
+              ev.kind === 'reveal' ? '[Solución revelada]' : ev.answer,
+              ev.kind === 'reveal' ? 'Revelado' : (ev.correct ? 'Sí' : 'No'),
+              ev.assisted ? 'Sí' : 'No',
+              Math.round((Number(ev.task_ms) || 0) / 1000)
+            ].map(csvEscape).join(';'));
+          }
+        }
+
+        const csv = '\uFEFF' + rows.join('\r\n');
+        return new Response(csv, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': `attachment; filename="mi-aula-resultados-${new Date().toISOString().slice(0, 10)}.csv"`,
+            'Cache-Control': 'no-store'
+          }
+        });
+      }
+    }
+
+    return jsonResponse({ error: 'Ruta de API no encontrada.' }, 404);
+  } catch (err) {
+    return jsonResponse({ error: err?.message || 'Error interno del servidor.' }, 500);
+  }
+}

@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#143833">
+  <title>Panel docente · Mi aula</title>
+  <link rel="stylesheet" href="/styles/tokens.css">
+  <link rel="stylesheet" href="/styles/docente.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+          </svg>
+        </span>
+        <span class="brand-meta">
+          <span id="headerAulaName">Mi aula</span>
+          <span class="brand-sub">Panel docente</span>
+        </span>
+      </a>
+      <div class="nav-actions">
+        <a class="btn btn-sm" href="/">← Volver al portal</a>
+        <button id="logoutBtn" class="btn btn-ghost btn-sm" type="button" hidden>Cerrar sesión</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="docente-main">
+    <!-- PIN Login View -->
+    <section id="loginView" class="login-wrap" hidden>
+      <h1>Acceso docente</h1>
+      <p>Introduce tu PIN para consultar resultados, gestionar la lista de clase y organizar las aplicaciones del aula.</p>
+      <div id="defaultPinTip" class="notice warn" style="margin-bottom:16px;" hidden>
+        PIN inicial por defecto: <strong>1234</strong>. Puedes cambiarlo o desactivarlo en la pestaña <em>Ajustes</em>.
+      </div>
+      <form id="loginForm">
+        <label class="sr-only" for="pinInput">PIN docente</label>
+        <input id="pinInput" class="pin-input" type="password" inputmode="numeric" maxlength="16" placeholder="••••" autocomplete="current-password" required>
+        <div id="loginError" class="notice error" style="margin-bottom:14px;" hidden></div>
+        <button class="btn btn-primary" type="submit" style="width:100%;">Entrar al panel docente</button>
+      </form>
+    </section>
+
+    <!-- Authenticated Dashboard -->
+    <section id="dashView" hidden>
+      <div class="dash-head">
+        <div>
+          <h1>Registro docente</h1>
+          <p class="dash-sub">Seguimiento del trabajo en el aula, alumnado y catálogo de actividades.</p>
+        </div>
+        <div class="dash-actions">
+          <button id="refreshBtn" class="btn btn-sm" type="button">Actualizar</button>
+          <a id="exportCsvBtn" class="btn btn-sm" href="/api/teacher/export.csv">Exportar CSV</a>
+          <button id="printBtn" class="btn btn-sm" type="button">Imprimir informe</button>
+        </div>
+      </div>
+
+      <div id="dashNotice" class="notice" style="margin-bottom:18px;" hidden></div>
+
+      <div class="tabs" role="tablist" aria-label="Secciones del panel docente">
+        <button class="tab-btn" role="tab" data-tab="sesiones" aria-selected="true" type="button">Resumen y sesiones</button>
+        <button class="tab-btn" role="tab" data-tab="alumnado" aria-selected="false" type="button">Alumnado e informes</button>
+        <button class="tab-btn" role="tab" data-tab="apps" aria-selected="false" type="button">Aplicaciones</button>
+        <button class="tab-btn" role="tab" data-tab="ajustes" aria-selected="false" type="button">Ajustes</button>
+      </div>
+
+      <!-- TAB 1: RESUMEN Y SESIONES -->
+      <div id="tab-sesiones" class="tab-panel">
+        <div class="metrics">
+          <div class="metric-card">
+            <div class="metric-label">Sesiones</div>
+            <b class="metric-value" id="mSessions">0</b>
+            <div class="metric-sub" id="mActiveSub">0 activas ahora</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Respuestas</div>
+            <b class="metric-value" id="mAttempts">0</b>
+            <div class="metric-sub" id="mCorrectSub">0 correctas</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Acierto medio</div>
+            <b class="metric-value" id="mAccuracy">—</b>
+            <div class="metric-sub">Sobre intentos registrados</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Tiempo activo</div>
+            <b class="metric-value" id="mTime">0 min</b>
+            <div class="metric-sub">Trabajo acumulado</div>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Sesiones registradas</h2>
+          </div>
+
+          <div class="filter-bar">
+            <div class="field">
+              <label for="filterStudent">Alumno / alumna</label>
+              <select id="filterStudent"><option value="">Todos</option></select>
+            </div>
+            <div class="field">
+              <label for="filterApp">Aplicación</label>
+              <select id="filterApp"><option value="">Todas</option></select>
+            </div>
+            <div class="field">
+              <label for="filterStatus">Estado</label>
+              <select id="filterStatus">
+                <option value="">Todos</option>
+                <option value="activa">Activa</option>
+                <option value="finalizada">Finalizada</option>
+                <option value="caducada">Caducada</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Código</th>
+                  <th>Participantes</th>
+                  <th>Aplicación</th>
+                  <th>Estado</th>
+                  <th>Resultado</th>
+                  <th>Tiempo</th>
+                  <th class="no-print">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="sessionsBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- TAB 2: ALUMNADO -->
+      <div id="tab-alumnado" class="tab-panel" hidden>
+        <div class="split-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Progreso por alumno</h2>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Alumno</th>
+                    <th>Curso</th>
+                    <th>Sesiones</th>
+                    <th>Acierto</th>
+                    <th>Tiempo</th>
+                    <th class="no-print">Informe</th>
+                  </tr>
+                </thead>
+                <tbody id="studentProgressBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel no-print">
+            <div class="panel-head">
+              <h2>Lista de clase</h2>
+            </div>
+
+            <form id="addStudentForm" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+              <input id="newStudentName" type="text" placeholder="Nombre del alumno/a" maxlength="60" style="flex:1;min-width:160px;padding:9px 12px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-warm);" required>
+              <select id="newStudentCourse" style="padding:9px 10px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-warm);">
+                <option value="3.º">3.º</option>
+                <option value="4.º">4.º</option>
+                <option value="">Sin curso</option>
+              </select>
+              <button class="btn btn-primary btn-sm" type="submit">Añadir</button>
+            </form>
+
+            <div id="rosterList" style="border:1px solid var(--border-subtle);border-radius:12px;margin-bottom:18px;"></div>
+
+            <details>
+              <summary style="cursor:pointer;font-weight:700;font-size:13.5px;color:var(--primary);margin-bottom:10px;">Importar lista completa (un nombre por línea)</summary>
+              <div class="field" style="margin-top:10px;">
+                <label for="bulkStudents">Formato: «Nombre» o «Nombre, 3.º»</label>
+                <textarea id="bulkStudents" placeholder="Ana G., 3.º&#10;Bruno M., 3.º&#10;Carla R., 4.º"></textarea>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button id="bulkAddBtn" class="btn btn-sm" type="button">Añadir a la lista</button>
+                <button id="bulkReplaceBtn" class="btn btn-danger btn-sm" type="button">Reemplazar lista</button>
+              </div>
+            </details>
+          </section>
+        </div>
+      </div>
+
+      <!-- TAB 3: APLICACIONES -->
+      <div id="tab-apps" class="tab-panel" hidden>
+        <div class="split-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Catálogo visible en el portal</h2>
+            </div>
+            <p class="dash-sub" style="margin-bottom:16px;">Oculta temporalmente las actividades que no quieras mostrar hoy o añade enlaces a otros recursos del aula.</p>
+            <div id="appsManageList" style="border:1px solid var(--border-subtle);border-radius:12px;"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Añadir recurso externo</h2>
+            </div>
+            <form id="addAppForm" class="form-grid">
+              <div class="field full">
+                <label for="customAppTitle">Nombre de la aplicación</label>
+                <input id="customAppTitle" type="text" placeholder="Ej. Dictado interactivo" maxlength="80" required>
+              </div>
+              <div class="field">
+                <label for="customAppArea">Área</label>
+                <input id="customAppArea" type="text" value="Lengua" maxlength="40" required>
+              </div>
+              <div class="field">
+                <label for="customAppCycle">Ciclo / Unidad</label>
+                <input id="customAppCycle" type="text" value="2.º ciclo" maxlength="30">
+              </div>
+              <div class="field full">
+                <label for="customAppUrl">Dirección web (URL)</label>
+                <input id="customAppUrl" type="url" placeholder="https://…" required>
+              </div>
+              <div class="field full">
+                <label for="customAppDesc">Descripción breve</label>
+                <textarea id="customAppDesc" placeholder="Qué practicará el alumnado en esta actividad…" maxlength="240"></textarea>
+              </div>
+              <div class="full">
+                <button class="btn btn-primary" type="submit" style="width:100%;">Añadir al portal</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
+
+      <!-- TAB 4: AJUSTES -->
+      <div id="tab-ajustes" class="tab-panel" hidden>
+        <section class="panel" style="max-width:680px;">
+          <div class="panel-head">
+            <h2>Configuración del aula</h2>
+          </div>
+          <form id="configForm">
+            <div class="form-grid" style="margin-bottom:16px;">
+              <div class="field">
+                <label for="cfgAulaName">Nombre del portal</label>
+                <input id="cfgAulaName" type="text" maxlength="60" required>
+              </div>
+              <div class="field">
+                <label for="cfgSubtitle">Subtítulo (ciclo o curso)</label>
+                <input id="cfgSubtitle" type="text" maxlength="80">
+              </div>
+              <div class="field">
+                <label for="cfgTtl">Duración de sesiones (horas)</label>
+                <input id="cfgTtl" type="number" min="1" max="24" value="8">
+              </div>
+              <div class="field">
+                <label for="cfgNewPin">Cambiar PIN docente (opcional)</label>
+                <input id="cfgNewPin" type="password" inputmode="numeric" minlength="4" maxlength="16" placeholder="Mínimo 4 dígitos">
+              </div>
+            </div>
+
+            <label class="switch-row">
+              <span>
+                <strong>Proteger el panel docente con PIN</strong><br>
+                <small style="color:var(--ink-muted);">Recomendado si el alumnado utiliza el mismo navegador o pizarra digital.</small>
+              </span>
+              <input id="cfgPinEnabled" type="checkbox">
+            </label>
+
+            <button class="btn btn-primary" type="submit">Guardar configuración</button>
+          </form>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="detailDialog" class="aula-dialog detail-dialog" aria-labelledby="detailTitle">
+    <div class="dialog-head">
+      <div>
+        <h2 id="detailTitle">Detalle de sesión</h2>
+        <div id="detailSubtitle" style="font-size:13.5px;color:var(--ink-secondary);margin-top:3px;"></div>
+      </div>
+      <button id="closeDetailBtn" class="dialog-close" type="button" aria-label="Cerrar">×</button>
+    </div>
+    <div id="detailBody" style="margin-top:16px;"></div>
+  </dialog>
+
+  <script src="/scripts/docente.js"></script>
+</body>
+</html>
