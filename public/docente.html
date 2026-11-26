@@ -61,6 +61,10 @@
           <p class="dash-sub">Seguimiento del trabajo en el aula, alumnado y catálogo de actividades.</p>
         </div>
         <div class="dash-actions">
+          <button id="liveToggleBtn" class="btn btn-sm live-toggle" type="button" aria-pressed="false" title="Actualizar automáticamente cada 15 segundos">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span id="liveToggleLabel">En directo</span>
+          </button>
           <button id="refreshBtn" class="btn btn-sm" type="button">Actualizar</button>
           <a id="exportCsvBtn" class="btn btn-sm" href="/api/teacher/export.csv">Exportar CSV</a>
           <button id="printBtn" class="btn btn-sm" type="button">Imprimir informe</button>
@@ -101,9 +105,33 @@
           </div>
         </div>
 
+        <section class="panel" id="livePanel" hidden>
+          <div class="panel-head">
+            <div>
+              <h2>En clase ahora</h2>
+              <p class="dash-sub" id="livePanelSub">Sesiones activas en este momento. Pulsa una tarjeta para ver las respuestas en detalle.</p>
+            </div>
+            <span class="live-updated" id="liveUpdated"></span>
+          </div>
+          <div class="live-grid" id="liveGrid"></div>
+        </section>
+
+        <section class="panel" id="weakPanel" hidden>
+          <div class="panel-head">
+            <div>
+              <h2>Contenidos para reforzar</h2>
+              <p class="dash-sub">Bloques con al menos 3 intentos y menor porcentaje de acierto en el periodo seleccionado.</p>
+            </div>
+          </div>
+          <div class="weak-grid" id="weakGrid"></div>
+        </section>
+
         <section class="panel">
           <div class="panel-head">
-            <h2>Sesiones registradas</h2>
+            <div>
+              <h2>Sesiones registradas</h2>
+              <p class="dash-sub" id="sessionsTruncatedNote" hidden></p>
+            </div>
           </div>
 
           <div class="filter-bar">

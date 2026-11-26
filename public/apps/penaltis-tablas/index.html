@@ -406,10 +406,11 @@
         <div class="shot-mode-choices">
           <label class="shot-mode-choice"><input type="radio" name="shot-mode" id="mode-challenge" checked>Desafío</label>
           <label class="shot-mode-choice"><input type="radio" name="shot-mode" id="mode-practice">Elegir tablas</label>
+          <label class="shot-mode-choice"><input type="checkbox" id="mode-training">Entrenamiento (sin perder vidas)</label>
         </div>
       </fieldset>
       <fieldset id="shot-table-picker" hidden>
-        <legend>Selecciona una o varias tablas</legend>
+        <legend>Selecciona una o varias tablas (se aplican a Penaltis y a Sumas repetidas)</legend>
         <div class="table-picks">
           <label class="table-pick"><input type="checkbox" value="1">1</label>
           <label class="table-pick"><input type="checkbox" value="2">2</label>
@@ -438,7 +439,7 @@
     <div class="stands" aria-hidden="true"><i class="lamps left"></i><i class="lamps right"></i></div>
     <div class="turf" aria-hidden="true"></div>
     <div class="goal" id="goal">
-      <h2 class="problem" id="problem" tabindex="-1" aria-live="polite"></h2>
+      <h2 class="problem" id="problem" tabindex="-1" aria-live="polite" data-aula-read="1"></h2>
     </div>
     <div class="keeper" id="keeper" aria-hidden="true"><canvas id="keeper-art" width="266" height="216"></canvas></div>
     <div class="choices" id="choices" role="group" aria-label="Resultados posibles"></div>
@@ -452,15 +453,16 @@
   </section>
 
   <div class="rules">
-    <p><span class="life-icon" aria-hidden="true">♥</span><span>Recuperas 1 vida al superar cada 5 niveles, hasta un máximo de 3.</span></p>
+    <p><span class="life-icon" aria-hidden="true">♥</span><span id="rules-lives">Recuperas 1 vida al superar cada 5 niveles, hasta un máximo de 3.</span></p>
     <p>Cada gol te lleva al siguiente nivel.</p>
   </div>
   </div>
 
   <section class="sums-panel" id="panel-sums" role="tabpanel" aria-labelledby="tab-sums" hidden>
     <header class="sums-task">
-      <h2 class="sums-equation" id="sums-equation" tabindex="-1"></h2>
-      <p id="sums-instruction"></p>
+      <h2 class="sums-equation" id="sums-equation" tabindex="-1" data-aula-read="1"></h2>
+      <p id="sums-instruction" data-aula-read="2"></p>
+      <span id="sums-tables-badge" style="margin-left:auto;padding:5px 10px;border-radius:999px;background:#112b2d;border:1px solid #5d8d70;color:#d5f96d;font-size:.82rem;font-weight:700;">Tablas del 1 al 10</span>
     </header>
     <div class="sums-board">
       <p class="sr-only" id="rings-keyboard">Si usas el teclado, pulsa la tecla más en un aro para colocar las pelotas del centro.</p>
@@ -528,12 +530,16 @@
   const shotSettings = byId('shot-settings');
   const challengeRadio = byId('mode-challenge');
   const practiceRadio = byId('mode-practice');
+  const trainingCheckbox = byId('mode-training');
+  const rulesLives = byId('rules-lives');
   const tablePicker = byId('shot-table-picker');
   const tableCheckboxes = Array.from(tablePicker.querySelectorAll('input'));
   const startShotMode = byId('start-shot-mode');
   const activeShotMode = byId('active-shot-mode');
   const challengeTables = tableNumbers(10);
   let activeShotTables = challengeTables;
+  let trainingMode = false;
+  let onTablesChanged = null;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const maxLives = 3;
   let lives, goals, question, deck, lastQuestion;
@@ -640,6 +646,14 @@
   function updateScore() {
     levelDisplay.textContent = phase === 'ready' ? goals + 1 : question.level;
     goalsDisplay.textContent = goals;
+    if (trainingMode) {
+      livesDisplay.setAttribute('aria-label', 'Modo entrenamiento, vidas infinitas');
+      Array.from(livesDisplay.children).forEach((heart) => {
+        heart.textContent = '∞';
+        heart.classList.remove('lost');
+      });
+      return;
+    }
     livesDisplay.setAttribute('aria-label', lives + ' de ' + maxLives + ' vidas');
     Array.from(livesDisplay.children).forEach((heart, index) => {
       const active = index < lives;
@@ -744,16 +758,16 @@
     let recovered = false;
     if (correct) {
       goals++;
-      if (goals % 5 === 0 && lives < maxLives) {
+      if (!trainingMode && goals % 5 === 0 && lives < maxLives) {
         lives++;
         recovered = true;
       }
       goal.classList.add('scored');
-    } else {
+    } else if (!trainingMode) {
       lives--;
     }
 
-    phase = lives ? 'feedback' : 'over';
+    phase = trainingMode || lives ? 'feedback' : 'over';
     updateScore();
     result.classList.toggle('goal-message', correct);
     result.classList.toggle('save-message', !correct);
@@ -765,7 +779,7 @@
     } else if (recovered) {
       detail.textContent = equation + ' ¡Recuperas 1 vida!';
     } else {
-      detail.textContent = equation + (correct ? '' : ' Pierdes 1 vida.');
+      detail.textContent = equation + (correct || trainingMode ? '' : ' Pierdes 1 vida.');
     }
     continueButton.textContent = phase === 'over' ? 'Jugar de nuevo' : 'Siguiente tiro';
     continueButton.hidden = false;
@@ -789,16 +803,24 @@
   shotSettings.addEventListener('change', updateShotSettings);
   startShotMode.addEventListener('click', () => {
     if (startShotMode.disabled) return;
+    trainingMode = Boolean(trainingCheckbox?.checked);
     activeShotTables = challengeRadio.checked
       ? challengeTables
       : tableCheckboxes.filter((box) => box.checked).map((box) => Number(box.value));
+    const trainingTag = trainingMode ? ' · Entrenamiento' : '';
     if (challengeRadio.checked) {
-      activeShotMode.textContent = '· Desafío (tablas del 1 al 10)';
+      activeShotMode.textContent = '· Desafío (tablas del 1 al 10)' + trainingTag;
     } else {
       const label = activeShotTables.length === 1 ? 'Tabla del ' : 'Tablas del ';
-      activeShotMode.textContent = '· ' + label + activeShotTables.join(', ');
+      activeShotMode.textContent = '· ' + label + activeShotTables.join(', ') + trainingTag;
+    }
+    if (rulesLives) {
+      rulesLives.textContent = trainingMode
+        ? 'Modo entrenamiento activo: practicas a tu ritmo sin perder vidas.'
+        : 'Recuperas 1 vida al superar cada 5 niveles, hasta un máximo de 3.';
     }
     shotSettings.open = false;
+    if (typeof onTablesChanged === 'function') onTablesChanged();
     startGame();
   });
 
@@ -845,10 +867,31 @@
     const check = byId('sums-check');
     const feedback = byId('sums-feedback');
     const next = byId('sums-next');
-    let remaining = shuffled(multiplicationPairs());
+    const tablesBadge = byId('sums-tables-badge');
+    function makeSumsDeck() {
+      return shuffled(multiplicationPairs(10, activeShotTables));
+    }
+    function updateTablesBadge() {
+      if (!tablesBadge) return;
+      if (activeShotTables.length === 10) {
+        tablesBadge.textContent = 'Tablas del 1 al 10';
+      } else {
+        const prefix = activeShotTables.length === 1 ? 'Tabla del ' : 'Tablas del ';
+        tablesBadge.textContent = prefix + activeShotTables.join(', ');
+      }
+    }
+    let remaining = makeSumsDeck();
     let exercise = remaining.pop();
     let groups, answer, solved, groupsChecked, selectedGroup, batchSize;
     let sumsStarted = false;
+
+    onTablesChanged = () => {
+      remaining = makeSumsDeck();
+      exercise = remaining.pop();
+      updateTablesBadge();
+      showExercise(false);
+    };
+    updateTablesBadge();
 
     function registerGroups() {
       window.Aula?.begin('aros', equation.textContent, 'Sumas repetidas');
@@ -1080,7 +1123,7 @@
         answer = '';
       } else if (key === 'back') {
         answer = answer.slice(0, -1);
-      } else if (answer.length < 2) {
+      } else if (answer.length < 3) {
         answer = answer === '0' ? key : answer + key;
       }
       setFeedback('Escribe el total.');
@@ -1125,10 +1168,11 @@
     next.addEventListener('click', () => {
       if (!solved) return;
       if (!remaining.length) {
-        remaining = shuffled(multiplicationPairs());
-        const last = remaining.at(-1);
-        if (last.a === exercise.a && last.b === exercise.b) {
-          [remaining[0], remaining[80]] = [remaining[80], remaining[0]];
+        remaining = makeSumsDeck();
+        const lastIdx = remaining.length - 1;
+        const last = remaining[lastIdx];
+        if (lastIdx > 0 && last.a === exercise.a && last.b === exercise.b) {
+          [remaining[0], remaining[lastIdx]] = [remaining[lastIdx], remaining[0]];
         }
       }
       exercise = remaining.pop();

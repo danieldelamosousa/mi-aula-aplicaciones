@@ -342,6 +342,90 @@
   margin-top: 16px;
 }
 
+.roster-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.batch-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-secondary);
+}
+
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.batch-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 14px;
+  border-radius: var(--radius-md);
+  border: 1.5px dashed var(--border-strong);
+  background: #ffffff;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.batch-card-app {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.batch-card-students {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 10px;
+  line-height: 1.25;
+}
+
+.batch-card-qr {
+  margin-bottom: 10px;
+}
+
+.batch-card-code {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: var(--accent-gold-soft);
+  border: 1px solid #ecd38c;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.batch-card-actions {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+}
+
 @media (max-width: 720px) {
   .gate-main {
     padding: 28px 16px 48px;
@@ -354,5 +438,43 @@
   }
   .qr-box {
     justify-self: start;
+  }
+}
+
+@media print {
+  .site-header,
+  .back-link,
+  .gate-eyebrow,
+  .gate-main > h1,
+  .gate-lead,
+  .choices,
+  #classroomLockPanel,
+  #studentsPanel,
+  #preparedPanel,
+  #gateMessage,
+  .no-print,
+  .batch-card-actions {
+    display: none !important;
+  }
+  body {
+    background: #ffffff;
+  }
+  .gate-main {
+    max-width: none;
+    padding: 0;
+  }
+  .batch-panel {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
+  .batch-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .batch-card {
+    padding: 12px 10px;
+    border: 1px dashed #666666;
   }
 }

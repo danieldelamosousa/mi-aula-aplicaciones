@@ -183,13 +183,14 @@ body[data-grade="4"] .dot:nth-child(odd){background:#bd793a}
         <label class="mode-row"><span>Practica</span><select id="mode"></select></label>
         <form id="form" novalidate>
           <div class="question-area">
-            <p class="question" id="question" tabindex="-1"></p>
+            <p class="question" id="question" tabindex="-1" data-aula-read="1"></p>
             <div id="visual"></div>
           </div>
           <div class="answers" id="answers" role="group" aria-labelledby="question"></div>
           <div class="actions">
             <button class="button button-primary" id="check" type="submit">Comprobar</button>
             <button class="button button-subtle" id="hint-btn" type="button" aria-controls="hint" aria-expanded="false">Ver pista</button>
+            <button class="button button-subtle" id="reveal-btn" type="button" hidden>Ver solución</button>
             <button class="button button-subtle" id="next" type="button">Otro reto</button>
           </div>
           <div class="hint" id="hint" aria-live="polite"></div>
@@ -384,7 +385,7 @@ function distributive(sign) {
 }
 
 function powers(pure) {
-  const a=random(2,178), exponent=random(1,3), digit=pure?1:random(2,9);
+  const a=pure?random(2,178):random(2,29), exponent=random(1,3), digit=pure?1:random(2,9);
   const b=digit*10**exponent;
   return write("Calcula la multiplicación.",`${times(a,b)} = ?`,[numeric("Resultado",a*b)],
     pure?`Multiplica por ${format(b)} añadiendo ${exponent} ${exponent===1?"cero":"ceros"} al final del número.`
@@ -414,7 +415,10 @@ function problem4() {
   const [prompt,unit]=pick([
     [`Un depósito tiene ${a} litros de agua. ¿Cuántos litros tienen ${b} depósitos iguales?`,"Litros"],
     [`El almacén prepara ${b} lotes de ${a} botellas cada uno. ¿Cuántas botellas hay?`,"Botellas"],
-    [`Un huerto recoge ${a} litros de agua de lluvia cada semana. ¿Cuántos litros recoge en ${b} semanas si la cantidad es siempre la misma?`,"Litros"]
+    [`Un huerto recoge ${a} litros de agua de lluvia cada semana. ¿Cuántos litros recoge en ${b} semanas si la cantidad es siempre la misma?`,"Litros"],
+    [`Un tren recorre ${a} kilómetros cada día. ¿Cuántos kilómetros recorrerá en ${b} días?`,"Kilómetros"],
+    [`En una biblioteca hay ${b} estanterías con ${a} libros en cada una. ¿Cuántos libros hay en total?`,"Libros"],
+    [`Una panadería hornea ${a} magdalenas cada mañana. ¿Cuántas hornea en ${b} días?`,"Magdalenas"]
   ]);
   return write(prompt,"",[numeric(unit,a*b)],
     "Multiplica lo que hay en un grupo por el número de grupos. Puedes colocar la operación en vertical.",
@@ -493,9 +497,17 @@ const courses = {
 
 function tableWordProblem(tableSet) {
   const a=random(2,10), b=pick(tableSet);
-  return write(`En la clase hay ${a} cajas con ${b} lápices en cada una. ¿Cuántos lápices hay?`,"",
-    [numeric("Lápices",a*b)],`Hay ${b} lápices en cada caja y ${a} cajas. Multiplica la cantidad de lápices por el número de cajas.`,
-    `${product(b,a)}. Hay ${a*b} lápices.`);
+  const [prompt,unit]=pick([
+    [`En la clase hay ${a} cajas con ${b} lápices en cada una. ¿Cuántos lápices hay?`,"Lápices"],
+    [`En el huerto hemos plantado ${a} filas con ${b} lechugas en cada fila. ¿Cuántas lechugas hay?`,"Lechugas"],
+    [`Preparamos ${a} bolsas con ${b} mandarinas en cada bolsa para la excursión. ¿Cuántas mandarinas llevamos?`,"Mandarinas"],
+    [`En la biblioteca hay ${a} mesas con ${b} cuentos en cada mesa. ¿Cuántos cuentos hay?`,"Cuentos"],
+    [`Un álbum tiene ${a} páginas con ${b} cromos en cada página. ¿Cuántos cromos tiene?`,"Cromos"],
+    [`En el patio hay ${a} aros con ${b} pelotas dentro de cada aro. ¿Cuántas pelotas hay?`,"Pelotas"]
+  ]);
+  return write(prompt,"",
+    [numeric(unit,a*b)],`Hay ${b} ${unit.toLowerCase()} en cada grupo y ${a} grupos. Multiplica la cantidad de cada grupo por el número de grupos.`,
+    `${product(b,a)}. Hay ${a*b} ${unit.toLowerCase()}.`);
 }
 
 const byId = id => document.getElementById(id);
@@ -508,6 +520,7 @@ const visual = byId("visual");
 const feedback = byId("feedback");
 const hint = byId("hint");
 const hintButton = byId("hint-btn");
+const revealButton = byId("reveal-btn");
 const checkButton = byId("check");
 const nextButton = byId("next");
 
@@ -548,7 +561,7 @@ function makeRound(progress) {
   window.Aula?.begin(topic, [exercise.prompt, operation].filter(Boolean).join(" · "), activity.name);
   progress.round = {
     exercise, topic, values:[], activeField:0, selected:null, wrong:[],
-    hintOpen:false, solved:false, message:"", tone:""
+    hintOpen:false, solved:false, attempts:0, message:"", tone:""
   };
 }
 
@@ -644,7 +657,11 @@ function renderRound() {
   question.textContent=exercise.prompt;
   visual.replaceChildren();
   answers.replaceChildren();
-  if (exercise.display) visual.append(node("div","display",exercise.display));
+  if (exercise.display) {
+    const disp = node("div","display",exercise.display);
+    disp.dataset.aulaRead = "2";
+    visual.append(disp);
+  }
   if (exercise.visual?.type==="dots") drawDots(exercise.visual);
   if (exercise.visual?.type==="vertical") drawVertical(exercise.visual);
   if (exercise.visual?.type==="table") drawPythagorean(round);
@@ -820,6 +837,7 @@ function updateRoundControls() {
   if (hint.textContent!==hintText) hint.textContent=hintText;
   hintButton.setAttribute("aria-expanded",round.hintOpen);
   hintButton.textContent=round.hintOpen ? "Ocultar pista" : "Ver pista";
+  if (revealButton) revealButton.hidden = round.solved || round.attempts === 0;
   checkButton.hidden=round.solved;
   nextButton.textContent=round.solved ? "Siguiente reto" : "Otro reto";
 }
@@ -862,7 +880,10 @@ function checkAnswer(event) {
       message="El producto coincide. Para representar esa suma, escribe primero el número que se repite.";
     }
   }
-  if (submitted !== undefined) window.Aula?.attempt(round.topic, !message && !round.wrong.length, submitted);
+  if (submitted !== undefined) {
+    round.attempts++;
+    window.Aula?.attempt(round.topic, !message && !round.wrong.length, submitted);
+  }
   if (message || round.wrong.length) {
     round.tone="try";
     round.message=message ?? (exercise.fields?.length>1
@@ -879,6 +900,25 @@ function checkAnswer(event) {
   updateRoundControls();
   if (round.solved) nextButton.focus();
   else if (message && exercise.fields) answers.querySelectorAll("input")[round.wrong[0]]?.focus();
+}
+
+function revealRound() {
+  const round = activeProgress().round;
+  if (!round || round.solved) return;
+  const exercise = round.exercise;
+  window.Aula?.reveal(round.topic);
+  round.solved = true;
+  round.wrong = [];
+  if (exercise.fields) {
+    exercise.fields.forEach((f, i) => { round.values[i] = String(f.answer); });
+    answers.querySelectorAll("input").forEach((input, i) => { input.value = round.values[i] ?? ""; });
+  } else {
+    round.selected = exercise.answer;
+  }
+  round.tone = "try";
+  round.message = `Solución: ${exercise.explanation} (Este reto mostrado con solución no suma acierto.)`;
+  updateRoundControls();
+  nextButton.focus();
 }
 
 function nextRound() {
@@ -912,6 +952,7 @@ hintButton.addEventListener("click",()=>{
   if (round.hintOpen) window.Aula?.hint(round.topic);
   updateRoundControls();
 });
+if (revealButton) revealButton.addEventListener("click", revealRound);
 nextButton.addEventListener("click",nextRound);
 byId("welcome").hidden=false;
 </script>

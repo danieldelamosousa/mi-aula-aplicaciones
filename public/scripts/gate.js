@@ -254,6 +254,7 @@
         return;
       }
 
+      if ($('batchPanel')) $('batchPanel').hidden = true;
       $('preparedPanel').hidden = false;
       $('preparedSummary').textContent = `Participantes: ${students.join(', ')}.`;
       $('sessionCodeValue').textContent = data.code;
@@ -279,6 +280,158 @@
 
   $('startHereBtn').addEventListener('click', () => startSession(false));
   $('prepareShareBtn').addEventListener('click', () => startSession(true));
+
+  function getVisibleRoster() {
+    const q = normalize($('rosterSearch').value);
+    return roster.filter(s => {
+      if (selectedCourse && s.course !== selectedCourse) return false;
+      if (q && !normalize(s.name).includes(q)) return false;
+      return true;
+    });
+  }
+
+  if ($('selectVisibleBtn')) {
+    $('selectVisibleBtn').addEventListener('click', () => {
+      for (const st of getVisibleRoster()) selectedStudents.add(st.name);
+      renderStudents();
+      updateBadge();
+      showMessage('');
+    });
+  }
+
+  if ($('clearSelectionBtn')) {
+    $('clearSelectionBtn').addEventListener('click', () => {
+      selectedStudents.clear();
+      renderStudents();
+      updateBadge();
+      showMessage('');
+    });
+  }
+
+  function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function buildGroups(students, mode) {
+    if (mode === 'pairs') {
+      if (students.length <= 2) return [students];
+      const shuffled = shuffleArray(students);
+      const pairs = [];
+      for (let i = 0; i < shuffled.length; i += 2) {
+        pairs.push(shuffled.slice(i, i + 2));
+      }
+      if (pairs.length >= 2 && pairs[pairs.length - 1].length === 1) {
+        pairs[pairs.length - 2].push(pairs.pop()[0]);
+      }
+      return pairs;
+    }
+    return students.map(name => [name]);
+  }
+
+  async function startBatch(mode) {
+    if (busy) return;
+    const students = [...selectedStudents];
+    if (!students.length) {
+      showMessage('Selecciona primero el alumnado para preparar el lote de códigos QR.', true);
+      return;
+    }
+    if (mode === 'pairs' && students.length < 2) {
+      showMessage('Selecciona al menos 2 alumnos para formar parejas.', true);
+      return;
+    }
+
+    const groups = buildGroups(students, mode);
+    busy = true;
+    $('startHereBtn').disabled = true;
+    $('prepareShareBtn').disabled = true;
+    if ($('batchIndividualBtn')) $('batchIndividualBtn').disabled = true;
+    if ($('batchPairsBtn')) $('batchPairsBtn').disabled = true;
+    showMessage('');
+
+    try {
+      const res = await fetch('/api/sessions/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app: appId, groups })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo preparar el lote de códigos QR.');
+
+      $('preparedPanel').hidden = true;
+      $('batchPanel').hidden = false;
+      $('batchTitle').textContent = `${data.appTitle} · ${data.sessions.length} ${data.sessions.length === 1 ? 'código QR' : 'códigos QR'}`;
+      $('batchSummary').textContent = mode === 'pairs'
+        ? `Organizado en ${data.sessions.length} parejas/grupos (${students.length} participantes). Válidos durante ${data.ttlHours} horas.`
+        : `Un código individual para cada participante (${data.sessions.length}). Válidos durante ${data.ttlHours} horas.`;
+
+      const grid = $('batchGrid');
+      grid.replaceChildren();
+
+      for (const s of data.sessions) {
+        const shortLink = `${location.origin}${s.shortUrl}`;
+        const card = document.createElement('article');
+        card.className = 'batch-card';
+
+        const appTag = document.createElement('div');
+        appTag.className = 'batch-card-app';
+        appTag.textContent = data.appTitle;
+
+        const who = document.createElement('div');
+        who.className = 'batch-card-students';
+        who.textContent = s.students.join(' · ');
+
+        const qr = document.createElement('div');
+        qr.className = 'batch-card-qr';
+        try {
+          qr.innerHTML = window.renderQrSvg(shortLink, 148);
+        } catch {
+          qr.textContent = s.code;
+        }
+
+        const codeEl = document.createElement('div');
+        codeEl.className = 'batch-card-code';
+        codeEl.textContent = s.code;
+
+        const actions = document.createElement('div');
+        actions.className = 'batch-card-actions';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'btn btn-sm';
+        copyBtn.textContent = 'Copiar enlace';
+        copyBtn.addEventListener('click', () => copyText(shortLink, `Enlace de ${s.students.join(', ')}`));
+
+        const openLink = document.createElement('a');
+        openLink.className = 'btn btn-ghost btn-sm';
+        openLink.href = s.directUrl;
+        openLink.textContent = 'Abrir →';
+
+        actions.append(copyBtn, openLink);
+        card.append(appTag, who, qr, codeEl, actions);
+        grid.append(card);
+      }
+
+      showMessage(`Lote preparado con ${data.sessions.length} códigos QR listos para escanear o imprimir.`);
+      $('batchPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      showMessage(err.message || 'No se pudo preparar el lote de códigos QR.', true);
+    } finally {
+      busy = false;
+      $('startHereBtn').disabled = false;
+      $('prepareShareBtn').disabled = false;
+      if ($('batchIndividualBtn')) $('batchIndividualBtn').disabled = false;
+      if ($('batchPairsBtn')) $('batchPairsBtn').disabled = false;
+    }
+  }
+
+  if ($('batchIndividualBtn')) $('batchIndividualBtn').addEventListener('click', () => startBatch('individual'));
+  if ($('batchPairsBtn')) $('batchPairsBtn').addEventListener('click', () => startBatch('pairs'));
+  if ($('printBatchBtn')) $('printBatchBtn').addEventListener('click', () => window.print());
 
   async function copyText(text, label) {
     try {

@@ -216,6 +216,105 @@ export async function onRequest(context) {
       }, 201);
     }
 
+    if (method === 'POST' && pathname === '/api/sessions/batch') {
+      const cfg = await getConfig(db);
+      const unlocked = await isClassroomUnlocked(db, request, cfg);
+      if (!unlocked) {
+        return jsonResponse({ error: 'Introduce la clave de aula antes de preparar sesiones.' }, 403);
+      }
+
+      const clientHash = await getClientHash(request);
+      const rate = await checkWindowRateLimit(db, `batch:${clientHash}`, 15, 10 * 60 * 1000);
+      if (!rate.allowed) {
+        return jsonResponse(
+          { error: 'Has preparado demasiados lotes seguidos desde esta red. Espera unos minutos.' },
+          429,
+          { 'Retry-After': String(rate.retryAfterSec) }
+        );
+      }
+
+      const body = await readJson(request);
+      const appId = String(body.app || '').trim();
+      const appRow = await db.prepare('SELECT id, title, built_in FROM apps WHERE id = ?').bind(appId).first();
+      if (!appRow || !appRow.built_in) {
+        return jsonResponse({ error: 'Aplicación no válida.' }, 400);
+      }
+
+      const rawGroups = Array.isArray(body.groups) ? body.groups.slice(0, 32) : [];
+      if (!rawGroups.length) {
+        return jsonResponse({ error: 'Selecciona al menos un alumno o grupo.' }, 400);
+      }
+
+      const roster = !cfg.allowGuestStudents ? await getStudents(db) : [];
+      const byLower = new Map(roster.map(r => [r.name.toLocaleLowerCase('es'), r.name]));
+
+      const cleanGroups = [];
+      for (const grp of rawGroups) {
+        let members = Array.isArray(grp)
+          ? [...new Set(grp.map(s => String(s).trim().slice(0, 60)).filter(Boolean))].slice(0, 12)
+          : [];
+        if (!members.length) continue;
+        if (!cfg.allowGuestStudents) {
+          const matched = [];
+          for (const name of members) {
+            const canonical = byLower.get(name.toLocaleLowerCase('es'));
+            if (!canonical) {
+              return jsonResponse({ error: 'Solo pueden participar alumnos incluidos en la lista oficial de clase.' }, 400);
+            }
+            matched.push(canonical);
+          }
+          members = [...new Set(matched)];
+        }
+        cleanGroups.push(members);
+      }
+
+      if (!cleanGroups.length) {
+        return jsonResponse({ error: 'Selecciona al menos un alumno o grupo.' }, 400);
+      }
+
+      const now = new Date();
+      const ttlHours = cfg.sessionTtlHours || 8;
+      const expiresAt = new Date(now.getTime() + ttlHours * 3600 * 1000).toISOString();
+      const nowIso = now.toISOString();
+
+      const usedCodes = new Set();
+      const created = [];
+      const stmts = [];
+      for (const students of cleanGroups) {
+        const token = randomToken(18);
+        let code = await generateShortCode(db);
+        let tries = 0;
+        while (usedCodes.has(code) && tries < 10) {
+          code = await generateShortCode(db);
+          tries++;
+        }
+        usedCodes.add(code);
+        stmts.push(
+          db.prepare(
+            `INSERT INTO sessions (token, code, app_id, app_title, students_json, created_at, expires_at, last_activity_at, ended_at, active_ms)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0)`
+          ).bind(token, code, appRow.id, appRow.title, JSON.stringify(students), nowIso, expiresAt, nowIso)
+        );
+        created.push({
+          token,
+          code,
+          students,
+          expiresAt,
+          directUrl: `/apps/${encodeURIComponent(appRow.id)}/?aula=1#sesion=${encodeURIComponent(token)}`,
+          shortUrl: `/codigo/${encodeURIComponent(code)}`
+        });
+      }
+
+      await db.batch(stmts);
+
+      return jsonResponse({
+        app: appRow.id,
+        appTitle: appRow.title,
+        ttlHours,
+        sessions: created
+      }, 201);
+    }
+
     if (method === 'GET' && pathname === '/api/sessions/resolve') {
       const rawCode = String(url.searchParams.get('code') || '').trim().toUpperCase().replace(/\s+/g, '');
       const normalized = rawCode.includes('-')
@@ -438,8 +537,8 @@ export async function onRequest(context) {
         const cutoffIso = resolveDateCutoff(range);
 
         const sessionsStmt = cutoffIso
-          ? db.prepare('SELECT * FROM sessions WHERE created_at >= ? ORDER BY created_at DESC LIMIT 300').bind(cutoffIso)
-          : db.prepare('SELECT * FROM sessions ORDER BY created_at DESC LIMIT 300');
+          ? db.prepare('SELECT * FROM sessions WHERE created_at >= ? ORDER BY created_at DESC').bind(cutoffIso)
+          : db.prepare('SELECT * FROM sessions ORDER BY created_at DESC');
 
         const aggStmt = cutoffIso
           ? db.prepare(
@@ -451,31 +550,58 @@ export async function onRequest(context) {
                  SUM(CASE WHEN e.kind = 'reveal' THEN 1 ELSE 0 END) AS reveals,
                  COUNT(DISTINCT CASE WHEN e.task_id IS NOT NULL AND e.task_id != '' AND e.task_id != 'session' THEN e.task_id END) AS task_count
                FROM events e
-               WHERE e.session_token IN (
-                 SELECT token FROM sessions WHERE created_at >= ? ORDER BY created_at DESC LIMIT 300
-               )
+               JOIN sessions s ON s.token = e.session_token
+               WHERE s.created_at >= ?
                GROUP BY e.session_token`
             ).bind(cutoffIso)
           : db.prepare(
               `SELECT
-                 e.session_token,
-                 SUM(CASE WHEN e.kind = 'attempt' THEN 1 ELSE 0 END) AS attempts,
-                 SUM(CASE WHEN e.kind = 'attempt' AND e.correct = 1 THEN 1 ELSE 0 END) AS correct,
-                 SUM(CASE WHEN e.kind = 'hint' THEN 1 ELSE 0 END) AS hints,
-                 SUM(CASE WHEN e.kind = 'reveal' THEN 1 ELSE 0 END) AS reveals,
-                 COUNT(DISTINCT CASE WHEN e.task_id IS NOT NULL AND e.task_id != '' AND e.task_id != 'session' THEN e.task_id END) AS task_count
-               FROM events e
-               WHERE e.session_token IN (
-                 SELECT token FROM sessions ORDER BY created_at DESC LIMIT 300
-               )
-               GROUP BY e.session_token`
+                 session_token,
+                 SUM(CASE WHEN kind = 'attempt' THEN 1 ELSE 0 END) AS attempts,
+                 SUM(CASE WHEN kind = 'attempt' AND correct = 1 THEN 1 ELSE 0 END) AS correct,
+                 SUM(CASE WHEN kind = 'hint' THEN 1 ELSE 0 END) AS hints,
+                 SUM(CASE WHEN kind = 'reveal' THEN 1 ELSE 0 END) AS reveals,
+                 COUNT(DISTINCT CASE WHEN task_id IS NOT NULL AND task_id != '' AND task_id != 'session' THEN task_id END) AS task_count
+               FROM events
+               GROUP BY session_token`
             );
 
-        const [students, apps, sessionsRes, aggRes] = await Promise.all([
+        const weakStmt = cutoffIso
+          ? db.prepare(
+              `SELECT
+                 s.app_id,
+                 s.app_title,
+                 e.mode,
+                 e.level,
+                 COUNT(*) AS attempts,
+                 SUM(CASE WHEN e.correct = 1 THEN 1 ELSE 0 END) AS correct
+               FROM events e
+               JOIN sessions s ON s.token = e.session_token
+               WHERE e.kind = 'attempt' AND s.created_at >= ?
+               GROUP BY s.app_id, s.app_title, e.mode, e.level
+               HAVING COUNT(*) >= 3`
+            ).bind(cutoffIso)
+          : db.prepare(
+              `SELECT
+                 s.app_id,
+                 s.app_title,
+                 e.mode,
+                 e.level,
+                 COUNT(*) AS attempts,
+                 SUM(CASE WHEN e.correct = 1 THEN 1 ELSE 0 END) AS correct
+               FROM events e
+               JOIN sessions s ON s.token = e.session_token
+               WHERE e.kind = 'attempt'
+               GROUP BY s.app_id, s.app_title, e.mode, e.level
+               HAVING COUNT(*) >= 3`
+            );
+
+        const [students, apps, sessionsRes, aggRes, weakRes] = await Promise.all([
           getStudents(db),
           getApps(db, false),
           sessionsStmt.all(),
-          aggStmt.all()
+          aggStmt.all(),
+          weakStmt.all()
         ]);
 
         const aggByToken = new Map();
@@ -490,6 +616,8 @@ export async function onRequest(context) {
         let totalAttempts = 0, totalCorrect = 0, totalActiveMs = 0, activeSessions = 0;
         const byApp = {};
         const byStudent = {};
+        const nowMs = Date.now();
+        const liveSessions = [];
 
         for (const st of students) {
           byStudent[st.name] = { name: st.name, course: st.course, sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} };
@@ -499,7 +627,17 @@ export async function onRequest(context) {
           totalAttempts += s.attempts;
           totalCorrect += s.correct;
           totalActiveMs += s.activeMs;
-          if (s.status === 'activa') activeSessions++;
+          if (s.status === 'activa') {
+            activeSessions++;
+            const lastMs = new Date(s.lastActivityAt || s.createdAt).getTime() || 0;
+            const isRecentlyActive = nowMs - lastMs < 5 * 60 * 1000;
+            const needsAttention = (s.attempts >= 2 && s.accuracy !== null && s.accuracy < 55) || (s.hints + s.reveals >= 3);
+            liveSessions.push({
+              ...s,
+              isRecentlyActive,
+              needsAttention
+            });
+          }
 
           if (!byApp[s.app]) {
             byApp[s.app] = { app: s.app, title: s.appTitle, sessions: 0, attempts: 0, correct: 0, activeMs: 0 };
@@ -530,6 +668,30 @@ export async function onRequest(context) {
           }
         }
 
+        liveSessions.sort((a, b) =>
+          Number(b.needsAttention) - Number(a.needsAttention) ||
+          new Date(b.lastActivityAt || b.createdAt).getTime() - new Date(a.lastActivityAt || a.createdAt).getTime()
+        );
+
+        const weakSpots = (weakRes.results || [])
+          .map(r => {
+            const attempts = Number(r.attempts) || 0;
+            const correct = Number(r.correct) || 0;
+            const accuracy = attempts > 0 ? Math.round((correct / attempts) * 100) : 100;
+            return {
+              app: r.app_id,
+              appTitle: r.app_title,
+              mode: r.mode || '',
+              level: r.level || '',
+              attempts,
+              correct,
+              accuracy
+            };
+          })
+          .filter(w => w.accuracy < 80)
+          .sort((a, b) => a.accuracy - b.accuracy || b.attempts - a.attempts)
+          .slice(0, 6);
+
         return jsonResponse({
           range,
           accessEmail: getAccessEmail(request) || null,
@@ -553,9 +715,13 @@ export async function onRequest(context) {
           },
           byApp: Object.values(byApp),
           byStudent: Object.values(byStudent),
+          weakSpots,
+          liveSessions: liveSessions.slice(0, 40),
           students,
           apps,
-          sessions: summaries
+          totalSessionsCount: summaries.length,
+          sessionsTruncated: summaries.length > 300,
+          sessions: summaries.slice(0, 300)
         });
       }
 

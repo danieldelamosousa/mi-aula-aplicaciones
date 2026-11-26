@@ -630,8 +630,8 @@ function renderRound() {
     '<div class="session-top"><span class="kind">' + esc(topic.name) + '</span><span class="counter">Reto ' + (session.index + 1) + ' de ' + session.rounds.length + '</span></div>' +
     sizeBar +
     '<div class="track" role="progressbar" aria-label="Retos terminados" aria-valuemin="0" aria-valuenow="' + session.index + '" aria-valuemax="' + session.rounds.length + '"><span style="width:' + (session.index / session.rounds.length * 100) + '%"></span></div>' +
-    '<h1 tabindex="-1">' + esc(item.prompt) + '</h1>' +
-    (item.stimulus ? '<p class="stimulus">' + highlight(item.stimulus) + '</p>' : "") + activity +
+    '<h1 tabindex="-1" data-aula-read="1">' + esc(item.prompt) + '</h1>' +
+    (item.stimulus ? '<p class="stimulus" data-aula-read="2">' + highlight(item.stimulus) + '</p>' : "") + activity +
     '<div id="hint" class="hint"></div><div id="feedback" class="feedback" role="status" aria-live="polite" aria-atomic="true"></div>' +
     '<div class="controls">' + button("check","Comprobar","primary"," disabled") +
     button("next",session.index === session.rounds.length - 1 ? "Ver resultado" : "Siguiente","primary"," hidden") +
@@ -932,7 +932,11 @@ main.addEventListener("click", event => {
   if (action === "hint") {
     round.hintOpen = !round.hintOpen;
     if (round.hintOpen) window.Aula?.hint(reportMode(round));
-    document.getElementById("hint").textContent = round.hintOpen ? round.item.hint || round.topic.tip : "";
+    let hintBody = round.item.hint || round.topic.tip || "";
+    if (round.hintOpen && /diptongo|hiato/i.test(round.topic.name)) {
+      hintBody += " Recuerda: vocales abiertas (a, e, o) · vocales cerradas (i, u).";
+    }
+    document.getElementById("hint").textContent = round.hintOpen ? hintBody : "";
     control.textContent = round.hintOpen ? "Ocultar pista" : "Pista";
     control.setAttribute("aria-expanded",String(round.hintOpen));
   }

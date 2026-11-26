@@ -1,5 +1,5 @@
 // Service Worker para Mi aula · Aplicaciones (PWA + resiliencia ante cortes de Wi-Fi)
-const CACHE_NAME = 'mi-aula-v3';
+const CACHE_NAME = 'mi-aula-v4';
 const PRECACHE_URLS = [
   '/',
   '/abrir',
