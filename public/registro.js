@@ -221,6 +221,14 @@
   }, 30000);
 
   document.addEventListener('DOMContentLoaded', async () => {
+    if (!document.querySelector('link[rel~="icon"]')) {
+      const icon = document.createElement('link');
+      icon.rel = 'icon';
+      icon.type = 'image/svg+xml';
+      icon.href = '/favicon.svg';
+      document.head.append(icon);
+    }
+
     const css = document.createElement('style');
     css.textContent = `
       #aula-bar {
@@ -374,6 +382,10 @@
       } catch {
         // Non-blocking
       }
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
   });
 })();

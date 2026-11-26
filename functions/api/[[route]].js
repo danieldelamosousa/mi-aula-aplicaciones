@@ -4,14 +4,24 @@ import {
   getApps,
   getStudents,
   hashPin,
+  verifySecret,
   randomHex,
   randomToken,
   generateShortCode,
   parseCookies,
+  getClientHash,
+  getAccessEmail,
+  checkAuthLock,
+  recordAuthFailure,
+  clearAuthFailures,
+  checkWindowRateLimit,
   isTeacherAuthenticated,
+  isClassroomUnlocked,
   jsonResponse,
   safeExternalUrl,
   csvEscape,
+  resolveDateCutoff,
+  summarizeSessionFromAgg,
   summarizeSessionRow,
   buildTasksFromDbEvents
 } from '../_lib/db.js';
@@ -22,6 +32,14 @@ async function readJson(request) {
   } catch {
     return {};
   }
+}
+
+function formatRetryMessage(retryAfterSec) {
+  if (retryAfterSec >= 60) {
+    const mins = Math.ceil(retryAfterSec / 60);
+    return `Demasiados intentos fallidos. Espera ${mins} ${mins === 1 ? 'minuto' : 'minutos'} antes de volver a intentarlo.`;
+  }
+  return `Demasiados intentos fallidos. Espera ${retryAfterSec} segundos antes de volver a intentarlo.`;
 }
 
 export async function onRequest(context) {
@@ -51,16 +69,102 @@ export async function onRequest(context) {
 
     if (method === 'GET' && pathname === '/api/profile') {
       const cfg = await getConfig(db);
+      const unlocked = await isClassroomUnlocked(db, request, cfg);
+      if (!unlocked) {
+        return jsonResponse({
+          aulaName: cfg.aulaName,
+          sessionTtlHours: cfg.sessionTtlHours,
+          classCodeRequired: true,
+          unlocked: false,
+          allowGuestStudents: cfg.allowGuestStudents,
+          students: [],
+          roster: []
+        });
+      }
       const roster = await getStudents(db);
       return jsonResponse({
         aulaName: cfg.aulaName,
         sessionTtlHours: cfg.sessionTtlHours,
+        classCodeRequired: cfg.classCodeEnabled,
+        unlocked: true,
+        allowGuestStudents: cfg.allowGuestStudents,
         students: roster.map(s => s.name),
         roster
       });
     }
 
+    if (method === 'POST' && pathname === '/api/classroom/unlock') {
+      const cfg = await getConfig(db);
+      if (!cfg.classCodeEnabled) {
+        return jsonResponse({ ok: true });
+      }
+
+      const clientHash = await getClientHash(request);
+      const lockKeys = [`class:${clientHash}`];
+      const retryAfter = await checkAuthLock(db, lockKeys);
+      if (retryAfter > 0) {
+        return jsonResponse(
+          { error: formatRetryMessage(retryAfter) },
+          429,
+          { 'Retry-After': String(retryAfter) }
+        );
+      }
+
+      const body = await readJson(request);
+      const code = String(body.code || '').trim();
+      const { ok, needsUpgrade } = await verifySecret(code, cfg.classCodeSalt, cfg.classCodeHash);
+
+      if (!ok) {
+        const res = await recordAuthFailure(db, `class:${clientHash}`);
+        if (res.lockSec > 0) {
+          return jsonResponse(
+            { error: formatRetryMessage(res.lockSec) },
+            429,
+            { 'Retry-After': String(res.lockSec) }
+          );
+        }
+        return jsonResponse({ error: 'Clave de aula incorrecta. Inténtalo de nuevo.' }, 401);
+      }
+
+      await clearAuthFailures(db, lockKeys);
+
+      const sid = randomToken(24);
+      const ttlSec = 30 * 24 * 3600;
+      const expiresAt = Date.now() + ttlSec * 1000;
+      const stmts = [
+        db.prepare('DELETE FROM classroom_tokens WHERE expires_at < ?').bind(Date.now()),
+        db.prepare('INSERT INTO classroom_tokens (sid, expires_at) VALUES (?, ?)').bind(sid, expiresAt)
+      ];
+      if (needsUpgrade) {
+        const upgraded = await hashPin(code, cfg.classCodeSalt);
+        stmts.push(db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').bind('classCodeHash', upgraded));
+      }
+      await db.batch(stmts);
+
+      return jsonResponse(
+        { ok: true },
+        200,
+        { 'Set-Cookie': `aula_clase=${sid}; ${cookieFlags}; Max-Age=${ttlSec}` }
+      );
+    }
+
     if (method === 'POST' && pathname === '/api/sessions') {
+      const cfg = await getConfig(db);
+      const unlocked = await isClassroomUnlocked(db, request, cfg);
+      if (!unlocked) {
+        return jsonResponse({ error: 'Introduce la clave de aula antes de iniciar una sesión registrada.' }, 403);
+      }
+
+      const clientHash = await getClientHash(request);
+      const rate = await checkWindowRateLimit(db, `sess:${clientHash}`, 40, 10 * 60 * 1000);
+      if (!rate.allowed) {
+        return jsonResponse(
+          { error: 'Se han creado demasiadas sesiones seguidas desde esta red. Espera unos minutos.' },
+          429,
+          { 'Retry-After': String(rate.retryAfterSec) }
+        );
+      }
+
       const body = await readJson(request);
       const appId = String(body.app || '').trim();
       const appRow = await db.prepare('SELECT id, title, built_in FROM apps WHERE id = ?').bind(appId).first();
@@ -68,14 +172,27 @@ export async function onRequest(context) {
         return jsonResponse({ error: 'Aplicación no válida.' }, 400);
       }
 
-      const students = Array.isArray(body.students)
-        ? [...new Set(body.students.map(s => String(s).trim()).filter(Boolean))].slice(0, 12)
+      let students = Array.isArray(body.students)
+        ? [...new Set(body.students.map(s => String(s).trim().slice(0, 60)).filter(Boolean))].slice(0, 12)
         : [];
       if (!students.length) {
         return jsonResponse({ error: 'Selecciona al menos un alumno o alumna.' }, 400);
       }
 
-      const cfg = await getConfig(db);
+      if (!cfg.allowGuestStudents) {
+        const roster = await getStudents(db);
+        const byLower = new Map(roster.map(r => [r.name.toLocaleLowerCase('es'), r.name]));
+        const matched = [];
+        for (const name of students) {
+          const canonical = byLower.get(name.toLocaleLowerCase('es'));
+          if (!canonical) {
+            return jsonResponse({ error: 'Solo pueden participar alumnos incluidos en la lista oficial de clase.' }, 400);
+          }
+          matched.push(canonical);
+        }
+        students = [...new Set(matched)];
+      }
+
       const token = randomToken(18);
       const code = await generateShortCode(db);
       const now = new Date();
@@ -124,7 +241,7 @@ export async function onRequest(context) {
         app: session.app_id,
         appTitle: session.app_title,
         students,
-        url: `/apps/${encodeURIComponent(session.app_id)}/index.html?aula=1#sesion=${encodeURIComponent(session.token)}`
+        url: `/apps/${encodeURIComponent(session.app_id)}/?aula=1#sesion=${encodeURIComponent(session.token)}`
       });
     }
 
@@ -224,30 +341,70 @@ export async function onRequest(context) {
     if (method === 'GET' && pathname === '/api/teacher/status') {
       const cfg = await getConfig(db);
       const authenticated = await isTeacherAuthenticated(db, request, cfg);
+      const accessEmail = getAccessEmail(request);
       return jsonResponse({
         authenticated,
         pinEnabled: cfg.pinEnabled,
         isDefaultPin: cfg.isDefaultPin,
-        aulaName: cfg.aulaName
+        aulaName: cfg.aulaName,
+        accessEmail: accessEmail || null
       });
     }
 
     if (method === 'POST' && pathname === '/api/teacher/login') {
       const cfg = await getConfig(db);
+      const accessEmail = getAccessEmail(request);
+      if (cfg.allowedTeacherEmail && accessEmail && accessEmail !== cfg.allowedTeacherEmail) {
+        return jsonResponse({ error: 'Tu cuenta de Cloudflare Access no está autorizada para este panel.' }, 403);
+      }
+
+      const clientHash = await getClientHash(request);
+      const ipKey = `login:${clientHash}`;
+      const globalKey = 'login:global';
+      const retryAfter = await checkAuthLock(db, [ipKey, globalKey]);
+      if (retryAfter > 0) {
+        return jsonResponse(
+          { error: formatRetryMessage(retryAfter) },
+          429,
+          { 'Retry-After': String(retryAfter) }
+        );
+      }
+
       const body = await readJson(request);
       const pin = String(body.pin || '').trim();
-      const provided = await hashPin(pin, cfg.pinSalt);
+      const { ok, needsUpgrade } = cfg.pinEnabled
+        ? await verifySecret(pin, cfg.pinSalt, cfg.pinHash)
+        : { ok: true, needsUpgrade: false };
 
-      if (cfg.pinEnabled && provided !== cfg.pinHash) {
+      if (cfg.pinEnabled && !ok) {
+        const [ipRes, glRes] = await Promise.all([
+          recordAuthFailure(db, ipKey, { t1: 5, l1: 300, t2: 8, l2: 900, t3: 10, l3: 1800 }),
+          recordAuthFailure(db, globalKey, { t1: 15, l1: 600, t2: 25, l2: 1800, t3: 40, l3: 3600 })
+        ]);
+        const lockSec = Math.max(ipRes.lockSec, glRes.lockSec);
+        if (lockSec > 0) {
+          return jsonResponse(
+            { error: formatRetryMessage(lockSec) },
+            429,
+            { 'Retry-After': String(lockSec) }
+          );
+        }
         return jsonResponse({ error: 'PIN incorrecto. Inténtalo de nuevo.' }, 401);
       }
 
+      await clearAuthFailures(db, [ipKey, globalKey]);
+
       const sid = randomToken(24);
       const expiresAt = Date.now() + 12 * 3600 * 1000;
-      await db.batch([
+      const stmts = [
         db.prepare('DELETE FROM teacher_tokens WHERE expires_at < ?').bind(Date.now()),
         db.prepare('INSERT INTO teacher_tokens (sid, expires_at) VALUES (?, ?)').bind(sid, expiresAt)
-      ]);
+      ];
+      if (needsUpgrade && pin) {
+        const upgraded = await hashPin(pin, cfg.pinSalt);
+        stmts.push(db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').bind('pinHash', upgraded));
+      }
+      await db.batch(stmts);
 
       return jsonResponse(
         { ok: true },
@@ -277,21 +434,57 @@ export async function onRequest(context) {
       }
 
       if (method === 'GET' && pathname === '/api/teacher/dashboard') {
-        const [students, apps, sessionsRes, eventsRes] = await Promise.all([
+        const range = url.searchParams.get('range') || 'all';
+        const cutoffIso = resolveDateCutoff(range);
+
+        const sessionsStmt = cutoffIso
+          ? db.prepare('SELECT * FROM sessions WHERE created_at >= ? ORDER BY created_at DESC LIMIT 300').bind(cutoffIso)
+          : db.prepare('SELECT * FROM sessions ORDER BY created_at DESC LIMIT 300');
+
+        const aggStmt = cutoffIso
+          ? db.prepare(
+              `SELECT
+                 e.session_token,
+                 SUM(CASE WHEN e.kind = 'attempt' THEN 1 ELSE 0 END) AS attempts,
+                 SUM(CASE WHEN e.kind = 'attempt' AND e.correct = 1 THEN 1 ELSE 0 END) AS correct,
+                 SUM(CASE WHEN e.kind = 'hint' THEN 1 ELSE 0 END) AS hints,
+                 SUM(CASE WHEN e.kind = 'reveal' THEN 1 ELSE 0 END) AS reveals,
+                 COUNT(DISTINCT CASE WHEN e.task_id IS NOT NULL AND e.task_id != '' AND e.task_id != 'session' THEN e.task_id END) AS task_count
+               FROM events e
+               WHERE e.session_token IN (
+                 SELECT token FROM sessions WHERE created_at >= ? ORDER BY created_at DESC LIMIT 300
+               )
+               GROUP BY e.session_token`
+            ).bind(cutoffIso)
+          : db.prepare(
+              `SELECT
+                 e.session_token,
+                 SUM(CASE WHEN e.kind = 'attempt' THEN 1 ELSE 0 END) AS attempts,
+                 SUM(CASE WHEN e.kind = 'attempt' AND e.correct = 1 THEN 1 ELSE 0 END) AS correct,
+                 SUM(CASE WHEN e.kind = 'hint' THEN 1 ELSE 0 END) AS hints,
+                 SUM(CASE WHEN e.kind = 'reveal' THEN 1 ELSE 0 END) AS reveals,
+                 COUNT(DISTINCT CASE WHEN e.task_id IS NOT NULL AND e.task_id != '' AND e.task_id != 'session' THEN e.task_id END) AS task_count
+               FROM events e
+               WHERE e.session_token IN (
+                 SELECT token FROM sessions ORDER BY created_at DESC LIMIT 300
+               )
+               GROUP BY e.session_token`
+            );
+
+        const [students, apps, sessionsRes, aggRes] = await Promise.all([
           getStudents(db),
           getApps(db, false),
-          db.prepare('SELECT * FROM sessions ORDER BY created_at DESC LIMIT 300').all(),
-          db.prepare('SELECT session_token, kind, task_id, correct FROM events').all()
+          sessionsStmt.all(),
+          aggStmt.all()
         ]);
 
-        const eventsByToken = new Map();
-        for (const ev of eventsRes.results || []) {
-          if (!eventsByToken.has(ev.session_token)) eventsByToken.set(ev.session_token, []);
-          eventsByToken.get(ev.session_token).push(ev);
+        const aggByToken = new Map();
+        for (const row of aggRes.results || []) {
+          aggByToken.set(row.session_token, row);
         }
 
         const summaries = (sessionsRes.results || []).map(row =>
-          summarizeSessionRow(row, eventsByToken.get(row.token) || [])
+          summarizeSessionFromAgg(row, aggByToken.get(row.token))
         );
 
         let totalAttempts = 0, totalCorrect = 0, totalActiveMs = 0, activeSessions = 0;
@@ -333,12 +526,17 @@ export async function onRequest(context) {
         }
 
         return jsonResponse({
+          range,
+          accessEmail: getAccessEmail(request) || null,
           config: {
             aulaName: cfg.aulaName,
             subtitle: cfg.subtitle,
             pinEnabled: cfg.pinEnabled,
             isDefaultPin: cfg.isDefaultPin,
-            sessionTtlHours: cfg.sessionTtlHours
+            sessionTtlHours: cfg.sessionTtlHours,
+            classCodeEnabled: cfg.classCodeEnabled,
+            allowGuestStudents: cfg.allowGuestStudents,
+            allowedTeacherEmail: cfg.allowedTeacherEmail
           },
           metrics: {
             totalSessions: summaries.length,
@@ -465,6 +663,7 @@ export async function onRequest(context) {
       if (method === 'PUT' && pathname === '/api/teacher/config') {
         const body = await readJson(request);
         const updates = [];
+        const extraStmts = [];
 
         if (typeof body.aulaName === 'string' && body.aulaName.trim()) {
           updates.push(['aulaName', body.aulaName.trim().slice(0, 60)]);
@@ -478,16 +677,46 @@ export async function onRequest(context) {
         if (body.sessionTtlHours !== undefined) {
           updates.push(['sessionTtlHours', String(Math.max(1, Math.min(24, Number(body.sessionTtlHours) || 8)))]);
         }
+        if (typeof body.allowGuestStudents === 'boolean') {
+          updates.push(['allowGuestStudents', body.allowGuestStudents ? 'true' : 'false']);
+        }
+        if (typeof body.allowedTeacherEmail === 'string') {
+          updates.push(['allowedTeacherEmail', body.allowedTeacherEmail.trim().toLowerCase().slice(0, 120)]);
+        }
         if (typeof body.newPin === 'string' && body.newPin.trim().length >= 4) {
           const newSalt = randomHex(16);
           const newHash = await hashPin(body.newPin.trim(), newSalt);
           updates.push(['pinSalt', newSalt], ['pinHash', newHash], ['isDefaultPin', 'false']);
+          // Invalidate other teacher sessions when PIN changes, keeping current session alive
+          const currentSid = parseCookies(request).aula_docente || '';
+          if (currentSid) {
+            extraStmts.push(db.prepare('DELETE FROM teacher_tokens WHERE sid != ?').bind(currentSid));
+          }
         }
 
-        if (updates.length) {
-          await db.batch(updates.map(([k, v]) =>
+        if (typeof body.newClassCode === 'string' && body.newClassCode.trim().length >= 4) {
+          const codeSalt = randomHex(16);
+          const codeHash = await hashPin(body.newClassCode.trim(), codeSalt);
+          updates.push(['classCodeSalt', codeSalt], ['classCodeHash', codeHash], ['classCodeEnabled', 'true']);
+          extraStmts.push(db.prepare('DELETE FROM classroom_tokens'));
+        } else if (typeof body.classCodeEnabled === 'boolean') {
+          if (body.classCodeEnabled && !cfg.classCodeHash) {
+            return jsonResponse({ error: 'Escribe una clave de aula de al menos 4 caracteres para activarla.' }, 400);
+          }
+          updates.push(['classCodeEnabled', body.classCodeEnabled ? 'true' : 'false']);
+          if (!body.classCodeEnabled) {
+            extraStmts.push(db.prepare('DELETE FROM classroom_tokens'));
+          }
+        }
+
+        const allStmts = [
+          ...updates.map(([k, v]) =>
             db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').bind(k, v)
-          ));
+          ),
+          ...extraStmts
+        ];
+        if (allStmts.length) {
+          await db.batch(allStmts);
         }
 
         const nextCfg = await getConfig(db);
@@ -498,7 +727,10 @@ export async function onRequest(context) {
             subtitle: nextCfg.subtitle,
             pinEnabled: nextCfg.pinEnabled,
             isDefaultPin: nextCfg.isDefaultPin,
-            sessionTtlHours: nextCfg.sessionTtlHours
+            sessionTtlHours: nextCfg.sessionTtlHours,
+            classCodeEnabled: nextCfg.classCodeEnabled,
+            allowGuestStudents: nextCfg.allowGuestStudents,
+            allowedTeacherEmail: nextCfg.allowedTeacherEmail
           }
         });
       }
@@ -506,11 +738,26 @@ export async function onRequest(context) {
       if (method === 'GET' && pathname === '/api/teacher/export.csv') {
         const studentFilter = url.searchParams.get('student') || '';
         const appFilter = url.searchParams.get('app') || '';
+        const range = url.searchParams.get('range') || 'all';
+        const cutoffIso = resolveDateCutoff(range);
 
-        const { results: sessions } = await db.prepare('SELECT * FROM sessions ORDER BY created_at DESC').all();
-        const { results: allEvents } = await db.prepare(
-          `SELECT * FROM events WHERE kind IN ('attempt', 'reveal') ORDER BY rowid ASC`
-        ).all();
+        const sessionsQuery = cutoffIso
+          ? db.prepare('SELECT * FROM sessions WHERE created_at >= ? ORDER BY created_at DESC').bind(cutoffIso)
+          : db.prepare('SELECT * FROM sessions ORDER BY created_at DESC');
+
+        const eventsQuery = cutoffIso
+          ? db.prepare(
+              `SELECT e.* FROM events e
+               JOIN sessions s ON s.token = e.session_token
+               WHERE s.created_at >= ? AND e.kind IN ('attempt', 'reveal')
+               ORDER BY e.rowid ASC`
+            ).bind(cutoffIso)
+          : db.prepare(`SELECT * FROM events WHERE kind IN ('attempt', 'reveal') ORDER BY rowid ASC`);
+
+        const [{ results: sessions }, { results: allEvents }] = await Promise.all([
+          sessionsQuery.all(),
+          eventsQuery.all()
+        ]);
 
         const eventsByToken = new Map();
         for (const ev of allEvents || []) {
@@ -551,7 +798,8 @@ export async function onRequest(context) {
           headers: {
             'Content-Type': 'text/csv; charset=utf-8',
             'Content-Disposition': `attachment; filename="mi-aula-resultados-${new Date().toISOString().slice(0, 10)}.csv"`,
-            'Cache-Control': 'no-store'
+            'Cache-Control': 'no-store',
+            'X-Robots-Tag': 'noindex, nofollow'
           }
         });
       }

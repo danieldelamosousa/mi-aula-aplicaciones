@@ -132,14 +132,109 @@ const MIME_TYPES = {
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
   '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2'
+  '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json'
 };
 
-// In-memory teacher login tokens (cookie-based)
+// In-memory teacher & classroom login tokens (cookie-based) and rate-limit buckets
 const teacherCookies = new Map();
+const classroomCookies = new Map();
+const authBuckets = new Map();
+const PBKDF2_ITERATIONS = 100000;
 
 function hashPin(pin, salt) {
-  return crypto.createHash('sha256').update(`${salt}:${String(pin)}`).digest('hex');
+  const derived = crypto.pbkdf2Sync(String(pin), String(salt), PBKDF2_ITERATIONS, 32, 'sha256').toString('hex');
+  return `pbkdf2$${PBKDF2_ITERATIONS}$${derived}`;
+}
+
+function timingSafeEqualStr(a, b) {
+  const ba = Buffer.from(String(a ?? ''), 'utf8');
+  const bb = Buffer.from(String(b ?? ''), 'utf8');
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
+
+function verifySecret(secret, salt, storedHash) {
+  if (!storedHash || !salt) return { ok: false, needsUpgrade: false };
+  const raw = String(storedHash);
+  if (raw.startsWith('pbkdf2$')) {
+    const parts = raw.split('$');
+    const iters = Math.min(PBKDF2_ITERATIONS, Math.max(1000, Number(parts[1]) || PBKDF2_ITERATIONS));
+    const expected = parts[2] || '';
+    const actual = crypto.pbkdf2Sync(String(secret), String(salt), iters, 32, 'sha256').toString('hex');
+    return { ok: timingSafeEqualStr(actual, expected), needsUpgrade: false };
+  }
+  const legacy = crypto.createHash('sha256').update(`${salt}:${String(secret)}`).digest('hex');
+  const ok = timingSafeEqualStr(legacy, raw);
+  return { ok, needsUpgrade: ok };
+}
+
+function getClientHash(req) {
+  const ip = String(req.headers['cf-connecting-ip'] || (req.headers['x-forwarded-for'] || '').split(',')[0] || req.socket?.remoteAddress || 'local').trim();
+  return crypto.createHash('sha256').update(`client:${ip}`).digest('hex').slice(0, 24);
+}
+
+function getAccessEmail(req) {
+  return String(req.headers['cf-access-authenticated-user-email'] || '').trim().toLowerCase();
+}
+
+function checkAuthLock(keys) {
+  const now = Date.now();
+  let maxRetry = 0;
+  for (const key of keys) {
+    const row = authBuckets.get(key);
+    if (row && row.lockedUntil > now) {
+      const sec = Math.ceil((row.lockedUntil - now) / 1000);
+      if (sec > maxRetry) maxRetry = sec;
+    }
+  }
+  return maxRetry;
+}
+
+function recordAuthFailure(key, thresholds = { t1: 5, l1: 300, t2: 8, l2: 900, t3: 10, l3: 1800 }) {
+  const now = Date.now();
+  const row = authBuckets.get(key);
+  const prev = row && (now - row.updatedAt < 3600 * 1000) ? row.failures : 0;
+  const failures = prev + 1;
+  let lockSec = 0;
+  if (failures >= thresholds.t3) lockSec = thresholds.l3;
+  else if (failures >= thresholds.t2) lockSec = thresholds.l2;
+  else if (failures >= thresholds.t1) lockSec = thresholds.l1;
+  authBuckets.set(key, { failures, lockedUntil: lockSec > 0 ? now + lockSec * 1000 : 0, updatedAt: now });
+  return { failures, lockSec };
+}
+
+function clearAuthFailures(keys) {
+  for (const k of keys) authBuckets.delete(k);
+}
+
+function checkWindowRateLimit(key, maxHits, windowMs) {
+  const now = Date.now();
+  const row = authBuckets.get(key);
+  const inWindow = row && (now - row.updatedAt < windowMs);
+  const count = inWindow ? row.failures : 0;
+  if (count >= maxHits) {
+    return { allowed: false, retryAfterSec: Math.max(1, Math.ceil((row.updatedAt + windowMs - now) / 1000)) };
+  }
+  authBuckets.set(key, { failures: count + 1, lockedUntil: 0, updatedAt: inWindow ? row.updatedAt : now });
+  return { allowed: true, retryAfterSec: 0 };
+}
+
+function formatRetryMessage(retryAfterSec) {
+  if (retryAfterSec >= 60) {
+    const mins = Math.ceil(retryAfterSec / 60);
+    return `Demasiados intentos fallidos. Espera ${mins} ${mins === 1 ? 'minuto' : 'minutos'} antes de volver a intentarlo.`;
+  }
+  return `Demasiados intentos fallidos. Espera ${retryAfterSec} segundos antes de volver a intentarlo.`;
+}
+
+function resolveDateCutoff(range) {
+  const now = new Date();
+  if (range === 'today') return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  if (range === '7d') return new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString();
+  if (range === '30d') return new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString();
+  if (range === '90d') return new Date(now.getTime() - 90 * 24 * 3600 * 1000).toISOString();
+  return null;
 }
 
 function createInitialDb() {
@@ -153,7 +248,12 @@ function createInitialDb() {
       pinSalt: salt,
       pinHash: hashPin('1234', salt),
       isDefaultPin: true,
-      sessionTtlHours: 8
+      sessionTtlHours: 8,
+      classCodeEnabled: false,
+      classCodeSalt: '',
+      classCodeHash: '',
+      allowGuestStudents: true,
+      allowedTeacherEmail: ''
     },
     students: DEFAULT_STUDENTS,
     apps: BUILT_IN_APPS,
@@ -223,6 +323,9 @@ function parseCookies(req) {
 }
 
 function isTeacherAuthenticated(req) {
+  const accessEmail = getAccessEmail(req);
+  const allowed = (db.config.allowedTeacherEmail || '').trim().toLowerCase();
+  if (allowed && accessEmail && accessEmail !== allowed) return false;
   if (!db.config.pinEnabled) return true;
   const cookies = parseCookies(req);
   const sid = cookies.aula_docente;
@@ -235,11 +338,26 @@ function isTeacherAuthenticated(req) {
   return true;
 }
 
+function isClassroomUnlocked(req) {
+  if (!db.config.classCodeEnabled || !db.config.classCodeHash) return true;
+  if (isTeacherAuthenticated(req)) return true;
+  const cookies = parseCookies(req);
+  const sid = cookies.aula_clase;
+  if (!sid) return false;
+  const expiresAt = classroomCookies.get(sid);
+  if (!expiresAt || expiresAt < Date.now()) {
+    classroomCookies.delete(sid);
+    return false;
+  }
+  return true;
+}
+
 function sendJson(res, status, data, extraHeaders = {}) {
   const body = JSON.stringify(data);
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
+    'X-Robots-Tag': 'noindex, nofollow',
     ...extraHeaders
   });
   res.end(body);
@@ -404,8 +522,13 @@ function serveStatic(req, res, pathname) {
   }
 
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-    res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end('<!doctype html><html lang="es"><meta charset="utf-8"><title>No encontrado · Mi aula</title><body style="font-family:system-ui;padding:48px;background:#f8f7f0;color:#173e39"><h1>Página no encontrada</h1><p><a href="/" style="color:#1c6759;font-weight:700">← Volver a Mi aula</a></p></body></html>');
+    const custom404 = path.join(PUBLIC_DIR, '404.html');
+    res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow' });
+    if (fs.existsSync(custom404)) {
+      fs.createReadStream(custom404).pipe(res);
+    } else {
+      res.end('<!doctype html><html lang="es"><meta charset="utf-8"><title>No encontrado · Mi aula</title><body style="font-family:system-ui;padding:48px;background:#f8f7f0;color:#173e39"><h1>Página no encontrada</h1><p><a href="/" style="color:#1c6759;font-weight:700">← Volver a Mi aula</a></p></body></html>');
+    }
     return;
   }
 
@@ -413,7 +536,11 @@ function serveStatic(req, res, pathname) {
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
   res.writeHead(200, {
     'Content-Type': contentType,
-    'Cache-Control': ext === '.webp' || ext === '.png' || ext === '.svg' ? 'public, max-age=86400' : 'no-cache'
+    'Cache-Control': ext === '.webp' || ext === '.png' || ext === '.svg' ? 'public, max-age=86400' : 'no-cache',
+    'X-Robots-Tag': 'noindex, nofollow',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   });
   fs.createReadStream(filePath).pipe(res);
 }
@@ -426,14 +553,15 @@ const server = http.createServer(async (req, res) => {
 
     // Short code direct redirect: /codigo/ABC-123
     if (method === 'GET' && pathname.startsWith('/codigo/')) {
-      const code = decodeURIComponent(pathname.slice('/codigo/'.length)).trim().toUpperCase();
+      const raw = decodeURIComponent(pathname.slice('/codigo/'.length)).trim().toUpperCase().replace(/\s+/g, '');
+      const code = raw.includes('-') ? raw : (raw.length === 6 ? `${raw.slice(0, 3)}-${raw.slice(3)}` : raw);
       const session = db.sessions.find(s => s.code === code);
       if (!session || session.endedAt || new Date(session.expiresAt).getTime() < Date.now()) {
         res.writeHead(302, { Location: '/?codigo_invalido=1' });
         res.end();
         return;
       }
-      const dest = `/apps/${encodeURIComponent(session.app)}/index.html?aula=1#sesion=${encodeURIComponent(session.token)}`;
+      const dest = `/apps/${encodeURIComponent(session.app)}/?aula=1#sesion=${encodeURIComponent(session.token)}`;
       res.writeHead(302, { Location: dest });
       res.end();
       return;
@@ -451,26 +579,98 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (method === 'GET' && pathname === '/api/profile') {
+      const classCodeRequired = Boolean(db.config.classCodeEnabled && db.config.classCodeHash);
+      const allowGuestStudents = db.config.allowGuestStudents !== false;
+      const unlocked = isClassroomUnlocked(req);
+      if (!unlocked) {
+        return sendJson(res, 200, {
+          aulaName: db.config.aulaName,
+          sessionTtlHours: db.config.sessionTtlHours || 8,
+          classCodeRequired: true,
+          unlocked: false,
+          allowGuestStudents,
+          students: [],
+          roster: []
+        });
+      }
       return sendJson(res, 200, {
         aulaName: db.config.aulaName,
         sessionTtlHours: db.config.sessionTtlHours || 8,
+        classCodeRequired,
+        unlocked: true,
+        allowGuestStudents,
         students: db.students.map(s => (typeof s === 'string' ? s : s.name)),
         roster: db.students.map(s => (typeof s === 'string' ? { name: s, course: '' } : s))
       });
     }
 
+    if (method === 'POST' && pathname === '/api/classroom/unlock') {
+      if (!db.config.classCodeEnabled || !db.config.classCodeHash) {
+        return sendJson(res, 200, { ok: true });
+      }
+      const clientHash = getClientHash(req);
+      const lockKeys = [`class:${clientHash}`];
+      const retryAfter = checkAuthLock(lockKeys);
+      if (retryAfter > 0) {
+        return sendJson(res, 429, { error: formatRetryMessage(retryAfter) }, { 'Retry-After': String(retryAfter) });
+      }
+      const body = await readJsonBody(req);
+      const code = String(body.code || '').trim();
+      const { ok, needsUpgrade } = verifySecret(code, db.config.classCodeSalt, db.config.classCodeHash);
+      if (!ok) {
+        const resLock = recordAuthFailure(`class:${clientHash}`);
+        if (resLock.lockSec > 0) {
+          return sendJson(res, 429, { error: formatRetryMessage(resLock.lockSec) }, { 'Retry-After': String(resLock.lockSec) });
+        }
+        return sendJson(res, 401, { error: 'Clave de aula incorrecta. Inténtalo de nuevo.' });
+      }
+      clearAuthFailures(lockKeys);
+      if (needsUpgrade) {
+        db.config.classCodeHash = hashPin(code, db.config.classCodeSalt);
+        saveDb(db);
+      }
+      const sid = crypto.randomBytes(24).toString('base64url');
+      const ttlSec = 30 * 24 * 3600;
+      classroomCookies.set(sid, Date.now() + ttlSec * 1000);
+      return sendJson(res, 200, { ok: true }, { 'Set-Cookie': `aula_clase=${sid}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${ttlSec}` });
+    }
+
     if (method === 'POST' && pathname === '/api/sessions') {
+      if (!isClassroomUnlocked(req)) {
+        return sendJson(res, 403, { error: 'Introduce la clave de aula antes de iniciar una sesión registrada.' });
+      }
+      const clientHash = getClientHash(req);
+      const rate = checkWindowRateLimit(`sess:${clientHash}`, 40, 10 * 60 * 1000);
+      if (!rate.allowed) {
+        return sendJson(res, 429, { error: 'Se han creado demasiadas sesiones seguidas desde esta red. Espera unos minutos.' }, { 'Retry-After': String(rate.retryAfterSec) });
+      }
+
       const body = await readJsonBody(req);
       const appId = String(body.app || '').trim();
       const appObj = db.apps.find(a => a.id === appId && a.builtIn);
       if (!appObj) {
         return sendJson(res, 400, { error: 'Aplicación no válida.' });
       }
-      const students = Array.isArray(body.students)
-        ? [...new Set(body.students.map(s => String(s).trim()).filter(Boolean))].slice(0, 12)
+      let students = Array.isArray(body.students)
+        ? [...new Set(body.students.map(s => String(s).trim().slice(0, 60)).filter(Boolean))].slice(0, 12)
         : [];
       if (!students.length) {
         return sendJson(res, 400, { error: 'Selecciona al menos un alumno o alumna.' });
+      }
+      if (db.config.allowGuestStudents === false) {
+        const byLower = new Map(db.students.map(s => {
+          const n = typeof s === 'string' ? s : s.name;
+          return [n.toLocaleLowerCase('es'), n];
+        }));
+        const matched = [];
+        for (const name of students) {
+          const canonical = byLower.get(name.toLocaleLowerCase('es'));
+          if (!canonical) {
+            return sendJson(res, 400, { error: 'Solo pueden participar alumnos incluidos en la lista oficial de clase.' });
+          }
+          matched.push(canonical);
+        }
+        students = [...new Set(matched)];
       }
 
       const token = crypto.randomBytes(18).toString('base64url');
@@ -525,7 +725,7 @@ const server = http.createServer(async (req, res) => {
         app: session.app,
         appTitle: session.appTitle,
         students: session.students,
-        url: `/apps/${encodeURIComponent(session.app)}/index.html?aula=1#sesion=${encodeURIComponent(session.token)}`
+        url: `/apps/${encodeURIComponent(session.app)}/?aula=1#sesion=${encodeURIComponent(session.token)}`
       });
     }
 
@@ -610,17 +810,42 @@ const server = http.createServer(async (req, res) => {
         authenticated: isTeacherAuthenticated(req),
         pinEnabled: Boolean(db.config.pinEnabled),
         isDefaultPin: Boolean(db.config.isDefaultPin),
-        aulaName: db.config.aulaName
+        aulaName: db.config.aulaName,
+        accessEmail: getAccessEmail(req) || null
       });
     }
 
     if (method === 'POST' && pathname === '/api/teacher/login') {
+      const accessEmail = getAccessEmail(req);
+      const allowedEmail = (db.config.allowedTeacherEmail || '').trim().toLowerCase();
+      if (allowedEmail && accessEmail && accessEmail !== allowedEmail) {
+        return sendJson(res, 403, { error: 'Tu cuenta de Cloudflare Access no está autorizada para este panel.' });
+      }
+      const clientHash = getClientHash(req);
+      const ipKey = `login:${clientHash}`;
+      const globalKey = 'login:global';
+      const retryAfter = checkAuthLock([ipKey, globalKey]);
+      if (retryAfter > 0) {
+        return sendJson(res, 429, { error: formatRetryMessage(retryAfter) }, { 'Retry-After': String(retryAfter) });
+      }
       const body = await readJsonBody(req);
       const pin = String(body.pin || '').trim();
-      const expected = db.config.pinHash;
-      const provided = hashPin(pin, db.config.pinSalt);
-      if (db.config.pinEnabled && provided !== expected) {
+      const { ok, needsUpgrade } = db.config.pinEnabled
+        ? verifySecret(pin, db.config.pinSalt, db.config.pinHash)
+        : { ok: true, needsUpgrade: false };
+      if (db.config.pinEnabled && !ok) {
+        const ipRes = recordAuthFailure(ipKey, { t1: 5, l1: 300, t2: 8, l2: 900, t3: 10, l3: 1800 });
+        const glRes = recordAuthFailure(globalKey, { t1: 15, l1: 600, t2: 25, l2: 1800, t3: 40, l3: 3600 });
+        const lockSec = Math.max(ipRes.lockSec, glRes.lockSec);
+        if (lockSec > 0) {
+          return sendJson(res, 429, { error: formatRetryMessage(lockSec) }, { 'Retry-After': String(lockSec) });
+        }
         return sendJson(res, 401, { error: 'PIN incorrecto. Inténtalo de nuevo.' });
+      }
+      clearAuthFailures([ipKey, globalKey]);
+      if (needsUpgrade && pin) {
+        db.config.pinHash = hashPin(pin, db.config.pinSalt);
+        saveDb(db);
       }
       const sid = crypto.randomBytes(24).toString('base64url');
       teacherCookies.set(sid, Date.now() + 12 * 3600 * 1000);
@@ -650,7 +875,13 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (method === 'GET' && pathname === '/api/teacher/dashboard') {
-        const summaries = db.sessions.map(summarizeSession);
+        const range = parsedUrl.searchParams.get('range') || 'all';
+        const cutoffIso = resolveDateCutoff(range);
+        const scopedSessions = (cutoffIso
+          ? db.sessions.filter(s => (s.createdAt || '') >= cutoffIso)
+          : db.sessions
+        ).slice(0, 300);
+        const summaries = scopedSessions.map(summarizeSession);
         let totalAttempts = 0;
         let totalCorrect = 0;
         let totalActiveMs = 0;
@@ -695,12 +926,17 @@ const server = http.createServer(async (req, res) => {
         }
 
         return sendJson(res, 200, {
+          range,
+          accessEmail: getAccessEmail(req) || null,
           config: {
             aulaName: db.config.aulaName,
             subtitle: db.config.subtitle || '2.º ciclo de Primaria',
             pinEnabled: Boolean(db.config.pinEnabled),
             isDefaultPin: Boolean(db.config.isDefaultPin),
-            sessionTtlHours: db.config.sessionTtlHours || 8
+            sessionTtlHours: db.config.sessionTtlHours || 8,
+            classCodeEnabled: Boolean(db.config.classCodeEnabled && db.config.classCodeHash),
+            allowGuestStudents: db.config.allowGuestStudents !== false,
+            allowedTeacherEmail: db.config.allowedTeacherEmail || ''
           },
           metrics: {
             totalSessions: summaries.length,
@@ -827,11 +1063,34 @@ const server = http.createServer(async (req, res) => {
         if (body.sessionTtlHours !== undefined) {
           db.config.sessionTtlHours = Math.max(1, Math.min(24, Number(body.sessionTtlHours) || 8));
         }
+        if (typeof body.allowGuestStudents === 'boolean') {
+          db.config.allowGuestStudents = body.allowGuestStudents;
+        }
+        if (typeof body.allowedTeacherEmail === 'string') {
+          db.config.allowedTeacherEmail = body.allowedTeacherEmail.trim().toLowerCase().slice(0, 120);
+        }
         if (typeof body.newPin === 'string' && body.newPin.trim().length >= 4) {
           const newSalt = crypto.randomBytes(16).toString('hex');
           db.config.pinSalt = newSalt;
           db.config.pinHash = hashPin(body.newPin.trim(), newSalt);
           db.config.isDefaultPin = false;
+          const currentSid = parseCookies(req).aula_docente || '';
+          for (const sid of teacherCookies.keys()) {
+            if (sid !== currentSid) teacherCookies.delete(sid);
+          }
+        }
+        if (typeof body.newClassCode === 'string' && body.newClassCode.trim().length >= 4) {
+          const codeSalt = crypto.randomBytes(16).toString('hex');
+          db.config.classCodeSalt = codeSalt;
+          db.config.classCodeHash = hashPin(body.newClassCode.trim(), codeSalt);
+          db.config.classCodeEnabled = true;
+          classroomCookies.clear();
+        } else if (typeof body.classCodeEnabled === 'boolean') {
+          if (body.classCodeEnabled && !db.config.classCodeHash) {
+            return sendJson(res, 400, { error: 'Escribe una clave de aula de al menos 4 caracteres para activarla.' });
+          }
+          db.config.classCodeEnabled = body.classCodeEnabled;
+          if (!body.classCodeEnabled) classroomCookies.clear();
         }
         saveDb(db);
         return sendJson(res, 200, {
@@ -841,7 +1100,10 @@ const server = http.createServer(async (req, res) => {
             subtitle: db.config.subtitle,
             pinEnabled: db.config.pinEnabled,
             isDefaultPin: db.config.isDefaultPin,
-            sessionTtlHours: db.config.sessionTtlHours
+            sessionTtlHours: db.config.sessionTtlHours,
+            classCodeEnabled: Boolean(db.config.classCodeEnabled && db.config.classCodeHash),
+            allowGuestStudents: db.config.allowGuestStudents !== false,
+            allowedTeacherEmail: db.config.allowedTeacherEmail || ''
           }
         });
       }
@@ -849,10 +1111,13 @@ const server = http.createServer(async (req, res) => {
       if (method === 'GET' && pathname === '/api/teacher/export.csv') {
         const studentFilter = parsedUrl.searchParams.get('student') || '';
         const appFilter = parsedUrl.searchParams.get('app') || '';
+        const range = parsedUrl.searchParams.get('range') || 'all';
+        const cutoffIso = resolveDateCutoff(range);
         const rows = [
           ['Fecha', 'Código sesión', 'Aplicación', 'Participantes', 'Modo', 'Nivel', 'Actividad', 'Respuesta', 'Acierto', 'Con ayuda', 'Tiempo (s)'].join(';')
         ];
         for (const s of db.sessions) {
+          if (cutoffIso && (s.createdAt || '') < cutoffIso) continue;
           if (appFilter && s.app !== appFilter) continue;
           if (studentFilter && !s.students.includes(studentFilter)) continue;
           const attempts = (s.events || []).filter(e => e.kind === 'attempt' || e.kind === 'reveal');
@@ -875,7 +1140,8 @@ const server = http.createServer(async (req, res) => {
         const csv = '\uFEFF' + rows.join('\r\n');
         res.writeHead(200, {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="mi-aula-resultados-${new Date().toISOString().slice(0, 10)}.csv"`
+          'Content-Disposition': `attachment; filename="mi-aula-resultados-${new Date().toISOString().slice(0, 10)}.csv"`,
+          'X-Robots-Tag': 'noindex, nofollow'
         });
         res.end(csv);
         return;

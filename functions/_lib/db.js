@@ -101,11 +101,15 @@ const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, code TEXT NOT NULL UNIQUE, app_id TEXT NOT NULL, app_title TEXT NOT NULL, students_json TEXT NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL, last_activity_at TEXT NOT NULL, ended_at TEXT, active_ms INTEGER NOT NULL DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, session_token TEXT NOT NULL, kind TEXT NOT NULL, task_id TEXT NOT NULL, mode TEXT NOT NULL DEFAULT '', level TEXT NOT NULL DEFAULT '', prompt TEXT NOT NULL DEFAULT '', answer TEXT NOT NULL DEFAULT '', correct INTEGER, assisted INTEGER NOT NULL DEFAULT 0, task_ms INTEGER NOT NULL DEFAULT 0, active_ms INTEGER NOT NULL DEFAULT 0, client_at TEXT NOT NULL, received_at TEXT NOT NULL, FOREIGN KEY (session_token) REFERENCES sessions(token) ON DELETE CASCADE)`,
   `CREATE TABLE IF NOT EXISTS teacher_tokens (sid TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS classroom_tokens (sid TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS auth_attempts (key TEXT PRIMARY KEY, failures INTEGER NOT NULL DEFAULT 0, locked_until INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS idx_sessions_code ON sessions(code)`,
   `CREATE INDEX IF NOT EXISTS idx_sessions_created ON sessions(created_at DESC)`,
-  `CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_token)`
+  `CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_token)`,
+  `CREATE INDEX IF NOT EXISTS idx_events_session_kind ON events(session_token, kind)`
 ];
 
+const PBKDF2_ITERATIONS = 100000;
 let initialized = false;
 
 export function randomHex(bytes = 16) {
@@ -122,10 +126,135 @@ export function randomToken(bytes = 18) {
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export async function hashPin(pin, salt) {
-  const data = new TextEncoder().encode(`${salt}:${String(pin)}`);
-  const buf = await crypto.subtle.digest('SHA-256', data);
+function bytesToHex(buf) {
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export function timingSafeEqualStr(a, b) {
+  const sa = String(a ?? '');
+  const sb = String(b ?? '');
+  const len = Math.max(sa.length, sb.length);
+  let diff = sa.length ^ sb.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (sa.charCodeAt(i) || 0) ^ (sb.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+async function sha256Hex(text) {
+  const data = new TextEncoder().encode(String(text));
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return bytesToHex(buf);
+}
+
+async function pbkdf2Hex(secret, salt, iterations = PBKDF2_ITERATIONS) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(String(secret)),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode(String(salt)),
+      iterations,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    256
+  );
+  return bytesToHex(bits);
+}
+
+export async function hashPin(pin, salt) {
+  const derived = await pbkdf2Hex(String(pin), String(salt), PBKDF2_ITERATIONS);
+  return `pbkdf2$${PBKDF2_ITERATIONS}$${derived}`;
+}
+
+export async function verifySecret(secret, salt, storedHash) {
+  if (!storedHash || !salt) return { ok: false, needsUpgrade: false };
+  const raw = String(storedHash);
+  if (raw.startsWith('pbkdf2$')) {
+    const parts = raw.split('$');
+    const iters = Math.min(PBKDF2_ITERATIONS, Math.max(1000, Number(parts[1]) || PBKDF2_ITERATIONS));
+    const expected = parts[2] || '';
+    const actual = await pbkdf2Hex(String(secret), String(salt), iters);
+    return { ok: timingSafeEqualStr(actual, expected), needsUpgrade: false };
+  }
+  // Legacy SHA-256(salt:pin) fallback with automatic upgrade on match
+  const legacy = await sha256Hex(`${salt}:${String(secret)}`);
+  const ok = timingSafeEqualStr(legacy, raw);
+  return { ok, needsUpgrade: ok };
+}
+
+export async function getClientHash(request) {
+  const ip = (
+    request.headers.get('cf-connecting-ip') ||
+    (request.headers.get('x-forwarded-for') || '').split(',')[0] ||
+    'local'
+  ).trim();
+  const digest = await sha256Hex(`client:${ip}`);
+  return digest.slice(0, 24);
+}
+
+export function getAccessEmail(request) {
+  return String(request.headers.get('cf-access-authenticated-user-email') || '').trim().toLowerCase();
+}
+
+export async function checkAuthLock(db, keys) {
+  const now = Date.now();
+  let maxRetry = 0;
+  for (const key of keys) {
+    const row = await db.prepare('SELECT locked_until FROM auth_attempts WHERE key = ?').bind(key).first();
+    if (row && Number(row.locked_until) > now) {
+      const sec = Math.ceil((Number(row.locked_until) - now) / 1000);
+      if (sec > maxRetry) maxRetry = sec;
+    }
+  }
+  return maxRetry;
+}
+
+export async function recordAuthFailure(db, key, thresholds = { t1: 5, l1: 300, t2: 8, l2: 900, t3: 10, l3: 1800 }) {
+  const now = Date.now();
+  const row = await db.prepare('SELECT failures, updated_at FROM auth_attempts WHERE key = ?').bind(key).first();
+  // Reset stale failures after 1 hour of quiet
+  const prev = row && (now - Number(row.updated_at) < 3600 * 1000) ? Number(row.failures) : 0;
+  const failures = prev + 1;
+  let lockSec = 0;
+  if (failures >= thresholds.t3) lockSec = thresholds.l3;
+  else if (failures >= thresholds.t2) lockSec = thresholds.l2;
+  else if (failures >= thresholds.t1) lockSec = thresholds.l1;
+
+  const lockedUntil = lockSec > 0 ? now + lockSec * 1000 : 0;
+  await db.prepare(
+    `INSERT OR REPLACE INTO auth_attempts (key, failures, locked_until, updated_at) VALUES (?, ?, ?, ?)`
+  ).bind(key, failures, lockedUntil, now).run();
+  return { failures, lockSec };
+}
+
+export async function clearAuthFailures(db, keys) {
+  if (!keys.length) return;
+  await db.batch(keys.map(k => db.prepare('DELETE FROM auth_attempts WHERE key = ?').bind(k)));
+}
+
+export async function checkWindowRateLimit(db, key, maxHits, windowMs) {
+  const now = Date.now();
+  const row = await db.prepare('SELECT failures, updated_at FROM auth_attempts WHERE key = ?').bind(key).first();
+  const inWindow = row && (now - Number(row.updated_at) < windowMs);
+  const count = inWindow ? Number(row.failures) : 0;
+  if (count >= maxHits) {
+    const retryAfterSec = Math.max(1, Math.ceil((Number(row.updated_at) + windowMs - now) / 1000));
+    return { allowed: false, retryAfterSec };
+  }
+  const nextCount = count + 1;
+  const windowStart = inWindow ? Number(row.updated_at) : now;
+  await db.prepare(
+    `INSERT OR REPLACE INTO auth_attempts (key, failures, locked_until, updated_at) VALUES (?, ?, 0, ?)`
+  ).bind(key, nextCount, windowStart).run();
+  return { allowed: true, retryAfterSec: 0 };
 }
 
 export async function generateShortCode(db) {
@@ -166,7 +295,10 @@ export async function ensureDb(db) {
       ['pinSalt', salt],
       ['pinHash', pinHash],
       ['isDefaultPin', 'true'],
-      ['sessionTtlHours', '8']
+      ['sessionTtlHours', '8'],
+      ['classCodeEnabled', 'false'],
+      ['allowGuestStudents', 'true'],
+      ['allowedTeacherEmail', '']
     ];
     await db.batch(defaults.map(([k, v]) =>
       db.prepare('INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)').bind(k, v)
@@ -206,7 +338,12 @@ export async function getConfig(db) {
     pinSalt: map.pinSalt || '',
     pinHash: map.pinHash || '',
     isDefaultPin: map.isDefaultPin === 'true',
-    sessionTtlHours: Math.max(1, Math.min(24, Number(map.sessionTtlHours) || 8))
+    sessionTtlHours: Math.max(1, Math.min(24, Number(map.sessionTtlHours) || 8)),
+    classCodeEnabled: map.classCodeEnabled === 'true' && Boolean(map.classCodeHash),
+    classCodeSalt: map.classCodeSalt || '',
+    classCodeHash: map.classCodeHash || '',
+    allowGuestStudents: map.allowGuestStudents !== 'false',
+    allowedTeacherEmail: (map.allowedTeacherEmail || '').trim().toLowerCase()
   };
 }
 
@@ -240,7 +377,11 @@ export function parseCookies(request) {
   for (const part of header.split(';')) {
     const idx = part.indexOf('=');
     if (idx > 0) {
-      cookies[part.slice(0, idx).trim()] = decodeURIComponent(part.slice(idx + 1).trim());
+      try {
+        cookies[part.slice(0, idx).trim()] = decodeURIComponent(part.slice(idx + 1).trim());
+      } catch {
+        cookies[part.slice(0, idx).trim()] = part.slice(idx + 1).trim();
+      }
     }
   }
   return cookies;
@@ -248,6 +389,10 @@ export function parseCookies(request) {
 
 export async function isTeacherAuthenticated(db, request, config = null) {
   const cfg = config || await getConfig(db);
+  const accessEmail = getAccessEmail(request);
+  if (cfg.allowedTeacherEmail && accessEmail && accessEmail !== cfg.allowedTeacherEmail) {
+    return false;
+  }
   if (!cfg.pinEnabled) return true;
   const cookies = parseCookies(request);
   const sid = cookies.aula_docente;
@@ -260,12 +405,28 @@ export async function isTeacherAuthenticated(db, request, config = null) {
   return true;
 }
 
+export async function isClassroomUnlocked(db, request, config = null) {
+  const cfg = config || await getConfig(db);
+  if (!cfg.classCodeEnabled) return true;
+  if (await isTeacherAuthenticated(db, request, cfg)) return true;
+  const cookies = parseCookies(request);
+  const sid = cookies.aula_clase;
+  if (!sid) return false;
+  const row = await db.prepare('SELECT expires_at FROM classroom_tokens WHERE sid = ?').bind(sid).first();
+  if (!row || Number(row.expires_at) < Date.now()) {
+    if (row) await db.prepare('DELETE FROM classroom_tokens WHERE sid = ?').bind(sid).run();
+    return false;
+  }
+  return true;
+}
+
 export function jsonResponse(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
+      'X-Robots-Tag': 'noindex, nofollow',
       ...extraHeaders
     }
   });
@@ -285,17 +446,30 @@ export function csvEscape(val) {
   return s;
 }
 
-export function summarizeSessionRow(row, events) {
-  let attempts = 0, correct = 0, hints = 0, reveals = 0;
-  const tasks = new Set();
-  for (const ev of events) {
-    if (ev.task_id && ev.task_id !== 'session') tasks.add(ev.task_id);
-    if (ev.kind === 'attempt') {
-      attempts++;
-      if (ev.correct) correct++;
-    } else if (ev.kind === 'hint') hints++;
-    else if (ev.kind === 'reveal') reveals++;
+export function resolveDateCutoff(range) {
+  const now = new Date();
+  if (range === 'today') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return start.toISOString();
   }
+  if (range === '7d') {
+    return new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString();
+  }
+  if (range === '30d') {
+    return new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString();
+  }
+  if (range === '90d') {
+    return new Date(now.getTime() - 90 * 24 * 3600 * 1000).toISOString();
+  }
+  return null;
+}
+
+export function summarizeSessionFromAgg(row, agg) {
+  const attempts = Number(agg?.attempts) || 0;
+  const correct = Number(agg?.correct) || 0;
+  const hints = Number(agg?.hints) || 0;
+  const reveals = Number(agg?.reveals) || 0;
+  const taskCount = Number(agg?.task_count) || 0;
 
   let students = [];
   try { students = JSON.parse(row.students_json || '[]'); } catch {}
@@ -320,8 +494,28 @@ export function summarizeSessionRow(row, events) {
     accuracy: attempts > 0 ? Math.round((correct / attempts) * 100) : null,
     hints,
     reveals,
-    taskCount: tasks.size
+    taskCount
   };
+}
+
+export function summarizeSessionRow(row, events) {
+  let attempts = 0, correct = 0, hints = 0, reveals = 0;
+  const tasks = new Set();
+  for (const ev of events) {
+    if (ev.task_id && ev.task_id !== 'session') tasks.add(ev.task_id);
+    if (ev.kind === 'attempt') {
+      attempts++;
+      if (ev.correct) correct++;
+    } else if (ev.kind === 'hint') hints++;
+    else if (ev.kind === 'reveal') reveals++;
+  }
+  return summarizeSessionFromAgg(row, {
+    attempts,
+    correct,
+    hints,
+    reveals,
+    task_count: tasks.size
+  });
 }
 
 export function buildTasksFromDbEvents(events) {

@@ -127,31 +127,76 @@
   }
 
   $('freeBtn').addEventListener('click', () => {
-    location.href = `/apps/${encodeURIComponent(appId)}/index.html?libre=1`;
+    location.href = `/apps/${encodeURIComponent(appId)}/?libre=1`;
   });
 
-  $('classBtn').addEventListener('click', async () => {
-    $('classBtn').setAttribute('aria-pressed', 'true');
+  async function loadClassroomProfile() {
     showMessage('');
     try {
       const res = await fetch('/api/profile', { cache: 'no-store' });
       const profile = await res.json();
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error(profile.error || 'No se pudo cargar la lista del aula.');
+
+      if (profile.classCodeRequired && !profile.unlocked) {
+        $('studentsPanel').hidden = true;
+        $('classroomLockPanel').hidden = false;
+        $('classroomLockPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        $('classCodeInput').focus();
+        return;
+      }
+
+      $('classroomLockPanel').hidden = true;
       roster = Array.isArray(profile.roster)
         ? profile.roster
         : (profile.students || []).map(name => ({ name, course: '' }));
       if (profile.sessionTtlHours) {
         $('ttlFootnote').textContent = `El código y el enlace permiten enviar resultados durante ${profile.sessionTtlHours} horas. No permiten consultar informes docentes.`;
       }
+      const quickAddRow = $('quickAddRow');
+      if (quickAddRow) {
+        quickAddRow.hidden = profile.allowGuestStudents === false;
+      }
       $('studentsPanel').hidden = false;
       renderCoursePills();
       renderStudents();
       updateBadge();
       $('studentsPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } catch {
-      showMessage('No se pudo cargar la lista del aula. Inténtalo de nuevo.', true);
+    } catch (err) {
+      showMessage(err.message || 'No se pudo cargar la lista del aula. Inténtalo de nuevo.', true);
     }
+  }
+
+  $('classBtn').addEventListener('click', async () => {
+    $('classBtn').setAttribute('aria-pressed', 'true');
+    await loadClassroomProfile();
   });
+
+  const unlockForm = $('classroomUnlockForm');
+  if (unlockForm) {
+    unlockForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const code = $('classCodeInput').value.trim();
+      if (!code) return;
+      $('unlockClassBtn').disabled = true;
+      showMessage('');
+      try {
+        const res = await fetch('/api/classroom/unlock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Clave de aula incorrecta.');
+        $('classCodeInput').value = '';
+        await loadClassroomProfile();
+      } catch (err) {
+        showMessage(err.message || 'No se pudo desbloquear el aula.', true);
+        $('classCodeInput').select();
+      } finally {
+        $('unlockClassBtn').disabled = false;
+      }
+    });
+  }
 
   $('rosterSearch').addEventListener('input', renderStudents);
 
@@ -200,7 +245,7 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudo preparar la sesión.');
 
-      const directLink = `${location.origin}/apps/${encodeURIComponent(appId)}/index.html?aula=1#sesion=${encodeURIComponent(data.token)}`;
+      const directLink = `${location.origin}/apps/${encodeURIComponent(appId)}/?aula=1#sesion=${encodeURIComponent(data.token)}`;
       const shortLink = `${location.origin}/codigo/${encodeURIComponent(data.code)}`;
 
       if (!shareMode) {

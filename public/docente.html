@@ -3,8 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#143833">
   <title>Panel docente · Mi aula</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/styles/tokens.css">
   <link rel="stylesheet" href="/styles/docente.css">
 </head>
@@ -22,7 +26,7 @@
         </span>
         <span class="brand-meta">
           <span id="headerAulaName">Mi aula</span>
-          <span class="brand-sub">Panel docente</span>
+          <span class="brand-sub" id="headerSub">Panel docente</span>
         </span>
       </a>
       <div class="nav-actions">
@@ -37,12 +41,13 @@
     <section id="loginView" class="login-wrap" hidden>
       <h1>Acceso docente</h1>
       <p>Introduce tu PIN para consultar resultados, gestionar la lista de clase y organizar las aplicaciones del aula.</p>
+      <div id="accessLoginBadge" class="notice" style="margin-bottom:16px;" hidden></div>
       <div id="defaultPinTip" class="notice warn" style="margin-bottom:16px;" hidden>
         PIN inicial por defecto: <strong>1234</strong>. Puedes cambiarlo o desactivarlo en la pestaña <em>Ajustes</em>.
       </div>
       <form id="loginForm">
         <label class="sr-only" for="pinInput">PIN docente</label>
-        <input id="pinInput" class="pin-input" type="password" inputmode="numeric" maxlength="16" placeholder="••••" autocomplete="current-password" required>
+        <input id="pinInput" class="pin-input" type="password" maxlength="32" placeholder="••••" autocomplete="current-password" required>
         <div id="loginError" class="notice error" style="margin-bottom:14px;" hidden></div>
         <button class="btn btn-primary" type="submit" style="width:100%;">Entrar al panel docente</button>
       </form>
@@ -102,6 +107,16 @@
           </div>
 
           <div class="filter-bar">
+            <div class="field">
+              <label for="filterRange">Periodo</label>
+              <select id="filterRange">
+                <option value="all">Todo el histórico</option>
+                <option value="today">Hoy</option>
+                <option value="7d">Últimos 7 días</option>
+                <option value="30d">Últimos 30 días</option>
+                <option value="90d">Último trimestre (90 días)</option>
+              </select>
+            </div>
             <div class="field">
               <label for="filterStudent">Alumno / alumna</label>
               <select id="filterStudent"><option value="">Todos</option></select>
@@ -243,9 +258,9 @@
 
       <!-- TAB 4: AJUSTES -->
       <div id="tab-ajustes" class="tab-panel" hidden>
-        <section class="panel" style="max-width:680px;">
+        <section class="panel" style="max-width:720px;">
           <div class="panel-head">
-            <h2>Configuración del aula</h2>
+            <h2>Configuración y seguridad del aula</h2>
           </div>
           <form id="configForm">
             <div class="form-grid" style="margin-bottom:16px;">
@@ -263,16 +278,40 @@
               </div>
               <div class="field">
                 <label for="cfgNewPin">Cambiar PIN docente (opcional)</label>
-                <input id="cfgNewPin" type="password" inputmode="numeric" minlength="4" maxlength="16" placeholder="Mínimo 4 dígitos">
+                <input id="cfgNewPin" type="password" minlength="4" maxlength="32" placeholder="Mínimo 4 caracteres">
+              </div>
+              <div class="field">
+                <label for="cfgNewClassCode">Clave de aula (opcional)</label>
+                <input id="cfgNewClassCode" type="password" minlength="4" maxlength="32" placeholder="Protege la lista de alumnos">
+              </div>
+              <div class="field">
+                <label for="cfgAllowedEmail">Correo Cloudflare Access (opcional)</label>
+                <input id="cfgAllowedEmail" type="email" maxlength="120" placeholder="tu-correo@ejemplo.com">
               </div>
             </div>
 
             <label class="switch-row">
               <span>
                 <strong>Proteger el panel docente con PIN</strong><br>
-                <small style="color:var(--ink-muted);">Recomendado si el alumnado utiliza el mismo navegador o pizarra digital.</small>
+                <small style="color:var(--ink-muted);">Recomendado siempre (con bloqueo automático tras 5 fallos).</small>
               </span>
               <input id="cfgPinEnabled" type="checkbox">
+            </label>
+
+            <label class="switch-row">
+              <span>
+                <strong>Pedir «Clave de aula» para ver la lista de clase</strong><br>
+                <small style="color:var(--ink-muted);">Oculta los nombres del alumnado a visitantes externos. En tablets del cole se guarda 30 días (los códigos QR siguen entrando directo).</small>
+              </span>
+              <input id="cfgClassCodeEnabled" type="checkbox">
+            </label>
+
+            <label class="switch-row">
+              <span>
+                <strong>Permitir participantes invitados fuera de la lista</strong><br>
+                <small style="color:var(--ink-muted);">Desactívalo para que solo se puedan crear sesiones con el alumnado oficial de la clase.</small>
+              </span>
+              <input id="cfgAllowGuests" type="checkbox">
             </label>
 
             <button class="btn btn-primary" type="submit">Guardar configuración</button>

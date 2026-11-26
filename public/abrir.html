@@ -3,8 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#143833">
   <title>Elegir modo · Mi aula</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/styles/tokens.css">
   <link rel="stylesheet" href="/styles/aula.css">
 </head>
@@ -61,6 +65,21 @@
       </button>
     </div>
 
+    <section class="panel" id="classroomLockPanel" hidden>
+      <div class="panel-head">
+        <div>
+          <h2>Clave de aula</h2>
+          <p class="panel-sub">Introduce la clave del aula para mostrar la lista de clase y registrar trabajo desde este dispositivo. Se recordará durante 30 días.</p>
+        </div>
+      </div>
+      <form id="classroomUnlockForm" class="quick-add" style="margin-top:0;">
+        <label class="sr-only" for="classCodeInput">Clave de aula</label>
+        <input id="classCodeInput" type="password" placeholder="Escribe la clave del aula…" maxlength="32" autocomplete="off" required>
+        <button id="unlockClassBtn" class="btn btn-primary btn-sm" type="submit">Desbloquear lista →</button>
+      </form>
+      <p class="panel-footnote">Si tu docente te ha dado un código corto o QR, puedes entrar directamente desde el portal sin clave de aula.</p>
+    </section>
+
     <section class="panel" id="studentsPanel" hidden>
       <div class="panel-head">
         <div>
@@ -78,7 +97,7 @@
 
       <div class="student-list" id="studentList"></div>
 
-      <div class="quick-add">
+      <div class="quick-add" id="quickAddRow">
         <label class="sr-only" for="guestName">Añadir participante puntual</label>
         <input id="guestName" type="text" placeholder="¿No aparece en la lista? Escribe su nombre…" maxlength="50">
         <button id="addGuestBtn" class="btn btn-sm" type="button">+ Añadir</button>
