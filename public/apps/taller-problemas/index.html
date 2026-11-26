@@ -1,0 +1,2189 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#143b34">
+<title>Taller de problemas paso a paso · Matemáticas</title>
+<style>
+:root {
+  font-family: Arial, "Liberation Sans", system-ui, sans-serif;
+  color: #162e29;
+  background: #f4f7f5;
+  --ink: #162e29;
+  --muted: #4c645e;
+  --line: #d4e0dc;
+  --navy: #143b34;
+  --accent: #186655;
+  --soft: #e3f5ee;
+  --glow: #b7e4d3;
+  --wash: #f2faf7;
+  --white: #ffffff;
+  --good-bg: #e2f6ea;
+  --good: #14532d;
+  --warn-bg: #fff2e4;
+  --warn: #8a3a0e;
+  --hint-bg: #ebf3fc;
+  --hint: #1d4373;
+}
+body[data-level="3"] {
+  --accent: #1a5d3e;
+  --soft: #e4f6eb;
+  --glow: #b2e2c4;
+  --wash: #f2fbf5;
+}
+body[data-level="4"] {
+  --accent: #824712;
+  --soft: #fff0d9;
+  --glow: #f5ce93;
+  --wash: #fffaf0;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 280px; background: var(--wash); color: var(--ink); line-height: 1.5; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .55; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #1d64c2; outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.top {
+  background: var(--navy);
+  color: #fff;
+}
+.top-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #e6f68f;
+  color: #143b34;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 1.15rem;
+}
+.level-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.level-btn {
+  border: 1px solid rgba(255,255,255,.28);
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 13px;
+  min-height: 40px;
+  font-weight: 700;
+  font-size: .92rem;
+}
+.level-btn[aria-pressed="true"] {
+  background: #e6f68f;
+  border-color: #e6f68f;
+  color: #143b34;
+}
+
+.wrap {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 22px 22px 44px;
+}
+
+/* Welcome / Level Picker */
+.welcome-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: clamp(22px, 4vw, 38px);
+  box-shadow: 0 10px 28px rgba(20,59,52,.07);
+}
+.welcome-card h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.7rem, 4vw, 2.5rem);
+  letter-spacing: -.03em;
+}
+.welcome-lead {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 1.05rem;
+  max-width: 66ch;
+}
+.level-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.pick-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  padding: 18px;
+  border-radius: 16px;
+  border: 2px solid #b8e0d3;
+  background: #effaf6;
+  color: #144a3d;
+  min-height: 138px;
+}
+.pick-card[data-level="3"] { border-color: #b4dfc3; background: #edf9f1; color: #175234; }
+.pick-card[data-level="4"] { border-color: #efca90; background: #fff7e8; color: #7a4110; }
+.pick-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(20,59,52,.1); }
+.pick-tag {
+  display: inline-block;
+  width: max-content;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.8);
+  font-size: .78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.pick-card strong { font-size: 1.2rem; }
+.pick-card span { font-size: .94rem; line-height: 1.4; }
+
+/* Workspace */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.mode-switch {
+  display: flex;
+  gap: 6px;
+  background: #e5eeeb;
+  padding: 4px;
+  border-radius: 12px;
+}
+.mode-btn {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  border-radius: 9px;
+  padding: 8px 14px;
+  min-height: 40px;
+  font-weight: 700;
+  font-size: .93rem;
+}
+.mode-btn[aria-pressed="true"] {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(20,59,52,.12);
+}
+.score-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  font-weight: 800;
+  font-size: .92rem;
+  color: var(--accent);
+}
+
+.sheet {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: clamp(18px, 3.5vw, 30px);
+  box-shadow: 0 8px 24px rgba(20,59,52,.06);
+}
+
+.problem-card {
+  background: var(--wash);
+  border: 2px solid var(--glow);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+.problem-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.problem-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--accent);
+  font-size: .84rem;
+  font-weight: 800;
+}
+.read-btn {
+  border: 1px solid var(--glow);
+  background: #fff;
+  color: var(--accent);
+  border-radius: 10px;
+  padding: 6px 12px;
+  min-height: 38px;
+  font-weight: 700;
+  font-size: .88rem;
+}
+.read-btn:hover { background: var(--soft); }
+.problem-text {
+  margin: 0;
+  font-size: clamp(1.12rem, 2.3vw, 1.3rem);
+  line-height: 1.65;
+  text-align: left;
+}
+.problem-text p { margin: 0 0 6px; }
+.problem-text p:last-child { margin-bottom: 0; }
+.problem-question {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--glow);
+  font-weight: 800;
+  color: var(--navy);
+  font-size: clamp(1.1rem, 2.2vw, 1.24rem);
+}
+
+/* Stepper */
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.step-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: #f8faf9;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: .88rem;
+  text-align: left;
+}
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #dce6e3;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  font-size: .82rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.step-tab.active {
+  border-color: var(--accent);
+  background: var(--soft);
+  color: var(--accent);
+}
+.step-tab.active .step-num {
+  background: var(--accent);
+  color: #fff;
+}
+.step-tab.done {
+  border-color: #7cc99d;
+  background: var(--good-bg);
+  color: var(--good);
+}
+.step-tab.done .step-num {
+  background: #1b7242;
+  color: #fff;
+}
+
+.step-box {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px 20px;
+  background: #fff;
+}
+.step-title {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--navy);
+}
+.step-sub {
+  margin: 0 0 14px;
+  font-size: .95rem;
+  color: var(--muted);
+}
+
+/* Step 1: Data chips */
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.data-chip {
+  min-height: 48px;
+  padding: 10px 15px;
+  border-radius: 12px;
+  border: 2px solid #c3d5cf;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: left;
+}
+.data-chip:hover:not(:disabled) { background: var(--wash); border-color: var(--accent); }
+.data-chip[aria-pressed="true"] {
+  background: var(--soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.data-chip.is-right { background: var(--good-bg); border-color: #217346; color: var(--good); }
+.data-chip.is-wrong { background: var(--warn-bg); border-color: #c2571a; color: var(--warn); }
+
+/* Step 2: Bar model visual diagram */
+.scheme-box {
+  margin: 0 0 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #f8fbfa;
+  border: 1.5px solid var(--line);
+}
+.scheme-caption {
+  font-size: .85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.bar-model {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+}
+.bar-total {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 2px solid #143b34;
+  background: #e6f2ef;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #143b34;
+}
+.bar-parts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.bar-part {
+  flex: 1 1 80px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 2px solid #2c7a68;
+  background: #fff;
+  text-align: center;
+  font-weight: 800;
+  font-size: .96rem;
+}
+.bar-part.unknown {
+  border-style: dashed;
+  border-color: #b45309;
+  background: #fff7e6;
+  color: #92400e;
+}
+.bar-total.unknown {
+  border-style: dashed;
+  border-color: #b45309;
+  background: #fff7e6;
+  color: #92400e;
+}
+.bar-part.removed {
+  border-color: #c2571a;
+  background: #fff1e8;
+  color: #8a3a0e;
+}
+
+.op-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.op-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  border: 2px solid #c3d5cf;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 1rem;
+}
+.op-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--wash); }
+.op-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--soft); color: var(--accent); }
+.op-btn.is-right { background: var(--good-bg); border-color: #217346; color: var(--good); }
+.op-btn.is-wrong { background: var(--warn-bg); border-color: #c2571a; color: var(--warn); }
+.op-symbol { font-size: 1.35rem; line-height: 1.1; }
+.op-desc { font-size: .82rem; font-weight: 700; color: var(--muted); }
+
+/* Step 3: Calculation + keypad */
+.calc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  gap: 18px;
+  align-items: start;
+}
+.calc-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.eq-card {
+  padding: 14px 16px;
+  border-radius: 13px;
+  border: 1.5px solid var(--line);
+  background: #f9fbfa;
+}
+.eq-label {
+  font-size: .85rem;
+  font-weight: 800;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.eq-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+.num-input {
+  width: 140px;
+  min-height: 50px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 2px solid #9eb8b1;
+  background: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.num-input.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,102,85,.15); }
+.num-input.is-right { background: var(--good-bg); border-color: #217346; }
+.num-input.is-wrong { background: var(--warn-bg); border-color: #c2571a; }
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #eaf1ee;
+}
+.kp-btn {
+  min-height: 46px;
+  border-radius: 9px;
+  border: 1px solid #b5cbc4;
+  background: #fff;
+  color: var(--ink);
+  font-size: 1.18rem;
+  font-weight: 800;
+  touch-action: manipulation;
+}
+.kp-btn:hover { background: var(--soft); border-color: var(--accent); }
+.kp-btn.util { background: #d8e5e0; font-size: .95rem; }
+
+/* Step 4: Sentence starter */
+.starter-box {
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--wash);
+  border: 2px solid var(--glow);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+.unit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+/* Actions, feedback, hints */
+.actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.btn {
+  min-height: 46px;
+  padding: 10px 16px;
+  border-radius: 11px;
+  border: 1.5px solid #bfd2cc;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: .96rem;
+}
+.btn:hover:not(:disabled) { background: #eef5f2; }
+.btn-primary {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) { background: #1e5248; }
+
+.feedback:not(:empty),
+.hint:not(:empty) {
+  margin-top: 13px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  font-size: .98rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.feedback.good { background: var(--good-bg); color: var(--good); }
+.feedback.try { background: var(--warn-bg); color: var(--warn); }
+.hint { background: var(--hint-bg); color: var(--hint); }
+
+.checklist {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f4faf6;
+  border: 1px solid #bfe2cd;
+  font-size: .92rem;
+  color: #164e31;
+}
+.checklist strong { display: block; margin-bottom: 4px; }
+
+@media (max-width: 780px) {
+  .level-cards { grid-template-columns: 1fr; }
+  .stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .calc-layout { grid-template-columns: 1fr; }
+  .keypad { max-width: 260px; }
+}
+</style>
+</head>
+<body data-level="3">
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">?</span>
+        <span>Taller de problemas paso a paso</span>
+      </div>
+      <div class="level-pills" role="group" aria-label="Elegir nivel">
+        <button class="level-btn" type="button" data-pick="inicial" aria-pressed="false">Nivel inicial</button>
+        <button class="level-btn" type="button" data-pick="3" aria-pressed="false">3.º Primaria</button>
+        <button class="level-btn" type="button" data-pick="4" aria-pressed="false">4.º Primaria</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="welcomeView" class="welcome-card">
+      <h1>Resuelve problemas paso a paso</h1>
+      <p class="welcome-lead">Lee despacio, selecciona los datos importantes, observa el esquema visual y calcula la solución sin prisas.</p>
+      <div class="level-cards">
+        <button class="pick-card" type="button" data-level="inicial">
+          <span class="pick-tag">1 operación · lectura fácil</span>
+          <strong>Nivel inicial</strong>
+          <span>Frases cortas (una idea por línea), sumas y restas directas con esquema visual guiado.</span>
+        </button>
+        <button class="pick-card" type="button" data-level="3">
+          <span class="pick-tag">3.º de Primaria</span>
+          <strong>3.º Primaria</strong>
+          <span>Sumas y restas con llevadas, grupos iguales, dinero en euros y detección de datos clave.</span>
+        </button>
+        <button class="pick-card" type="button" data-level="4">
+          <span class="pick-tag">4.º de Primaria</span>
+          <strong>4.º Primaria</strong>
+          <span>Multiplicaciones, repartos exactos, doble/mitad y problemas de 2 pasos encadenados.</span>
+        </button>
+      </div>
+    </section>
+
+    <section id="workView" hidden>
+      <div class="toolbar">
+        <div class="mode-switch" role="group" aria-label="Modo de resolución">
+          <button class="mode-btn" id="modeGuidedBtn" type="button" aria-pressed="true">Paso a paso (4 pasos)</button>
+          <button class="mode-btn" id="modeDirectBtn" type="button" aria-pressed="false">Modo directo</button>
+        </div>
+        <div class="score-pill">
+          <span id="progressText">Problema 1 de 12</span>
+          <span>·</span>
+          <span id="solvedText">0 resueltos</span>
+        </div>
+      </div>
+
+      <article class="sheet">
+        <div class="problem-card" data-aula-read>
+          <div class="problem-head">
+            <span class="problem-badge" id="problemTag">3.º Primaria</span>
+            <button class="read-btn" id="speakProblemBtn" type="button">🔊 Escuchar problema</button>
+          </div>
+          <div class="problem-text" id="problemLines"></div>
+          <div class="problem-question" id="problemQuestion"></div>
+        </div>
+
+        <nav class="stepper" id="stepper" aria-label="Pasos del problema">
+          <div class="step-tab" data-step="1"><span class="step-num">1</span><span>Datos clave</span></div>
+          <div class="step-tab" data-step="2"><span class="step-num">2</span><span>Esquema y operación</span></div>
+          <div class="step-tab" data-step="3"><span class="step-num">3</span><span>Calcula</span></div>
+          <div class="step-tab" data-step="4"><span class="step-num">4</span><span>Solución</span></div>
+        </nav>
+
+        <div id="stepArea" class="step-box"></div>
+        <div id="feedbackBox" class="feedback" role="status" aria-live="polite"></div>
+        <div id="hintBox" class="hint" aria-live="polite"></div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/registro.js"></script>
+  <script>
+  (() => {
+    'use strict';
+
+    const PROBLEMS = {
+      inicial: [
+        {
+          id: 'ini-1',
+          topic: 'Suma (juntar)',
+          lines: ['En la biblioteca del cole hay <strong>14 cuentos</strong>.', 'Vera coloca <strong>12 cuentos</strong> más en la estantería.'],
+          question: '¿Cuántos cuentos hay ahora en total?',
+          chips: [
+            { text: '14 cuentos', useful: true },
+            { text: '12 cuentos más', useful: true },
+            { text: 'En la biblioteca', useful: false }
+          ],
+          scheme: { type: 'add', parts: ['14 cuentos', '12 cuentos'], total: '¿Total?' },
+          op: '+',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar (juntar)' },
+            { val: '−', sym: '−', desc: 'Restar (quitar)' }
+          ],
+          steps: [{ label: 'Juntamos los dos grupos', expr: '14 + 12 =', ans: 26 }],
+          answer: 26,
+          starter: 'SOLUCIÓN: Ahora hay ___',
+          unitCorrect: '26 cuentos',
+          unitOptions: ['26 cuentos', '26 euros', '26 minutos'],
+          hint1: 'Si colocamos más cuentos en la estantería, habrá más que al principio. Hay que sumar.',
+          hint2: 'Suma 14 + 12. Primero las unidades (4 + 2 = 6) y luego las decenas (1 + 1 = 2).'
+        },
+        {
+          id: 'ini-2',
+          topic: 'Resta (quitar)',
+          lines: ['Hugo lleva <strong>28 cromos</strong> al patio.', 'Regala <strong>13 cromos</strong> a su amiga Nora.'],
+          question: '¿Cuántos cromos le quedan a Hugo?',
+          chips: [
+            { text: '28 cromos', useful: true },
+            { text: 'Regala 13 cromos', useful: true },
+            { text: 'En el patio', useful: false }
+          ],
+          scheme: { type: 'sub', total: '28 cromos', taken: '13 regalados', left: '¿Quedan?' },
+          op: '−',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar (juntar)' },
+            { val: '−', sym: '−', desc: 'Restar (quitar)' }
+          ],
+          steps: [{ label: 'Quitamos los cromos regalados', expr: '28 − 13 =', ans: 15 }],
+          answer: 15,
+          starter: 'SOLUCIÓN: A Hugo le quedan ___',
+          unitCorrect: '15 cromos',
+          unitOptions: ['15 cromos', '15 libros', '15 cajas'],
+          hint1: 'Si Hugo regala cromos, al final tiene menos. Hay que restar.',
+          hint2: 'Resta 28 − 13: unidades 8 − 3 = 5, decenas 2 − 1 = 1.'
+        },
+        {
+          id: 'ini-3',
+          topic: 'Suma (juntar)',
+          lines: ['En una cesta hay <strong>21 manzanas</strong>.', 'El abuelo pone <strong>15 peras</strong> en la misma cesta.'],
+          question: '¿Cuántas piezas de fruta hay en la cesta?',
+          chips: [
+            { text: '21 manzanas', useful: true },
+            { text: '15 peras', useful: true },
+            { text: 'Una cesta', useful: false }
+          ],
+          scheme: { type: 'add', parts: ['21 manzanas', '15 peras'], total: '¿Fruta total?' },
+          op: '+',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar (juntar)' },
+            { val: '−', sym: '−', desc: 'Restar (quitar)' }
+          ],
+          steps: [{ label: 'Juntamos manzanas y peras', expr: '21 + 15 =', ans: 36 }],
+          answer: 36,
+          starter: 'SOLUCIÓN: En la cesta hay ___',
+          unitCorrect: '36 piezas de fruta',
+          unitOptions: ['36 piezas de fruta', '36 árboles', '36 euros'],
+          hint1: 'Queremos saber cuánta fruta hay juntando manzanas y peras. Hay que sumar.',
+          hint2: 'Suma 21 + 15: 1 + 5 = 6 y 2 + 1 = 3.'
+        },
+        {
+          id: 'ini-4',
+          topic: 'Resta (dinero)',
+          lines: ['Nora tiene <strong>35 euros</strong> en su hucha.', 'Compra un juego que cuesta <strong>12 euros</strong>.'],
+          question: '¿Cuántos euros le quedan en la hucha?',
+          chips: [
+            { text: '35 euros', useful: true },
+            { text: 'Cuesta 12 euros', useful: true },
+            { text: 'Su hucha', useful: false }
+          ],
+          scheme: { type: 'sub', total: '35 €', taken: '12 € gastados', left: '¿Quedan?' },
+          op: '−',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: 'Restamos lo que cuesta el juego', expr: '35 − 12 =', ans: 23 }],
+          answer: 23,
+          starter: 'SOLUCIÓN: En la hucha le quedan ___',
+          unitCorrect: '23 euros',
+          unitOptions: ['23 euros', '23 juegos', '23 cromos'],
+          hint1: 'Al comprar el juego gasta dinero, así que le queda menos. Hay que restar.',
+          hint2: 'Resta 35 − 12: 5 − 2 = 3 y 3 − 1 = 2.'
+        },
+        {
+          id: 'ini-5',
+          topic: 'Suma (subir pasajeros)',
+          lines: ['En el autobús a Calatayud van <strong>23 personas</strong>.', 'En la parada de Alhama suben <strong>14 personas</strong> más.'],
+          question: '¿Cuántas personas viajan ahora en el autobús?',
+          chips: [
+            { text: '23 personas', useful: true },
+            { text: 'Suben 14 personas', useful: true },
+            { text: 'Autobús a Calatayud', useful: false }
+          ],
+          scheme: { type: 'add', parts: ['23 personas', '14 suben'], total: '¿Total?' },
+          op: '+',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: 'Sumamos las personas que suben', expr: '23 + 14 =', ans: 37 }],
+          answer: 37,
+          starter: 'SOLUCIÓN: Ahora viajan ___',
+          unitCorrect: '37 personas',
+          unitOptions: ['37 personas', '37 paradas', '37 autobuses'],
+          hint1: 'Si suben más personas, hay más gente dentro del autobús. Hay que sumar.',
+          hint2: 'Suma 23 + 14: 3 + 4 = 7 y 2 + 1 = 3.'
+        },
+        {
+          id: 'ini-6',
+          topic: 'Resta (diferencia)',
+          lines: ['En clase hay <strong>19 pinturas</strong> rojas.', 'Se han roto <strong>7 pinturas</strong>.'],
+          question: '¿Cuántas pinturas quedan sin romper?',
+          chips: [
+            { text: '19 pinturas', useful: true },
+            { text: '7 rotas', useful: true },
+            { text: 'De color rojo', useful: false }
+          ],
+          scheme: { type: 'sub', total: '19 pinturas', taken: '7 rotas', left: '¿Quedan?' },
+          op: '−',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: 'Quitamos las pinturas rotas', expr: '19 − 7 =', ans: 12 }],
+          answer: 12,
+          starter: 'SOLUCIÓN: Quedan sin romper ___',
+          unitCorrect: '12 pinturas',
+          unitOptions: ['12 pinturas', '12 mesas', '12 folios'],
+          hint1: 'Quitamos las pinturas rotas del total que había. Hay que restar.',
+          hint2: 'Resta 19 − 7 = 12.'
+        },
+        {
+          id: 'ini-7',
+          topic: 'Suma (estuche)',
+          lines: ['En un bote hay <strong>32 lápices</strong>.', 'En otro bote hay <strong>26 lápices</strong>.'],
+          question: '¿Cuántos lápices hay entre los dos botes?',
+          chips: [
+            { text: '32 lápices', useful: true },
+            { text: '26 lápices', useful: true },
+            { text: 'Dos botes', useful: false }
+          ],
+          scheme: { type: 'add', parts: ['32 lápices', '26 lápices'], total: '¿Total?' },
+          op: '+',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: 'Juntamos los lápices de ambos botes', expr: '32 + 26 =', ans: 58 }],
+          answer: 58,
+          starter: 'SOLUCIÓN: Entre los dos botes hay ___',
+          unitCorrect: '58 lápices',
+          unitOptions: ['58 lápices', '58 botes', '58 hojas'],
+          hint1: 'Queremos juntar lo que hay en un bote y en el otro. Hay que sumar.',
+          hint2: 'Suma 32 + 26: 2 + 6 = 8 y 3 + 2 = 5.'
+        },
+        {
+          id: 'ini-8',
+          topic: 'Resta (páginas)',
+          lines: ['Un cuento tiene <strong>46 páginas</strong>.', 'Vera ya ha leído <strong>24 páginas</strong>.'],
+          question: '¿Cuántas páginas le faltan por leer?',
+          chips: [
+            { text: '46 páginas en total', useful: true },
+            { text: '24 páginas leídas', useful: true },
+            { text: 'Un cuento', useful: false }
+          ],
+          scheme: { type: 'sub', total: '46 páginas', taken: '24 leídas', left: '¿Faltan?' },
+          op: '−',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: 'Quitamos las páginas ya leídas', expr: '46 − 24 =', ans: 22 }],
+          answer: 22,
+          starter: 'SOLUCIÓN: Le faltan por leer ___',
+          unitCorrect: '22 páginas',
+          unitOptions: ['22 páginas', '22 cuentos', '22 días'],
+          hint1: 'Para saber cuántas faltan, quitamos las leídas al total del libro. Hay que restar.',
+          hint2: 'Resta 46 − 24: 6 − 4 = 2 y 4 − 2 = 2.'
+        },
+        {
+          id: 'ini-9',
+          topic: 'Grupos iguales (intro)',
+          lines: ['En el patio hay <strong>3 aros</strong>.', 'En cada aro ponemos <strong>5 pelotas</strong>.'],
+          question: '¿Cuántas pelotas hay en total?',
+          chips: [
+            { text: '3 aros', useful: true },
+            { text: '5 pelotas en cada aro', useful: true },
+            { text: 'En el patio', useful: false }
+          ],
+          scheme: { type: 'mul', groups: 3, each: '5 pelotas', total: '¿Total?' },
+          op: '×',
+          opOptions: [
+            { val: '×', sym: '×', desc: 'Multiplicar (grupos iguales)' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: '3 grupos de 5 pelotas (5 + 5 + 5)', expr: '3 × 5 =', ans: 15 }],
+          answer: 15,
+          starter: 'SOLUCIÓN: En total hay ___',
+          unitCorrect: '15 pelotas',
+          unitOptions: ['15 pelotas', '15 aros', '15 patios'],
+          hint1: 'Hay 3 aros con el mismo número de pelotas en cada uno. Podemos multiplicar 3 × 5.',
+          hint2: 'Cuenta de 5 en 5 tres veces: 5, 10, 15.'
+        },
+        {
+          id: 'ini-10',
+          topic: 'Suma (flores)',
+          lines: ['En el huerto escolar plantamos <strong>30 lechugas</strong>.', 'Al día siguiente plantamos <strong>18 lechugas</strong> más.'],
+          question: '¿Cuántas lechugas hay ahora en el huerto?',
+          chips: [
+            { text: '30 lechugas', useful: true },
+            { text: '18 lechugas más', useful: true },
+            { text: 'Huerto escolar', useful: false }
+          ],
+          scheme: { type: 'add', parts: ['30 lechugas', '18 más'], total: '¿Total?' },
+          op: '+',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: 'Sumamos las lechugas plantadas', expr: '30 + 18 =', ans: 48 }],
+          answer: 48,
+          starter: 'SOLUCIÓN: Ahora hay ___',
+          unitCorrect: '48 lechugas',
+          unitOptions: ['48 lechugas', '48 tomates', '48 días'],
+          hint1: 'Si plantamos más lechugas, juntamos las dos cantidades. Hay que sumar.',
+          hint2: 'Suma 30 + 18 = 48.'
+        },
+        {
+          id: 'ini-11',
+          topic: 'Resta (galletas)',
+          lines: ['Una caja trae <strong>39 galletas</strong>.', 'En el almuerzo comemos <strong>16 galletas</strong>.'],
+          question: '¿Cuántas galletas quedan en la caja?',
+          chips: [
+            { text: '39 galletas', useful: true },
+            { text: '16 comidas', useful: true },
+            { text: 'En el almuerzo', useful: false }
+          ],
+          scheme: { type: 'sub', total: '39 galletas', taken: '16 comidas', left: '¿Quedan?' },
+          op: '−',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: 'Quitamos las galletas comidas', expr: '39 − 16 =', ans: 23 }],
+          answer: 23,
+          starter: 'SOLUCIÓN: En la caja quedan ___',
+          unitCorrect: '23 galletas',
+          unitOptions: ['23 galletas', '23 cajas', '23 recreos'],
+          hint1: 'Si nos comemos 16 galletas, quedan menos en la caja. Hay que restar.',
+          hint2: 'Resta 39 − 16: 9 − 6 = 3 y 3 − 1 = 2.'
+        },
+        {
+          id: 'ini-12',
+          topic: 'Grupos iguales (intro)',
+          lines: ['El abuelo compra <strong>4 bolsas</strong> de naranjas.', 'Cada bolsa tiene <strong>6 naranjas</strong>.'],
+          question: '¿Cuántas naranjas ha comprado en total?',
+          chips: [
+            { text: '4 bolsas', useful: true },
+            { text: '6 naranjas en cada bolsa', useful: true },
+            { text: 'El abuelo', useful: false }
+          ],
+          scheme: { type: 'mul', groups: 4, each: '6 naranjas', total: '¿Total?' },
+          op: '×',
+          opOptions: [
+            { val: '×', sym: '×', desc: 'Multiplicar (grupos iguales)' },
+            { val: '+', sym: '+', desc: 'Sumar solo 4 + 6' }
+          ],
+          steps: [{ label: '4 bolsas de 6 naranjas cada una', expr: '4 × 6 =', ans: 24 }],
+          answer: 24,
+          starter: 'SOLUCIÓN: Ha comprado ___',
+          unitCorrect: '24 naranjas',
+          unitOptions: ['24 naranjas', '24 bolsas', '24 euros'],
+          hint1: 'El número 6 se repite 4 veces (una por cada bolsa). Multiplicamos 4 × 6.',
+          hint2: '6 + 6 = 12, y 12 + 12 = 24. Así que 4 × 6 = 24.'
+        }
+      ],
+
+      '3': [
+        {
+          id: 'g3-1',
+          topic: 'Suma con llevadas',
+          lines: ['La biblioteca de Alhama tenía <strong>268 libros</strong> de aventuras y <strong>147 libros</strong> de animales.', 'Además, la sala tiene 4 ventanas grandes.'],
+          question: '¿Cuántos libros hay en total entre las dos secciones?',
+          chips: [
+            { text: '268 libros de aventuras', useful: true },
+            { text: '147 libros de animales', useful: true },
+            { text: '4 ventanas grandes', useful: false }
+          ],
+          scheme: { type: 'add', parts: ['268 aventuras', '147 animales'], total: '¿Total libros?' },
+          op: '+',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: 'Sumamos los dos grupos de libros', expr: '268 + 147 =', ans: 415 }],
+          answer: 415,
+          starter: 'SOLUCIÓN: En total hay ___',
+          unitCorrect: '415 libros',
+          unitOptions: ['415 libros', '415 ventanas', '415 euros'],
+          hint1: 'Las 4 ventanas son un dato que sobra. Solo juntamos 268 y 147 libros.',
+          hint2: 'Suma por columnas: 8 + 7 = 15 (me llevo 1), 6 + 4 + 1 = 11 (me llevo 1), 2 + 1 + 1 = 4.'
+        },
+        {
+          id: 'g3-2',
+          topic: 'Resta con llevadas',
+          lines: ['Para la excursión a Zaragoza se han apuntado <strong>324 escolares</strong> en total.', 'Por la mañana ya han subido al tren <strong>158 escolares</strong>.'],
+          question: '¿Cuántos escolares faltan todavía por subir?',
+          chips: [
+            { text: '324 escolares en total', useful: true },
+            { text: '158 ya han subido', useful: true },
+            { text: 'Excursión a Zaragoza', useful: false }
+          ],
+          scheme: { type: 'sub', total: '324 escolares', taken: '158 subieron', left: '¿Faltan?' },
+          op: '−',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: 'Restamos los que ya han subido', expr: '324 − 158 =', ans: 166 }],
+          answer: 166,
+          starter: 'SOLUCIÓN: Faltan por subir ___',
+          unitCorrect: '166 escolares',
+          unitOptions: ['166 escolares', '166 trenes', '166 minutos'],
+          hint1: 'Sabemos el total (324) y una parte (158). Para hallar la otra parte, restamos.',
+          hint2: '324 − 158: desagrupamos en decenas y centenas → 166. Comprueba: 166 + 158 = 324.'
+        },
+        {
+          id: 'g3-3',
+          topic: 'Multiplicación (grupos iguales)',
+          lines: ['En el taller de plástica hemos preparado <strong>7 cajas</strong>.', 'En cada caja guardamos <strong>8 rotuladores</strong>.'],
+          question: '¿Cuántos rotuladores hay en total?',
+          chips: [
+            { text: '7 cajas', useful: true },
+            { text: '8 rotuladores por caja', useful: true },
+            { text: 'Taller de plástica', useful: false }
+          ],
+          scheme: { type: 'mul', groups: 7, each: '8 rotuladores', total: '¿Total?' },
+          op: '×',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: '7 cajas con 8 rotuladores cada una', expr: '7 × 8 =', ans: 56 }],
+          answer: 56,
+          starter: 'SOLUCIÓN: En total hay ___',
+          unitCorrect: '56 rotuladores',
+          unitOptions: ['56 rotuladores', '56 cajas', '56 folios'],
+          hint1: 'Todas las cajas tienen la misma cantidad (8). Multiplicamos 7 × 8.',
+          hint2: 'Recuerda la tabla del 7 o del 8: 7 × 8 = 56.'
+        },
+        {
+          id: 'g3-4',
+          topic: 'Dinero (cambio)',
+          lines: ['Hugo compra una mochila de montaña que cuesta <strong>38 euros</strong>.', 'Paga en la tienda con un billete de <strong>50 euros</strong>.'],
+          question: '¿Cuántos euros le tienen que devolver?',
+          chips: [
+            { text: 'Cuesta 38 euros', useful: true },
+            { text: 'Paga con 50 euros', useful: true },
+            { text: 'Mochila de montaña', useful: false }
+          ],
+          scheme: { type: 'sub', total: '50 € entregados', taken: '38 € precio', left: '¿Cambio?' },
+          op: '−',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: 'Calculamos la diferencia para el cambio', expr: '50 − 38 =', ans: 12 }],
+          answer: 12,
+          starter: 'SOLUCIÓN: Le tienen que devolver ___',
+          unitCorrect: '12 euros',
+          unitOptions: ['12 euros', '12 mochilas', '12 billetes'],
+          hint1: 'Para calcular el cambio restamos lo que cuesta al billete con el que paga.',
+          hint2: 'De 38 hasta 40 van 2, y de 40 hasta 50 van 10. En total: 12.'
+        },
+        {
+          id: 'g3-5',
+          topic: 'Multiplicación (tablas)',
+          lines: ['En el huerto de Nora hay <strong>6 filas</strong> de fresas.', 'En cada fila crecen <strong>9 plantas</strong>. El lunes llovió 2 horas.'],
+          question: '¿Cuántas plantas de fresa hay en el huerto?',
+          chips: [
+            { text: '6 filas', useful: true },
+            { text: '9 plantas por fila', useful: true },
+            { text: 'Llovió 2 horas', useful: false }
+          ],
+          scheme: { type: 'mul', groups: 6, each: '9 plantas', total: '¿Total?' },
+          op: '×',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: '6 filas iguales de 9 plantas', expr: '6 × 9 =', ans: 54 }],
+          answer: 54,
+          starter: 'SOLUCIÓN: En el huerto hay ___',
+          unitCorrect: '54 plantas de fresa',
+          unitOptions: ['54 plantas de fresa', '54 horas', '54 filas'],
+          hint1: 'Las 2 horas de lluvia no hacen falta. Hay 6 filas con 9 plantas en cada una.',
+          hint2: '6 × 10 = 60; si quitamos 6 nos queda 6 × 9 = 54.'
+        },
+        {
+          id: 'g3-6',
+          topic: 'Comparación (más que)',
+          lines: ['Vera ha recorrido <strong>185 metros</strong> en bicicleta.', 'Su abuelo ha recorrido <strong>64 metros más</strong> que Vera.'],
+          question: '¿Cuántos metros ha recorrido el abuelo?',
+          chips: [
+            { text: '185 metros (Vera)', useful: true },
+            { text: '64 metros más', useful: true },
+            { text: 'En bicicleta', useful: false }
+          ],
+          scheme: { type: 'add', parts: ['185 m (Vera)', '64 m más'], total: '¿Abuelo?' },
+          op: '+',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: 'Sumamos los 64 metros de más', expr: '185 + 64 =', ans: 249 }],
+          answer: 249,
+          starter: 'SOLUCIÓN: El abuelo ha recorrido ___',
+          unitCorrect: '249 metros',
+          unitOptions: ['249 metros', '249 bicicletas', '249 euros'],
+          hint1: 'El abuelo recorrió más metros que Vera: a los 185 de Vera le sumamos 64.',
+          hint2: '185 + 64: 5 + 4 = 9, 8 + 6 = 14 (me llevo 1), 1 + 1 = 2 → 249.'
+        },
+        {
+          id: 'g3-7',
+          topic: 'Resta (comparación)',
+          lines: ['El álbum de minerales de Leo tiene <strong>240 huecos</strong>.', 'Ya tiene colocados <strong>175 minerales</strong>.'],
+          question: '¿Cuántos minerales le faltan para completar el álbum?',
+          chips: [
+            { text: '240 huecos en total', useful: true },
+            { text: '175 ya colocados', useful: true },
+            { text: 'Álbum de minerales', useful: false }
+          ],
+          scheme: { type: 'sub', total: '240 huecos', taken: '175 colocados', left: '¿Faltan?' },
+          op: '−',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: 'Calculamos lo que falta hasta 240', expr: '240 − 175 =', ans: 65 }],
+          answer: 65,
+          starter: 'SOLUCIÓN: Le faltan ___',
+          unitCorrect: '65 minerales',
+          unitOptions: ['65 minerales', '65 álbumes', '65 euros'],
+          hint1: 'Queremos saber cuánto falta desde 175 hasta 240. Restamos 240 − 175.',
+          hint2: 'De 175 a 200 van 25, y de 200 a 240 van 40. 25 + 40 = 65.'
+        },
+        {
+          id: 'g3-8',
+          topic: 'Multiplicación (2 cifras × 1)',
+          lines: ['En cada mesa del comedor se sientan <strong>12 alumnos</strong>.', 'Hoy se han ocupado <strong>4 mesas</strong> completas.'],
+          question: '¿Cuántos alumnos comen hoy en el comedor?',
+          chips: [
+            { text: '12 alumnos por mesa', useful: true },
+            { text: '4 mesas completas', useful: true },
+            { text: 'Hoy en el comedor', useful: false }
+          ],
+          scheme: { type: 'mul', groups: 4, each: '12 alumnos', total: '¿Total?' },
+          op: '×',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: '4 mesas con 12 alumnos cada una', expr: '12 × 4 =', ans: 48 }],
+          answer: 48,
+          starter: 'SOLUCIÓN: Hoy comen en el comedor ___',
+          unitCorrect: '48 alumnos',
+          unitOptions: ['48 alumnos', '48 mesas', '48 platos'],
+          hint1: 'Cada una de las 4 mesas tiene 12 alumnos. Hay que multiplicar 12 × 4.',
+          hint2: 'Descompón 12 = 10 + 2: 10 × 4 = 40 y 2 × 4 = 8 → 48.'
+        },
+        {
+          id: 'g3-9',
+          topic: 'Suma (3 sumandos)',
+          lines: ['En la carrera solidaria corrieron <strong>45 niños</strong> de 1.er ciclo, <strong>52 niños</strong> de 2.º ciclo y <strong>38 niños</strong> de 3.er ciclo.'],
+          question: '¿Cuántos niños participaron en total?',
+          chips: [
+            { text: '45 de 1.er ciclo', useful: true },
+            { text: '52 de 2.º ciclo', useful: true },
+            { text: '38 de 3.er ciclo', useful: true }
+          ],
+          scheme: { type: 'add', parts: ['45', '52', '38'], total: '¿Total niños?' },
+          op: '+',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar los 3 grupos' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: 'Juntamos los tres ciclos', expr: '45 + 52 + 38 =', ans: 135 }],
+          answer: 135,
+          starter: 'SOLUCIÓN: En total participaron ___',
+          unitCorrect: '135 niños',
+          unitOptions: ['135 niños', '135 ciclos', '135 metros'],
+          hint1: 'Queremos saber el total reuniendo los tres ciclos. Sumamos 45 + 52 + 38.',
+          hint2: 'Truco asociativo: junta primero 52 + 38 = 90, y luego 90 + 45 = 135.'
+        },
+        {
+          id: 'g3-10',
+          topic: 'Multiplicación (dinero)',
+          lines: ['Cada entrada al museo de Teruel cuesta <strong>9 euros</strong>.', 'Van <strong>5 personas</strong> de la familia de Martina.'],
+          question: '¿Cuánto pagan en total por las entradas?',
+          chips: [
+            { text: '9 euros por entrada', useful: true },
+            { text: '5 personas', useful: true },
+            { text: 'Museo de Teruel', useful: false }
+          ],
+          scheme: { type: 'mul', groups: 5, each: '9 €', total: '¿Precio total?' },
+          op: '×',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: '5 entradas a 9 euros cada una', expr: '5 × 9 =', ans: 45 }],
+          answer: 45,
+          starter: 'SOLUCIÓN: En total pagan ___',
+          unitCorrect: '45 euros',
+          unitOptions: ['45 euros', '45 entradas', '45 museos'],
+          hint1: 'Cada persona paga 9 euros, y son 5 personas. Multiplicamos 5 × 9.',
+          hint2: 'Tabla del 5: 5 × 9 = 45.'
+        },
+        {
+          id: 'g3-11',
+          topic: 'Resta con llevadas',
+          lines: ['Una panadería horneó <strong>410 magdalenas</strong> por la mañana.', 'Antes de mediodía vendió <strong>265 magdalenas</strong>.'],
+          question: '¿Cuántas magdalenas quedan todavía sin vender?',
+          chips: [
+            { text: '410 magdalenas horneadas', useful: true },
+            { text: '265 vendidas', useful: true },
+            { text: 'Antes de mediodía', useful: false }
+          ],
+          scheme: { type: 'sub', total: '410 magdalenas', taken: '265 vendidas', left: '¿Quedan?' },
+          op: '−',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: 'Restamos las vendidas al total', expr: '410 − 265 =', ans: 145 }],
+          answer: 145,
+          starter: 'SOLUCIÓN: Quedan sin vender ___',
+          unitCorrect: '145 magdalenas',
+          unitOptions: ['145 magdalenas', '145 euros', '145 panaderías'],
+          hint1: 'Si se venden 265, las quitamos de las 410 iniciales. Hay que restar.',
+          hint2: '410 − 265 = 145. Prueba: 145 + 265 = 410.'
+        },
+        {
+          id: 'g3-12',
+          topic: 'Multiplicación (2 cifras × 1)',
+          lines: ['En cada paquete vienen <strong>24 folios</strong> de colores.', 'La clase ha comprado <strong>3 paquetes</strong>.'],
+          question: '¿Cuántos folios de colores tienen en total?',
+          chips: [
+            { text: '24 folios por paquete', useful: true },
+            { text: '3 paquetes', useful: true },
+            { text: 'De colores', useful: false }
+          ],
+          scheme: { type: 'mul', groups: 3, each: '24 folios', total: '¿Total?' },
+          op: '×',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '−', sym: '−', desc: 'Restar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' }
+          ],
+          steps: [{ label: '3 paquetes de 24 folios', expr: '24 × 3 =', ans: 72 }],
+          answer: 72,
+          starter: 'SOLUCIÓN: Tienen en total ___',
+          unitCorrect: '72 folios',
+          unitOptions: ['72 folios', '72 paquetes', '72 colores'],
+          hint1: 'Son 3 paquetes iguales de 24 folios. Multiplicamos 24 × 3.',
+          hint2: '20 × 3 = 60 y 4 × 3 = 12 → 60 + 12 = 72.'
+        }
+      ],
+
+      '4': [
+        {
+          id: 'g4-1',
+          topic: 'División (reparto exacto)',
+          lines: ['La bibliotecaria reparte <strong>72 libros nuevos</strong> en partes iguales entre <strong>6 estanterías</strong>.', 'Cada estantería mide 2 metros.'],
+          question: '¿Cuántos libros coloca en cada estantería?',
+          chips: [
+            { text: '72 libros nuevos', useful: true },
+            { text: '6 estanterías iguales', useful: true },
+            { text: 'Mide 2 metros', useful: false }
+          ],
+          scheme: { type: 'div', total: '72 libros', groups: 6, each: '¿Cada estantería?' },
+          op: '÷',
+          opOptions: [
+            { val: '×', sym: '×', desc: 'Multiplicar' },
+            { val: '÷', sym: '÷', desc: 'Dividir (repartir)' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: 'Repartimos 72 entre 6 estanterías', expr: '72 ÷ 6 =', ans: 12 }],
+          answer: 12,
+          starter: 'SOLUCIÓN: Coloca en cada estantería ___',
+          unitCorrect: '12 libros',
+          unitOptions: ['12 libros', '12 metros', '12 estanterías'],
+          hint1: 'Repartir en partes iguales es dividir. Los 2 metros son un dato que sobra.',
+          hint2: '6 × 10 = 60 y 6 × 2 = 12 → 6 × 12 = 72. Por tanto, 72 ÷ 6 = 12.'
+        },
+        {
+          id: 'g4-2',
+          topic: 'Problema de 2 pasos (compra y cambio)',
+          lines: ['Vera compra <strong>3 cuadernos</strong> a <strong>4 euros</strong> cada uno.', 'Paga en caja con un billete de <strong>20 euros</strong>.'],
+          question: '¿Cuántos euros le devuelven de cambio?',
+          chips: [
+            { text: '3 cuadernos', useful: true },
+            { text: '4 euros cada cuaderno', useful: true },
+            { text: 'Billete de 20 euros', useful: true }
+          ],
+          scheme: { type: 'two', stepA: '1.º Coste: 3 × 4 €', stepB: '2.º Cambio: 20 € − coste' },
+          op: '× y −',
+          opOptions: [
+            { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+            { val: '+ y −', sym: '+ y −', desc: 'Sumar y luego restar' },
+            { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' }
+          ],
+          steps: [
+            { label: 'Paso 1: ¿Cuánto cuestan los 3 cuadernos?', expr: '3 × 4 =', ans: 12 },
+            { label: 'Paso 2: ¿Cuánto le devuelven de 20 €?', expr: '20 − 12 =', ans: 8 }
+          ],
+          answer: 8,
+          starter: 'SOLUCIÓN: Le devuelven de cambio ___',
+          unitCorrect: '8 euros',
+          unitOptions: ['8 euros', '8 cuadernos', '8 billetes'],
+          hint1: 'Primero averigua el precio de los 3 cuadernos (3 × 4) y después réstalo a 20.',
+          hint2: 'Paso 1: 3 × 4 = 12 €. Paso 2: 20 − 12 = 8 €.'
+        },
+        {
+          id: 'g4-3',
+          topic: 'Multiplicación (3 cifras × 1)',
+          lines: ['Un autobús de ruta entre Zaragoza y Huesca recorre <strong>145 kilómetros</strong> cada día.', 'Hace exactamente el mismo recorrido durante <strong>4 días</strong>.'],
+          question: '¿Cuántos kilómetros recorre en total en esos 4 días?',
+          chips: [
+            { text: '145 km al día', useful: true },
+            { text: '4 días', useful: true },
+            { text: 'Zaragoza y Huesca', useful: false }
+          ],
+          scheme: { type: 'mul', groups: 4, each: '145 km', total: '¿Total km?' },
+          op: '×',
+          opOptions: [
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '×', sym: '×', desc: 'Multiplicar' },
+            { val: '÷', sym: '÷', desc: 'Dividir' }
+          ],
+          steps: [{ label: 'Repetimos 145 km durante 4 días', expr: '145 × 4 =', ans: 580 }],
+          answer: 580,
+          starter: 'SOLUCIÓN: En total recorre ___',
+          unitCorrect: '580 kilómetros',
+          unitOptions: ['580 kilómetros', '580 días', '580 autobuses'],
+          hint1: 'Cada día hace los mismos 145 km, 4 veces. Hay que multiplicar 145 × 4.',
+          hint2: '100 × 4 = 400, 40 × 4 = 160 y 5 × 4 = 20 → 400 + 160 + 20 = 580.'
+        },
+        {
+          id: 'g4-4',
+          topic: 'Problema de 2 pasos (juntar y repartir)',
+          lines: ['En 3.º hay <strong>18 alumnos</strong> y en 4.º hay <strong>22 alumnos</strong>.', 'Para las estaciones de Matemáticas formamos grupos iguales de <strong>5 alumnos</strong>.'],
+          question: '¿Cuántos grupos de 5 alumnos podemos formar?',
+          chips: [
+            { text: '18 alumnos de 3.º', useful: true },
+            { text: '22 alumnos de 4.º', useful: true },
+            { text: 'Grupos de 5 alumnos', useful: true }
+          ],
+          scheme: { type: 'two', stepA: '1.º Total alumnos: 18 + 22', stepB: '2.º Reparto: total ÷ 5' },
+          op: '+ y ÷',
+          opOptions: [
+            { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' },
+            { val: '+ y ×', sym: '+ y ×', desc: 'Sumar y luego multiplicar' },
+            { val: '− y ÷', sym: '− y ÷', desc: 'Restar y luego dividir' }
+          ],
+          steps: [
+            { label: 'Paso 1: ¿Cuántos alumnos hay en total?', expr: '18 + 22 =', ans: 40 },
+            { label: 'Paso 2: ¿Cuántos grupos de 5 salen?', expr: '40 ÷ 5 =', ans: 8 }
+          ],
+          answer: 8,
+          starter: 'SOLUCIÓN: Podemos formar ___',
+          unitCorrect: '8 grupos',
+          unitOptions: ['8 grupos', '8 alumnos', '8 estaciones'],
+          hint1: 'Primero junta los alumnos de 3.º y 4.º; luego divide ese total en grupos de 5.',
+          hint2: 'Paso 1: 18 + 22 = 40 alumnos. Paso 2: 40 ÷ 5 = 8 grupos.'
+        },
+        {
+          id: 'g4-5',
+          topic: 'El triple',
+          lines: ['Hugo ha leído <strong>36 páginas</strong> esta semana.', 'Valeria ha leído <strong>el triple</strong> de páginas que Hugo.'],
+          question: '¿Cuántas páginas ha leído Valeria?',
+          chips: [
+            { text: '36 páginas (Hugo)', useful: true },
+            { text: 'El triple (× 3)', useful: true },
+            { text: 'Esta semana', useful: false }
+          ],
+          scheme: { type: 'mul', groups: 3, each: '36 págs.', total: '¿Valeria?' },
+          op: '×',
+          opOptions: [
+            { val: '×', sym: '×', desc: 'Multiplicar por 3' },
+            { val: '÷', sym: '÷', desc: 'Dividir entre 3' },
+            { val: '+', sym: '+', desc: 'Sumar 3' }
+          ],
+          steps: [{ label: 'El triple es multiplicar por 3', expr: '36 × 3 =', ans: 108 }],
+          answer: 108,
+          starter: 'SOLUCIÓN: Valeria ha leído ___',
+          unitCorrect: '108 páginas',
+          unitOptions: ['108 páginas', '108 semanas', '108 libros'],
+          hint1: '«El triple» significa 3 veces la misma cantidad: multiplicamos por 3.',
+          hint2: '30 × 3 = 90 y 6 × 3 = 18 → 90 + 18 = 108.'
+        },
+        {
+          id: 'g4-6',
+          topic: 'La mitad (división entre 2)',
+          lines: ['En la plaza del Pilar había <strong>96 sillas</strong> preparadas para el concierto.', 'Al terminar, ya se han recogido <strong>la mitad</strong> de las sillas.'],
+          question: '¿Cuántas sillas se han recogido?',
+          chips: [
+            { text: '96 sillas en total', useful: true },
+            { text: 'La mitad (÷ 2)', useful: true },
+            { text: 'Plaza del Pilar', useful: false }
+          ],
+          scheme: { type: 'div', total: '96 sillas', groups: 2, each: '¿Mitad?' },
+          op: '÷',
+          opOptions: [
+            { val: '÷', sym: '÷', desc: 'Dividir entre 2' },
+            { val: '×', sym: '×', desc: 'Multiplicar por 2' },
+            { val: '−', sym: '−', desc: 'Restar 2' }
+          ],
+          steps: [{ label: 'La mitad se calcula dividiendo entre 2', expr: '96 ÷ 2 =', ans: 48 }],
+          answer: 48,
+          starter: 'SOLUCIÓN: Se han recogido ___',
+          unitCorrect: '48 sillas',
+          unitOptions: ['48 sillas', '48 conciertos', '48 plazas'],
+          hint1: 'Calcular la mitad es repartir en 2 partes iguales: dividimos entre 2.',
+          hint2: 'La mitad de 90 es 45 y la mitad de 6 es 3 → 45 + 3 = 48.'
+        },
+        {
+          id: 'g4-7',
+          topic: 'Problema de 2 pasos (cajas y venta)',
+          lines: ['Un frutero recibe <strong>5 cajas</strong> con <strong>16 kilos</strong> de cerezas en cada caja.', 'Durante la mañana vende <strong>35 kilos</strong>.'],
+          question: '¿Cuántos kilos de cerezas le quedan para la tarde?',
+          chips: [
+            { text: '5 cajas', useful: true },
+            { text: '16 kilos por caja', useful: true },
+            { text: 'Vende 35 kilos', useful: true }
+          ],
+          scheme: { type: 'two', stepA: '1.º Total cerezas: 5 × 16', stepB: '2.º Quedan: total − 35' },
+          op: '× y −',
+          opOptions: [
+            { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+            { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+            { val: '÷ y −', sym: '÷ y −', desc: 'Dividir y luego restar' }
+          ],
+          steps: [
+            { label: 'Paso 1: ¿Cuántos kilos recibe en total?', expr: '5 × 16 =', ans: 80 },
+            { label: 'Paso 2: ¿Cuántos kilos le quedan?', expr: '80 − 35 =', ans: 45 }
+          ],
+          answer: 45,
+          starter: 'SOLUCIÓN: Para la tarde le quedan ___',
+          unitCorrect: '45 kilos de cerezas',
+          unitOptions: ['45 kilos de cerezas', '45 cajas', '45 euros'],
+          hint1: 'Primero calcula todos los kilos recibidos (5 × 16) y luego resta los 35 vendidos.',
+          hint2: 'Paso 1: 5 × 16 = 80 kg. Paso 2: 80 − 35 = 45 kg.'
+        },
+        {
+          id: 'g4-8',
+          topic: 'División (agrupamiento)',
+          lines: ['Tenemos <strong>84 cromos</strong> de fauna aragonesa para pegar en sobres.', 'En cada sobre caben exactamente <strong>7 cromos</strong>.'],
+          question: '¿Cuántos sobres completos podemos llenar?',
+          chips: [
+            { text: '84 cromos', useful: true },
+            { text: '7 cromos por sobre', useful: true },
+            { text: 'Fauna aragonesa', useful: false }
+          ],
+          scheme: { type: 'div', total: '84 cromos', groups: 7, each: '¿Sobres?' },
+          op: '÷',
+          opOptions: [
+            { val: '÷', sym: '÷', desc: 'Dividir' },
+            { val: '×', sym: '×', desc: 'Multiplicar' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: 'Agrupamos 84 cromos de 7 en 7', expr: '84 ÷ 7 =', ans: 12 }],
+          answer: 12,
+          starter: 'SOLUCIÓN: Podemos llenar ___',
+          unitCorrect: '12 sobres',
+          unitOptions: ['12 sobres', '12 cromos', '12 animales'],
+          hint1: 'Queremos saber cuántos grupos de 7 caben en 84. Dividimos 84 ÷ 7.',
+          hint2: '7 × 10 = 70; sobran 14, y 14 ÷ 7 = 2 → 10 + 2 = 12 sobres.'
+        },
+        {
+          id: 'g4-9',
+          topic: 'Problema de 2 pasos (doble y suma)',
+          lines: ['Daniel recoge <strong>24 bellotas</strong> en el paseo por el monte.', 'Su hermana recoge <strong>el doble</strong> que Daniel.'],
+          question: '¿Cuántas bellotas han recogido entre los dos?',
+          chips: [
+            { text: '24 bellotas (Daniel)', useful: true },
+            { text: 'Su hermana: el doble (× 2)', useful: true },
+            { text: 'Paseo por el monte', useful: false }
+          ],
+          scheme: { type: 'two', stepA: '1.º Hermana: 24 × 2', stepB: '2.º Entre los dos: 24 + hermana' },
+          op: '× y +',
+          opOptions: [
+            { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+            { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+            { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' }
+          ],
+          steps: [
+            { label: 'Paso 1: ¿Cuántas bellotas recoge su hermana?', expr: '24 × 2 =', ans: 48 },
+            { label: 'Paso 2: ¿Cuántas tienen entre los dos?', expr: '24 + 48 =', ans: 72 }
+          ],
+          answer: 72,
+          starter: 'SOLUCIÓN: Entre los dos han recogido ___',
+          unitCorrect: '72 bellotas',
+          unitOptions: ['72 bellotas', '72 árboles', '72 pasos'],
+          hint1: '¡Ojo! Pregunta por las de los dos juntos: primero halla las de la hermana y luego súmalas a las de Daniel.',
+          hint2: 'Paso 1: 24 × 2 = 48. Paso 2: 24 + 48 = 72 bellotas.'
+        },
+        {
+          id: 'g4-10',
+          topic: 'División exacta',
+          lines: ['Un colegio compra <strong>135 balones</strong> nuevos para repartir en partes iguales entre <strong>5 pistas</strong> deportivas.'],
+          question: '¿Cuántos balones corresponden a cada pista?',
+          chips: [
+            { text: '135 balones', useful: true },
+            { text: '5 pistas iguales', useful: true },
+            { text: 'Balones nuevos', useful: false }
+          ],
+          scheme: { type: 'div', total: '135 balones', groups: 5, each: '¿Cada pista?' },
+          op: '÷',
+          opOptions: [
+            { val: '÷', sym: '÷', desc: 'Dividir' },
+            { val: '×', sym: '×', desc: 'Multiplicar' },
+            { val: '−', sym: '−', desc: 'Restar' }
+          ],
+          steps: [{ label: 'Repartimos 135 balones entre 5 pistas', expr: '135 ÷ 5 =', ans: 27 }],
+          answer: 27,
+          starter: 'SOLUCIÓN: A cada pista le corresponden ___',
+          unitCorrect: '27 balones',
+          unitOptions: ['27 balones', '27 pistas', '27 colegios'],
+          hint1: 'Repartimos 135 en 5 partes iguales: dividimos 135 ÷ 5.',
+          hint2: '100 ÷ 5 = 20 y 35 ÷ 5 = 7 → 20 + 7 = 27.'
+        },
+        {
+          id: 'g4-11',
+          topic: 'Problema de 2 pasos (compras)',
+          lines: ['En la papelería compramos <strong>4 cajas de ceras</strong> a <strong>6 euros</strong> cada una y un diccionario de <strong>15 euros</strong>.'],
+          question: '¿Cuánto pagamos en total por toda la compra?',
+          chips: [
+            { text: '4 cajas de ceras', useful: true },
+            { text: '6 euros cada caja', useful: true },
+            { text: 'Diccionario de 15 euros', useful: true }
+          ],
+          scheme: { type: 'two', stepA: '1.º Ceras: 4 × 6 €', stepB: '2.º Total: ceras + 15 €' },
+          op: '× y +',
+          opOptions: [
+            { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+            { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+            { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' }
+          ],
+          steps: [
+            { label: 'Paso 1: ¿Cuánto cuestan las 4 cajas de ceras?', expr: '4 × 6 =', ans: 24 },
+            { label: 'Paso 2: Añadimos el precio del diccionario', expr: '24 + 15 =', ans: 39 }
+          ],
+          answer: 39,
+          starter: 'SOLUCIÓN: Por toda la compra pagamos ___',
+          unitCorrect: '39 euros',
+          unitOptions: ['39 euros', '39 cajas', '39 diccionarios'],
+          hint1: 'Primero calcula lo que valen las 4 cajas (4 × 6) y luego suma los 15 euros del diccionario.',
+          hint2: 'Paso 1: 4 × 6 = 24 €. Paso 2: 24 + 15 = 39 €.'
+        },
+        {
+          id: 'g4-12',
+          topic: 'Multiplicación (2 cifras × 2 cifras fácil)',
+          lines: ['En la sala de cine de Calatayud hay <strong>14 filas</strong> con <strong>10 butacas</strong> en cada fila.'],
+          question: '¿Cuántas butacas tiene la sala de cine?',
+          chips: [
+            { text: '14 filas', useful: true },
+            { text: '10 butacas por fila', useful: true },
+            { text: 'Cine de Calatayud', useful: false }
+          ],
+          scheme: { type: 'mul', groups: 14, each: '10 butacas', total: '¿Total?' },
+          op: '×',
+          opOptions: [
+            { val: '×', sym: '×', desc: 'Multiplicar' },
+            { val: '+', sym: '+', desc: 'Sumar' },
+            { val: '÷', sym: '÷', desc: 'Dividir' }
+          ],
+          steps: [{ label: 'Multiplicamos filas por butacas', expr: '14 × 10 =', ans: 140 }],
+          answer: 140,
+          starter: 'SOLUCIÓN: La sala de cine tiene ___',
+          unitCorrect: '140 butacas',
+          unitOptions: ['140 butacas', '140 filas', '140 entradas'],
+          hint1: 'Cada una de las 14 filas tiene 10 butacas: multiplicamos 14 × 10.',
+          hint2: 'Para multiplicar por 10, añadimos un cero al final: 14 × 10 = 140.'
+        }
+      ]
+    };
+
+    const LEVEL_LABELS = {
+      inicial: 'Nivel inicial',
+      '3': '3.º Primaria',
+      '4': '4.º Primaria'
+    };
+
+    const $ = id => document.getElementById(id);
+    const Aula = window.Aula || {
+      begin() {}, activate() {}, attempt() {}, hint() {}, reveal() {}
+    };
+
+    let currentLevel = null;
+    let guidedMode = true;
+    let deck = [];
+    let index = 0;
+    let solvedCount = 0;
+    let currentStep = 1; // 1..4 in guided mode
+    let selectedChips = new Set();
+    let selectedOp = null;
+    let stepInputs = [];
+    let activeInputIdx = 0;
+    let hintLevel = 0;
+    let problemSolved = false;
+    let showDirectScheme = false;
+
+    function aulaMode() {
+      return guidedMode ? 'Paso a paso' : 'Directo';
+    }
+
+    function shuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function plainTextProblem(p) {
+      const stripped = p.lines.map(l => l.replace(/<[^>]+>/g, '')).join(' ');
+      return `${stripped} ${p.question}`;
+    }
+
+    function setFeedback(text, kind = '') {
+      const el = $('feedbackBox');
+      el.textContent = text;
+      el.className = kind ? `feedback ${kind}` : 'feedback';
+    }
+
+    function setHint(text) {
+      $('hintBox').textContent = text;
+    }
+
+    function speakText(text) {
+      try {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'es-ES';
+        u.rate = 0.94;
+        window.speechSynthesis.speak(u);
+      } catch {}
+    }
+
+    function selectLevel(lvl) {
+      currentLevel = lvl;
+      document.body.dataset.level = lvl;
+      document.querySelectorAll('.level-btn').forEach(b => {
+        b.setAttribute('aria-pressed', String(b.dataset.pick === lvl));
+      });
+      $('welcomeView').hidden = true;
+      $('workView').hidden = false;
+      deck = shuffle(PROBLEMS[lvl]);
+      index = 0;
+      solvedCount = 0;
+      Aula.activate(aulaMode());
+      loadProblem();
+    }
+
+    function currentProblem() {
+      return deck[index % deck.length];
+    }
+
+    function loadProblem() {
+      const p = currentProblem();
+      currentStep = 1;
+      selectedChips = new Set();
+      selectedOp = null;
+      stepInputs = p.steps.map(() => '');
+      activeInputIdx = 0;
+      hintLevel = 0;
+      problemSolved = false;
+      showDirectScheme = false;
+
+      $('problemTag').textContent = `${LEVEL_LABELS[currentLevel]} · ${p.topic}`;
+      $('problemLines').innerHTML = p.lines.map(l => `<p>${l}</p>`).join('');
+      $('problemQuestion').textContent = p.question;
+      $('progressText').textContent = `Problema ${index + 1} de ${deck.length}`;
+      $('solvedText').textContent = `${solvedCount} ${solvedCount === 1 ? 'resuelto' : 'resueltos'}`;
+      $('stepper').hidden = !guidedMode;
+
+      setFeedback('');
+      setHint('');
+
+      Aula.begin(aulaMode(), `${p.topic}: ${plainTextProblem(p)}`, LEVEL_LABELS[currentLevel]);
+
+      renderStep();
+    }
+
+    function updateStepper() {
+      document.querySelectorAll('.step-tab').forEach(tab => {
+        const s = Number(tab.dataset.step);
+        tab.classList.remove('active', 'done');
+        if (problemSolved || s < currentStep) tab.classList.add('done');
+        else if (s === currentStep) tab.classList.add('active');
+      });
+    }
+
+    function renderSchemeHtml(scheme) {
+      if (scheme.type === 'add') {
+        return `
+          <div class="scheme-box">
+            <div class="scheme-caption">Esquema visual · Juntar partes</div>
+            <div class="bar-model">
+              <div class="bar-total unknown">${escapeHtml(scheme.total)}</div>
+              <div class="bar-parts">
+                ${scheme.parts.map(pt => `<div class="bar-part">${escapeHtml(pt)}</div>`).join('')}
+              </div>
+            </div>
+          </div>`;
+      }
+      if (scheme.type === 'sub') {
+        return `
+          <div class="scheme-box">
+            <div class="scheme-caption">Esquema visual · Total y partes</div>
+            <div class="bar-model">
+              <div class="bar-total">${escapeHtml(scheme.total)}</div>
+              <div class="bar-parts">
+                <div class="bar-part removed">${escapeHtml(scheme.taken)}</div>
+                <div class="bar-part unknown">${escapeHtml(scheme.left)}</div>
+              </div>
+            </div>
+          </div>`;
+      }
+      if (scheme.type === 'mul') {
+        const visualCount = Math.min(scheme.groups, 6);
+        const extra = scheme.groups > 6 ? `<div class="bar-part">… (${scheme.groups} grupos)</div>` : '';
+        return `
+          <div class="scheme-box">
+            <div class="scheme-caption">Esquema visual · ${scheme.groups} grupos iguales</div>
+            <div class="bar-model">
+              <div class="bar-total unknown">${escapeHtml(scheme.total)}</div>
+              <div class="bar-parts">
+                ${Array.from({ length: visualCount }, () => `<div class="bar-part">${escapeHtml(scheme.each)}</div>`).join('')}
+                ${extra}
+              </div>
+            </div>
+          </div>`;
+      }
+      if (scheme.type === 'div') {
+        const visualCount = Math.min(scheme.groups, 6);
+        const extra = scheme.groups > 6 ? `<div class="bar-part unknown">… (${scheme.groups} partes)</div>` : '';
+        return `
+          <div class="scheme-box">
+            <div class="scheme-caption">Esquema visual · Repartir en ${scheme.groups} partes iguales</div>
+            <div class="bar-model">
+              <div class="bar-total">${escapeHtml(scheme.total)}</div>
+              <div class="bar-parts">
+                ${Array.from({ length: visualCount }, () => `<div class="bar-part unknown">${escapeHtml(scheme.each)}</div>`).join('')}
+                ${extra}
+              </div>
+            </div>
+          </div>`;
+      }
+      return `
+        <div class="scheme-box">
+          <div class="scheme-caption">Esquema visual · Problema de 2 pasos</div>
+          <div class="bar-model">
+            <div class="bar-part">${escapeHtml(scheme.stepA)}</div>
+            <div class="bar-part unknown">${escapeHtml(scheme.stepB)}</div>
+          </div>
+        </div>`;
+    }
+
+    function renderKeypadHtml() {
+      const keys = ['7','8','9','4','5','6','1','2','3','C','0','⌫'];
+      return `
+        <div class="keypad" aria-label="Teclado numérico">
+          ${keys.map(k => `<button type="button" class="kp-btn ${k === 'C' || k === '⌫' ? 'util' : ''}" data-kp="${k}">${k}</button>`).join('')}
+        </div>`;
+    }
+
+    function wireKeypad(container) {
+      container.querySelectorAll('[data-kp]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const k = btn.dataset.kp;
+          const inputs = [...container.querySelectorAll('.num-input')];
+          const inp = inputs[activeInputIdx] || inputs[0];
+          if (!inp || inp.readOnly) return;
+          if (k === 'C') inp.value = '';
+          else if (k === '⌫') inp.value = inp.value.slice(0, -1);
+          else if (inp.value.length < 5) inp.value += k;
+          stepInputs[activeInputIdx] = inp.value;
+          inp.focus();
+        });
+      });
+    }
+
+    function renderStep() {
+      const p = currentProblem();
+      const box = $('stepArea');
+      if (!guidedMode) {
+        renderDirectMode(p, box);
+        return;
+      }
+      updateStepper();
+
+      if (currentStep === 1) {
+        box.innerHTML = `
+          <h2 class="step-title">Paso 1 · Selecciona los datos clave</h2>
+          <p class="step-sub">Toca solo los datos que necesitas para responder a la pregunta.</p>
+          <div class="chip-grid" id="chipGrid">
+            ${p.chips.map((c, i) => `
+              <button type="button" class="data-chip" data-chip="${i}" aria-pressed="${selectedChips.has(i)}">${escapeHtml(c.text)}</button>
+            `).join('')}
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="checkStep1Btn">Comprobar datos</button>
+            <button type="button" class="btn" id="hintStepBtn">💡 Pista</button>
+          </div>
+        `;
+        box.querySelectorAll('[data-chip]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const i = Number(btn.dataset.chip);
+            if (selectedChips.has(i)) selectedChips.delete(i);
+            else selectedChips.add(i);
+            btn.setAttribute('aria-pressed', String(selectedChips.has(i)));
+            btn.classList.remove('is-wrong', 'is-right');
+          });
+        });
+        $('checkStep1Btn').addEventListener('click', () => {
+          const expected = p.chips.map((c, i) => c.useful ? i : -1).filter(i => i >= 0);
+          const chosen = [...selectedChips].sort((a, b) => a - b);
+          const ok = expected.length === chosen.length && expected.every((v, idx) => v === chosen[idx]);
+          box.querySelectorAll('[data-chip]').forEach(btn => {
+            const i = Number(btn.dataset.chip);
+            const isSel = selectedChips.has(i);
+            btn.classList.remove('is-right', 'is-wrong');
+            if (isSel && p.chips[i].useful) btn.classList.add('is-right');
+            else if (isSel && !p.chips[i].useful) btn.classList.add('is-wrong');
+          });
+          if (ok) {
+            setFeedback('¡Genial! Has seleccionado exactamente los datos necesarios.', 'good');
+            setHint('');
+            currentStep = 2;
+            setTimeout(() => { setFeedback(''); renderStep(); }, 650);
+          } else {
+            const extras = chosen.filter(i => !p.chips[i].useful).length;
+            const msg = extras > 0
+              ? 'Hay algún dato marcado que no hace falta para calcular la respuesta. Revisa la pregunta.'
+              : `Te falta marcar algún dato importante (en este problema hay ${expected.length} datos clave).`;
+            setFeedback(msg, 'try');
+          }
+        });
+        $('hintStepBtn').addEventListener('click', () => {
+          const useful = p.chips.filter(c => c.useful).map(c => c.text).join(' · ');
+          Aula.hint(aulaMode());
+          setHint(`Fíjate en los números que responden a la pregunta: ${useful}.`);
+        });
+        return;
+      }
+
+      if (currentStep === 2) {
+        box.innerHTML = `
+          <h2 class="step-title">Paso 2 · Observa el esquema y elige la operación</h2>
+          <p class="step-sub">Mira el dibujo del problema y decide qué operación te permite resolverlo.</p>
+          ${renderSchemeHtml(p.scheme)}
+          <div class="op-grid" id="opGrid">
+            ${p.opOptions.map(o => `
+              <button type="button" class="op-btn" data-op="${escapeHtml(o.val)}" aria-pressed="${selectedOp === o.val}">
+                <span class="op-symbol">${escapeHtml(o.sym)}</span>
+                <span class="op-desc">${escapeHtml(o.desc)}</span>
+              </button>
+            `).join('')}
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="checkStep2Btn">Comprobar operación</button>
+            <button type="button" class="btn" id="hintStepBtn">💡 Pista</button>
+          </div>
+        `;
+        box.querySelectorAll('[data-op]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectedOp = btn.dataset.op;
+            box.querySelectorAll('[data-op]').forEach(b => {
+              b.setAttribute('aria-pressed', String(b === btn));
+              b.classList.remove('is-wrong', 'is-right');
+            });
+          });
+        });
+        $('checkStep2Btn').addEventListener('click', () => {
+          if (!selectedOp) {
+            setFeedback('Elige primero una operación.', 'try');
+            return;
+          }
+          const ok = selectedOp === p.op;
+          box.querySelectorAll('[data-op]').forEach(b => {
+            if (b.dataset.op === selectedOp) b.classList.add(ok ? 'is-right' : 'is-wrong');
+          });
+          if (ok) {
+            setFeedback('¡Exacto! Esa es la operación que resuelve el problema.', 'good');
+            setHint('');
+            currentStep = 3;
+            setTimeout(() => { setFeedback(''); renderStep(); }, 650);
+          } else {
+            Aula.attempt(aulaMode(), false, `Operación: ${selectedOp}`);
+            setFeedback('Piensa si el resultado debe ser mayor o menor y observa las partes del esquema.', 'try');
+          }
+        });
+        $('hintStepBtn').addEventListener('click', () => {
+          Aula.hint(aulaMode());
+          setHint(p.hint1);
+        });
+        return;
+      }
+
+      if (currentStep === 3) {
+        box.innerHTML = `
+          <h2 class="step-title">Paso 3 · Calcula el resultado</h2>
+          <p class="step-sub">Escribe la respuesta usando el teclado o los botones numéricos.</p>
+          ${renderSchemeHtml(p.scheme)}
+          <div class="calc-layout">
+            <div class="calc-stack">
+              ${p.steps.map((st, idx) => `
+                <div class="eq-card">
+                  <div class="eq-label">${escapeHtml(st.label)}</div>
+                  <div class="eq-row">
+                    <span>${escapeHtml(st.expr)}</span>
+                    <input type="text" inputmode="numeric" class="num-input ${idx === activeInputIdx ? 'active' : ''}" data-step-input="${idx}" value="${escapeHtml(stepInputs[idx] || '')}" aria-label="${escapeHtml(st.label)}">
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            ${renderKeypadHtml()}
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="checkStep3Btn">Comprobar cálculo</button>
+            <button type="button" class="btn" id="hintStepBtn">💡 Pista</button>
+            <button type="button" class="btn" id="revealStepBtn">Ver solución</button>
+          </div>
+        `;
+        const inputs = [...box.querySelectorAll('.num-input')];
+        inputs.forEach((inp, idx) => {
+          inp.addEventListener('focus', () => {
+            activeInputIdx = idx;
+            inputs.forEach((el, j) => el.classList.toggle('active', j === idx));
+          });
+          inp.addEventListener('input', () => {
+            inp.value = inp.value.replace(/[^0-9]/g, '').slice(0, 5);
+            stepInputs[idx] = inp.value;
+            inp.classList.remove('is-wrong', 'is-right');
+          });
+          inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter') $('checkStep3Btn').click();
+          });
+        });
+        wireKeypad(box);
+        if (inputs[0]) inputs[0].focus();
+
+        $('checkStep3Btn').addEventListener('click', () => {
+          let allFilled = true;
+          let allOk = true;
+          inputs.forEach((inp, idx) => {
+            const val = inp.value.trim();
+            if (!val) allFilled = false;
+            const ok = Number(val) === p.steps[idx].ans;
+            inp.classList.remove('is-right', 'is-wrong');
+            if (val) inp.classList.add(ok ? 'is-right' : 'is-wrong');
+            if (!ok) allOk = false;
+          });
+          if (!allFilled) {
+            setFeedback('Completa el cálculo antes de comprobar.', 'try');
+            return;
+          }
+          const finalVal = inputs[inputs.length - 1].value.trim();
+          Aula.attempt(aulaMode(), allOk, finalVal);
+          if (allOk) {
+            setFeedback('¡Cálculo perfecto! Vamos al último paso para escribir la solución completa.', 'good');
+            setHint('');
+            currentStep = 4;
+            setTimeout(() => { setFeedback(''); renderStep(); }, 650);
+          } else {
+            setFeedback('Revisa la operación marcada en naranja. Puedes usar una pista si la necesitas.', 'try');
+          }
+        });
+
+        $('hintStepBtn').addEventListener('click', () => {
+          hintLevel++;
+          const txt = hintLevel === 1 ? p.hint1 : p.hint2;
+          Aula.hint(aulaMode());
+          setHint(txt);
+        });
+
+        $('revealStepBtn').addEventListener('click', () => {
+          inputs.forEach((inp, idx) => {
+            inp.value = String(p.steps[idx].ans);
+            stepInputs[idx] = inp.value;
+            inp.classList.remove('is-wrong');
+            inp.classList.add('is-right');
+          });
+          Aula.reveal(aulaMode());
+          setHint(`Solución paso a paso: ${p.steps.map(s => `${s.expr} ${s.ans}`).join(' · ')}`);
+          setFeedback('Solución mostrada. Pulsa «Comprobar cálculo» para pasar a la frase final o ve al siguiente problema.', 'try');
+        });
+        return;
+      }
+
+      // Step 4: Sentence starter & unit verification
+      const opts = shuffle(p.unitOptions);
+      box.innerHTML = `
+        <h2 class="step-title">Paso 4 · Completa la solución</h2>
+        <p class="step-sub">Elige la respuesta con las palabras correctas para contestar a la pregunta.</p>
+        <div class="starter-box" id="starterPreview">${escapeHtml(p.starter)}</div>
+        <div class="unit-grid">
+          ${opts.map(u => `<button type="button" class="data-chip" data-unit="${escapeHtml(u)}">${escapeHtml(u)}</button>`).join('')}
+        </div>
+        <div id="doneChecklist" class="checklist" hidden>
+          <strong>✓ Problema completado</strong>
+          □ He elegido los datos útiles · □ He usado el esquema y la operación · □ He comprobado el resultado con su unidad.
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="nextProblemBtn" hidden>Siguiente problema →</button>
+        </div>
+      `;
+      box.querySelectorAll('[data-unit]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (problemSolved) return;
+          const chosen = btn.dataset.unit;
+          const ok = chosen === p.unitCorrect;
+          btn.classList.add(ok ? 'is-right' : 'is-wrong');
+          if (ok) {
+            problemSolved = true;
+            solvedCount++;
+            $('solvedText').textContent = `${solvedCount} ${solvedCount === 1 ? 'resuelto' : 'resueltos'}`;
+            $('starterPreview').textContent = p.starter.replace('___', chosen) + '.';
+            $('doneChecklist').hidden = false;
+            $('nextProblemBtn').hidden = false;
+            updateStepper();
+            setFeedback('¡Enhorabuena! Has resuelto todo el problema paso a paso.', 'good');
+            box.querySelectorAll('[data-unit]').forEach(b => { b.disabled = true; });
+          } else {
+            setFeedback('Fíjate bien en qué pregunta el problema para elegir la unidad correcta.', 'try');
+          }
+        });
+      });
+      $('nextProblemBtn').addEventListener('click', goNextProblem);
+    }
+
+    function renderDirectMode(p, box) {
+      box.innerHTML = `
+        <h2 class="step-title">Resuelve directamente</h2>
+        <p class="step-sub">Elige la operación y escribe el resultado final.</p>
+        ${showDirectScheme ? renderSchemeHtml(p.scheme) : ''}
+        <div class="op-grid" style="margin-bottom:16px;">
+          ${p.opOptions.map(o => `
+            <button type="button" class="op-btn" data-op="${escapeHtml(o.val)}" aria-pressed="${selectedOp === o.val}">
+              <span class="op-symbol">${escapeHtml(o.sym)}</span>
+              <span class="op-desc">${escapeHtml(o.desc)}</span>
+            </button>
+          `).join('')}
+        </div>
+        <div class="calc-layout">
+          <div class="calc-stack">
+            <div class="eq-card">
+              <div class="eq-label">Resultado final (${escapeHtml(p.unitCorrect.replace(/^\d+\s*/, ''))})</div>
+              <div class="eq-row">
+                <input type="text" inputmode="numeric" class="num-input active" id="directInput" value="${escapeHtml(stepInputs[0] || '')}" aria-label="Resultado final">
+              </div>
+            </div>
+          </div>
+          ${renderKeypadHtml()}
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="checkDirectBtn">Comprobar</button>
+          <button type="button" class="btn" id="toggleSchemeBtn">${showDirectScheme ? 'Ocultar esquema' : 'Ver esquema visual'}</button>
+          <button type="button" class="btn" id="hintDirectBtn">💡 Pista</button>
+          <button type="button" class="btn" id="revealDirectBtn">Ver solución</button>
+          <button type="button" class="btn btn-primary" id="nextDirectBtn" ${problemSolved ? '' : 'hidden'}>Siguiente problema →</button>
+        </div>
+      `;
+      activeInputIdx = 0;
+      const inp = $('directInput');
+      inp.addEventListener('input', () => {
+        inp.value = inp.value.replace(/[^0-9]/g, '').slice(0, 5);
+        stepInputs[0] = inp.value;
+        inp.classList.remove('is-wrong', 'is-right');
+      });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') $('checkDirectBtn').click();
+      });
+      wireKeypad(box);
+      box.querySelectorAll('[data-op]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedOp = btn.dataset.op;
+          box.querySelectorAll('[data-op]').forEach(b => {
+            b.setAttribute('aria-pressed', String(b === btn));
+            b.classList.remove('is-wrong', 'is-right');
+          });
+        });
+      });
+      $('toggleSchemeBtn').addEventListener('click', () => {
+        showDirectScheme = !showDirectScheme;
+        renderStep();
+      });
+      $('hintDirectBtn').addEventListener('click', () => {
+        hintLevel++;
+        const txt = hintLevel === 1 ? p.hint1 : p.hint2;
+        Aula.hint(aulaMode());
+        setHint(txt);
+      });
+      $('revealDirectBtn').addEventListener('click', () => {
+        selectedOp = p.op;
+        inp.value = String(p.answer);
+        stepInputs[0] = inp.value;
+        Aula.reveal(aulaMode());
+        setHint(`Solución: ${p.steps.map(s => `${s.expr} ${s.ans}`).join(' · ')} (${p.unitCorrect}).`);
+        $('nextDirectBtn').hidden = false;
+      });
+      $('checkDirectBtn').addEventListener('click', () => {
+        const val = inp.value.trim();
+        if (!val) {
+          setFeedback('Escribe el resultado antes de comprobar.', 'try');
+          return;
+        }
+        const opOk = !selectedOp || selectedOp === p.op;
+        const numOk = Number(val) === p.answer;
+        const ok = opOk && numOk;
+        Aula.attempt(aulaMode(), ok, `${selectedOp || ''} = ${val}`.trim());
+        inp.classList.add(numOk ? 'is-right' : 'is-wrong');
+        if (ok) {
+          if (!problemSolved) {
+            problemSolved = true;
+            solvedCount++;
+            $('solvedText').textContent = `${solvedCount} ${solvedCount === 1 ? 'resuelto' : 'resueltos'}`;
+          }
+          setFeedback(`¡Correcto! ${p.starter.replace('___', p.unitCorrect)}.`, 'good');
+          $('nextDirectBtn').hidden = false;
+        } else if (!opOk) {
+          setFeedback('Revisa la operación elegida. Puedes pulsar «Ver esquema visual» para ayudarte.', 'try');
+        } else {
+          setFeedback('Ese resultado no coincide todavía. Repasa el cálculo o pide una pista.', 'try');
+        }
+      });
+      $('nextDirectBtn').addEventListener('click', goNextProblem);
+      inp.focus();
+    }
+
+    function goNextProblem() {
+      index++;
+      if (index >= deck.length) {
+        deck = shuffle(PROBLEMS[currentLevel]);
+        index = 0;
+      }
+      loadProblem();
+    }
+
+    document.querySelectorAll('.pick-card').forEach(btn => {
+      btn.addEventListener('click', () => selectLevel(btn.dataset.level));
+    });
+    document.querySelectorAll('.level-btn').forEach(btn => {
+      btn.addEventListener('click', () => selectLevel(btn.dataset.pick));
+    });
+    $('modeGuidedBtn').addEventListener('click', () => {
+      if (guidedMode) return;
+      guidedMode = true;
+      $('modeGuidedBtn').setAttribute('aria-pressed', 'true');
+      $('modeDirectBtn').setAttribute('aria-pressed', 'false');
+      Aula.activate('Paso a paso');
+      loadProblem();
+    });
+    $('modeDirectBtn').addEventListener('click', () => {
+      if (!guidedMode) return;
+      guidedMode = false;
+      $('modeGuidedBtn').setAttribute('aria-pressed', 'false');
+      $('modeDirectBtn').setAttribute('aria-pressed', 'true');
+      Aula.activate('Directo');
+      loadProblem();
+    });
+    $('speakProblemBtn').addEventListener('click', () => {
+      if (!currentLevel) return;
+      speakText(plainTextProblem(currentProblem()));
+    });
+  })();
+  </script>
+</body>
+</html>

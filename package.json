@@ -4,7 +4,8 @@
   "description": "Portal educativo Mi aula · Aplicaciones interactivas de Lengua y Matemáticas para 2.º ciclo de Primaria con registro docente local.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node tests/run.js"
   },
   "engines": {
     "node": ">=18"

@@ -1,0 +1,1290 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2b2147">
+<title>Clases de palabras y oraciones · Lengua</title>
+<style>
+:root {
+  font-family: Arial, "Liberation Sans", system-ui, sans-serif;
+  color: #1f1933;
+  background: #f7f5fc;
+  --ink: #1f1933;
+  --muted: #564c70;
+  --line: #ddd5ee;
+  --navy: #2b2147;
+  --accent: #5233a6;
+  --soft: #efe9ff;
+  --white: #ffffff;
+  --good-bg: #e2f6ea;
+  --good: #14532d;
+  --warn-bg: #fff2e4;
+  --warn: #8a3a0e;
+  --hint-bg: #eef4ff;
+  --hint: #1e3a8a;
+
+  /* DUA Word-Class Color System */
+  --sus-bg: #dbeafe; --sus-fg: #1d4ed8; --sus-bd: #60a5fa;
+  --adj-bg: #dcfce7; --adj-fg: #15803d; --adj-bd: #4ade80;
+  --ver-bg: #fee2e2; --ver-fg: #b91c1c; --ver-bd: #f87171;
+  --det-bg: #fef3c7; --det-fg: #92400e; --det-bd: #f59e0b;
+  --pro-bg: #ede9fe; --pro-fg: #6d28d9; --pro-bd: #a78bfa;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 280px; background: #f7f5fc; color: var(--ink); line-height: 1.5; }
+button { font: inherit; cursor: pointer; }
+button:disabled { cursor: default; opacity: .55; }
+button:focus-visible { outline: 3px solid #5233a6; outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.top { background: var(--navy); color: #fff; }
+.top-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #e5f38c;
+  color: #2b2147;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+.level-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.level-btn {
+  border: 1px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 13px;
+  min-height: 40px;
+  font-weight: 700;
+  font-size: .92rem;
+}
+.level-btn[aria-pressed="true"] {
+  background: #e5f38c;
+  border-color: #e5f38c;
+  color: #2b2147;
+}
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 22px 22px 46px; }
+
+/* Welcome */
+.welcome-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: clamp(22px, 4vw, 38px);
+  box-shadow: 0 10px 28px rgba(43,33,71,.07);
+}
+.welcome-card h1 { margin: 0 0 8px; font-size: clamp(1.7rem, 4vw, 2.5rem); letter-spacing: -.03em; }
+.welcome-lead { margin: 0 0 18px; color: var(--muted); font-size: 1.05rem; max-width: 68ch; }
+.level-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.pick-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  padding: 18px;
+  border-radius: 16px;
+  border: 2px solid #c9bdf0;
+  background: #f6f2ff;
+  color: #2b2147;
+  min-height: 142px;
+}
+.pick-card[data-level="3"] { border-color: #b5e0c4; background: #eefaf2; color: #164e31; }
+.pick-card[data-level="4"] { border-color: #f0ca8f; background: #fff7e8; color: #753e0e; }
+.pick-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(43,33,71,.1); }
+.pick-tag {
+  display: inline-block;
+  width: max-content;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.85);
+  font-size: .78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.pick-card strong { font-size: 1.2rem; }
+.pick-card span { font-size: .94rem; line-height: 1.4; }
+
+/* DUA Legend */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  margin-bottom: 16px;
+  align-items: center;
+}
+.legend-title { font-size: .84rem; font-weight: 800; color: var(--muted); margin-right: 4px; }
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: .84rem;
+  font-weight: 800;
+  border: 1.5px solid transparent;
+}
+.tag.sus, .tok.cls-sus { background: var(--sus-bg); color: var(--sus-fg); border-color: var(--sus-bd); }
+.tag.adj, .tok.cls-adj { background: var(--adj-bg); color: var(--adj-fg); border-color: var(--adj-bd); }
+.tag.ver, .tok.cls-ver { background: var(--ver-bg); color: var(--ver-fg); border-color: var(--ver-bd); }
+.tag.det, .tok.cls-det { background: var(--det-bg); color: var(--det-fg); border-color: var(--det-bd); }
+.tag.pro, .tok.cls-pro { background: var(--pro-bg); color: var(--pro-fg); border-color: var(--pro-bd); }
+
+/* Tabs & Score */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab-btn {
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 11px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: .92rem;
+}
+.tab-btn[aria-selected="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.score-pill {
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  font-weight: 800;
+  font-size: .92rem;
+  color: var(--accent);
+}
+
+.sheet {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: clamp(18px, 3.5vw, 30px);
+  box-shadow: 0 8px 24px rgba(43,33,71,.06);
+}
+.prompt-card {
+  background: #f6f2ff;
+  border-left: 5px solid var(--accent);
+  border-radius: 6px 14px 14px 6px;
+  padding: 15px 18px;
+  margin-bottom: 18px;
+}
+.prompt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.prompt-eyebrow {
+  font-size: .82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--accent);
+}
+.read-btn {
+  border: 1px solid #cbbcf0;
+  background: #fff;
+  color: var(--accent);
+  border-radius: 10px;
+  padding: 6px 12px;
+  min-height: 36px;
+  font-weight: 700;
+  font-size: .86rem;
+}
+.read-btn:hover { background: var(--soft); }
+.prompt-title { margin: 0; font-size: clamp(1.12rem, 2.4vw, 1.32rem); font-weight: 800; text-align: left; }
+.prompt-sub { margin: 5px 0 0; color: var(--muted); font-size: .95rem; text-align: left; }
+
+/* Interactive word tokens */
+.sentence-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 14px;
+  background: #faf9fd;
+  border: 1.5px solid var(--line);
+  margin-bottom: 14px;
+}
+.tok {
+  min-height: 48px;
+  padding: 9px 14px;
+  border-radius: 11px;
+  border: 2px solid #c6bbd9;
+  background: #fff;
+  color: var(--ink);
+  font-size: 1.12rem;
+  font-weight: 800;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.tok small { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; opacity: .9; }
+.tok:hover:not(:disabled) { border-color: var(--accent); background: #f5f0ff; }
+.tok[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: #e9dfff;
+  color: #2b2147;
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.tok.is-right { background: var(--good-bg); border-color: #217346; color: var(--good); }
+.tok.is-wrong { background: var(--warn-bg); border-color: #c2571a; color: var(--warn); }
+.punct { font-size: 1.35rem; font-weight: 800; color: var(--muted); padding: 0 2px; }
+
+/* Classify mode */
+.bank-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #faf9fd;
+  border: 1.5px dashed #c6bbd9;
+  min-height: 68px;
+}
+.bins-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 12px;
+}
+.bin-card {
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  padding: 12px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 126px;
+  text-align: left;
+}
+.bin-card.sus { border-color: var(--sus-bd); background: #f4f8ff; }
+.bin-card.adj { border-color: var(--adj-bd); background: #f3fdf6; }
+.bin-card.ver { border-color: var(--ver-bd); background: #fff6f6; }
+.bin-card.det { border-color: var(--det-bd); background: #fffbf0; }
+.bin-card.pro { border-color: var(--pro-bd); background: #f9f6ff; }
+.bin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-weight: 800;
+  font-size: .96rem;
+}
+.bin-hint { font-size: .8rem; color: var(--muted); font-weight: 700; }
+.bin-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.bin-chip {
+  padding: 5px 10px;
+  border-radius: 9px;
+  border: 1.5px solid rgba(0,0,0,.15);
+  background: #fff;
+  font-weight: 800;
+  font-size: .94rem;
+}
+.bin-chip.is-right { background: var(--good-bg); border-color: #217346; color: var(--good); }
+.bin-chip.is-wrong { background: var(--warn-bg); border-color: #c2571a; color: var(--warn); }
+
+/* Agreement / options */
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+.opt-btn {
+  min-height: 54px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid #c6bbd9;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 1.06rem;
+  text-align: center;
+}
+.opt-btn:hover:not(:disabled) { border-color: var(--accent); background: #f5f0ff; }
+.opt-btn.is-right { background: var(--good-bg); border-color: #217346; color: var(--good); }
+.opt-btn.is-wrong { background: var(--warn-bg); border-color: #c2571a; color: var(--warn); }
+
+/* Sentence builder / Subject-Predicate */
+.compose-zone {
+  min-height: 70px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 2px dashed #b9a4e0;
+  background: #faf7ff;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.compose-placeholder { color: var(--muted); font-size: .95rem; font-weight: 700; }
+.sp-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.sp-box {
+  border-radius: 14px;
+  padding: 13px;
+  border: 2px solid var(--line);
+  background: #fff;
+}
+.sp-box.suj { border-color: var(--sus-bd); background: #f3f8ff; }
+.sp-box.pred { border-color: var(--ver-bd); background: #fff6f6; }
+.sp-box strong { display: block; margin-bottom: 4px; font-size: .95rem; }
+.sp-box small { display: block; color: var(--muted); margin-bottom: 8px; font-size: .82rem; }
+
+/* Actions & Feedback */
+.actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
+.btn {
+  min-height: 46px;
+  padding: 10px 16px;
+  border-radius: 11px;
+  border: 1.5px solid #c6bbd9;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: .95rem;
+}
+.btn:hover:not(:disabled) { background: #f3eefc; }
+.btn-primary { background: var(--navy); border-color: var(--navy); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #41326b; }
+
+.feedback:not(:empty), .hint:not(:empty) {
+  margin-top: 13px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  font-size: .97rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: left;
+}
+.feedback.good { background: var(--good-bg); color: var(--good); }
+.feedback.try { background: var(--warn-bg); color: var(--warn); }
+.hint { background: var(--hint-bg); color: var(--hint); }
+
+@media (max-width: 780px) {
+  .level-cards, .sp-split { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">Aa</span>
+        <span>Clases de palabras y oraciones</span>
+      </div>
+      <div class="level-pills" role="group" aria-label="Elegir nivel">
+        <button class="level-btn" type="button" data-pick="inicial" aria-pressed="false">Nivel inicial</button>
+        <button class="level-btn" type="button" data-pick="3" aria-pressed="false">3.º Primaria</button>
+        <button class="level-btn" type="button" data-pick="4" aria-pressed="false">4.º Primaria</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="welcomeView" class="welcome-card">
+      <h1>Clases de palabras y oraciones</h1>
+      <p class="welcome-lead">Aprende a reconocer sustantivos, adjetivos, verbos, determinantes y pronombres con código de color DUA, practica la concordancia y construye oraciones claras.</p>
+
+      <div class="legend" aria-label="Código de colores DUA">
+        <span class="legend-title">Código de color:</span>
+        <span class="tag sus">🟦 Sustantivo</span>
+        <span class="tag adj">🟩 Adjetivo</span>
+        <span class="tag ver">🟥 Verbo</span>
+        <span class="tag det">🟨 Determinante</span>
+        <span class="tag pro">🟪 Pronombre</span>
+      </div>
+
+      <div class="level-cards">
+        <button class="pick-card" type="button" data-level="inicial">
+          <span class="pick-tag">3 clases · oraciones cortas</span>
+          <strong>Nivel inicial</strong>
+          <span>Sustantivo, adjetivo y verbo con apoyo visual de colores, concordancia sencilla y frases cortas.</span>
+        </button>
+        <button class="pick-card" type="button" data-level="3">
+          <span class="pick-tag">3.º de Primaria</span>
+          <strong>3.º Primaria</strong>
+          <span>Sustantivos, adjetivos, verbos y determinantes, concordancia género/número y construcción de oraciones.</span>
+        </button>
+        <button class="pick-card" type="button" data-level="4">
+          <span class="pick-tag">4.º de Primaria</span>
+          <strong>4.º Primaria</strong>
+          <span>Las 5 clases de palabras (incluidos pronombres personales), concordancia completa y sujeto/predicado.</span>
+        </button>
+      </div>
+    </section>
+
+    <section id="workView" hidden>
+      <div class="legend" id="activeLegend" aria-label="Código de colores DUA"></div>
+
+      <div class="toolbar">
+        <div class="tabs" role="tablist" aria-label="Talleres de gramática">
+          <button class="tab-btn" role="tab" data-tab="detect" aria-selected="true" type="button">🔍 Detecta</button>
+          <button class="tab-btn" role="tab" data-tab="classify" aria-selected="false" type="button">🗂️ Clasifica</button>
+          <button class="tab-btn" role="tab" data-tab="agree" aria-selected="false" type="button">⚖️ Concordancia</button>
+          <button class="tab-btn" role="tab" data-tab="sentence" aria-selected="false" type="button">🧩 Oraciones</button>
+        </div>
+        <div class="score-pill" id="scorePill">0 aciertos</div>
+      </div>
+
+      <article class="sheet">
+        <div id="activityArea"></div>
+        <div id="feedbackBox" class="feedback" role="status" aria-live="polite"></div>
+        <div id="hintBox" class="hint" aria-live="polite"></div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/registro.js"></script>
+  <script>
+  (() => {
+    'use strict';
+
+    const CATS = {
+      sus: { code: 'sus', name: 'Sustantivo', icon: '🟦', desc: 'personas, animales, lugares o cosas' },
+      adj: { code: 'adj', name: 'Adjetivo', icon: '🟩', desc: 'dice cómo es o cómo está' },
+      ver: { code: 'ver', name: 'Verbo', icon: '🟥', desc: 'indica acción o estado' },
+      det: { code: 'det', name: 'Determinante', icon: '🟨', desc: 'acompaña al sustantivo (el, la, un, mi…)' },
+      pro: { code: 'pro', name: 'Pronombre', icon: '🟪', desc: 'sustituye al sustantivo (yo, tú, él, ella…)' }
+    };
+
+    const LEVEL_CATS = {
+      inicial: ['sus', 'adj', 'ver'],
+      '3': ['sus', 'adj', 'ver', 'det'],
+      '4': ['sus', 'adj', 'ver', 'det', 'pro']
+    };
+
+    const LEVEL_LABELS = {
+      inicial: 'Nivel inicial',
+      '3': '3.º Primaria',
+      '4': '4.º Primaria'
+    };
+
+    const DATA = {
+      detect: {
+        inicial: [
+          { target: 'sus', tokens: [['El','det'],['perro','sus'],['negro','adj'],['corre','ver']], hint: 'Busca el nombre de un animal.' },
+          { target: 'ver', tokens: [['Vera','sus'],['lee','ver'],['un','det'],['cuento','sus']], hint: 'Busca la palabra que indica qué acción hace Vera.' },
+          { target: 'adj', tokens: [['La','det'],['mesa','sus'],['grande','adj'],['brilla','ver']], hint: 'Busca la palabra que dice cómo es la mesa.' },
+          { target: 'sus', tokens: [['Hugo','sus'],['pinta','ver'],['una','det'],['casa','sus']], hint: 'Hay 2 sustantivos: un nombre de persona y una cosa.' },
+          { target: 'ver', tokens: [['Nora','sus'],['salta','ver'],['en','prep'],['el','det'],['patio','sus']], hint: '¿Qué hace Nora? Esa palabra es el verbo.' },
+          { target: 'adj', tokens: [['Un','det'],['gato','sus'],['suave','adj'],['duerme','ver']], hint: '¿Cómo es el gato?' }
+        ],
+        '3': [
+          { target: 'sus', tokens: [['La','det'],['mochila','sus'],['azul','adj'],['pesa','ver'],['mucho','adv']], hint: 'Busca el nombre de un objeto.' },
+          { target: 'adj', tokens: [['El','det'],['río','sus'],['Ebro','sus'],['lleva','ver'],['agua','sus'],['fría','adj']], hint: 'Busca la palabra que describe cómo está el agua.' },
+          { target: 'ver', tokens: [['Los','det'],['niños','sus'],['dibujan','ver'],['y','conj'],['recortan','ver'],['estrellas','sus']], hint: 'Hay 2 verbos: indican dos acciones que hacen los niños.' },
+          { target: 'det', tokens: [['Aquella','det'],['biblioteca','sus'],['tiene','ver'],['muchos','det'],['libros','sus']], hint: 'Los determinantes acompañan y presentan a los sustantivos (biblioteca, libros).' },
+          { target: 'sus', tokens: [['Mi','det'],['abuelo','sus'],['pasea','ver'],['por','prep'],['Alhama','sus']], hint: 'Hay 2 sustantivos: una persona y un lugar.' },
+          { target: 'adj', tokens: [['Unas','det'],['montañas','sus'],['altas','adj'],['y','conj'],['verdes','adj'],['rodean','ver'],['el','det'],['pueblo','sus']], hint: 'Hay 2 adjetivos que dicen cómo son las montañas.' }
+        ],
+        '4': [
+          { target: 'pro', tokens: [['Ella','pro'],['prepara','ver'],['la','det'],['excursión','sus'],['con','prep'],['nosotros','pro']], hint: 'Los pronombres sustituyen a nombres de personas (ella, nosotros).' },
+          { target: 'ver', tokens: [['Nosotros','pro'],['visitamos','ver'],['la','det'],['Aljafería','sus'],['y','conj'],['aprendimos','ver'],['historia','sus']], hint: 'Hay 2 verbos en pasado.' },
+          { target: 'det', tokens: [['Estas','det'],['tres','det'],['lámparas','sus'],['iluminan','ver'],['nuestra','det'],['clase','sus']], hint: 'Busca las 3 palabras que acompañan a «lámparas» y «clase».' },
+          { target: 'adj', tokens: [['El','det'],['viento','sus'],['fuerte','adj'],['mueve','ver'],['las','det'],['ramas','sus'],['secas','adj']], hint: 'Hay 2 adjetivos: uno dice cómo es el viento y otro cómo están las ramas.' },
+          { target: 'pro', tokens: [['Tú','pro'],['escribes','ver'],['muy','adv'],['bien','adv'],['y','conj'],['él','pro'],['dibuja','ver'],['genial','adj']], hint: 'Busca los 2 pronombres personales con tilde.' },
+          { target: 'sus', tokens: [['El','det'],['museo','sus'],['de','prep'],['Teruel','sus'],['guarda','ver'],['fósiles','sus'],['antiguos','adj']], hint: 'Hay 3 sustantivos: un edificio, una ciudad y un objeto.' }
+        ]
+      },
+
+      classify: {
+        inicial: [
+          { words: [['lápiz','sus'],['bonito','adj'],['salta','ver']], hint: 'lápiz = cosa; bonito = cómo es; salta = acción.' },
+          { words: [['perro','sus'],['rápido','adj'],['corre','ver']], hint: 'perro = animal; rápido = cómo es; corre = acción.' },
+          { words: [['manzana','sus'],['roja','adj'],['come','ver']], hint: 'manzana = fruta/cosa; roja = cómo es; come = acción.' },
+          { words: [['colegio','sus'],['alegre','adj'],['juega','ver']], hint: 'colegio = lugar; alegre = cómo es; juega = acción.' },
+          { words: [['sol','sus'],['caliente','adj'],['brilla','ver']], hint: 'sol = cosa; caliente = cómo es; brilla = acción.' }
+        ],
+        '3': [
+          { words: [['árbol','sus'],['verde','adj'],['crece','ver'],['aquel','det']], hint: '«aquel» acompaña al sustantivo (determinante); «crece» es una acción (verbo).' },
+          { words: [['cuaderno','sus'],['limpio','adj'],['escribe','ver'],['mi','det']], hint: '«mi» es determinante posesivo; «limpio» dice cómo está el cuaderno.' },
+          { words: [['Zaragoza','sus'],['antigua','adj'],['viajan','ver'],['las','det']], hint: '«Zaragoza» es sustantivo propio; «las» es determinante artículo.' },
+          { words: [['cesto','sus'],['pesado','adj'],['llevamos','ver'],['tres','det']], hint: '«tres» es determinante numeral; «llevamos» es verbo.' },
+          { words: [['nube','sus'],['blanca','adj'],['flota','ver'],['esta','det']], hint: '«esta» señala cercanía antes del sustantivo (determinante).' }
+        ],
+        '4': [
+          { words: [['puente','sus'],['largo','adj'],['cruzamos','ver'],['ese','det'],['nosotros','pro']], hint: '«nosotros» sustituye a las personas (pronombre); «ese» acompaña al sustantivo (determinante).' },
+          { words: [['música','sus'],['suave','adj'],['escuchan','ver'],['nuestra','det'],['ellas','pro']], hint: '«ellas» es pronombre personal; «nuestra» es determinante posesivo.' },
+          { words: [['castillo','sus'],['enorme','adj'],['descubrí','ver'],['unos','det'],['yo','pro']], hint: '«yo» sustituye al hablante (pronombre); «descubrí» es acción (verbo).' },
+          { words: [['montaña','sus'],['nevada','adj'],['subiréis','ver'],['aquella','det'],['vosotros','pro']], hint: '«vosotros» es pronombre personal; «aquella» acompaña al sustantivo.' },
+          { words: [['carta','sus'],['divertida','adj'],['leyó','ver'],['varias','det'],['tú','pro']], hint: '«tú» con tilde es pronombre personal; «varias» es determinante indefinido.' }
+        ]
+      },
+
+      agree: {
+        inicial: [
+          { before: 'La gata', after: 'duerme en el sofá.', correct: 'blanca', options: ['blanca', 'blanco', 'blancas'], cue: '«La gata» es femenino · singular', hint: 'Como «gata» es una sola (singular) y femenino, el adjetivo termina en -a: blanca.' },
+          { before: 'Los perros', after: 'corren en el parque.', correct: 'pequeños', options: ['pequeños', 'pequeño', 'pequeña'], cue: '«Los perros» es masculino · plural', hint: 'Son varios perros (masculino plural) → pequeños.' },
+          { before: 'Unas flores', after: 'crecen en el jardín.', correct: 'rojas', options: ['rojas', 'rojo', 'roja'], cue: '«Unas flores» es femenino · plural', hint: '«Flores» es femenino plural → rojas.' },
+          { before: 'El niño', after: 'un libro nuevo.', correct: 'lee', options: ['lee', 'leen'], cue: '«El niño» es singular (1 persona)', hint: 'Solo hay un niño → él lee.' },
+          { before: 'Las niñas', after: 'a la comba.', correct: 'saltan', options: ['saltan', 'salta'], cue: '«Las niñas» es plural (varias)', hint: 'Son varias niñas → ellas saltan.' },
+          { before: 'Un coche', after: 'pasa por la calle.', correct: 'azul', options: ['azul', 'azules'], cue: '«Un coche» es singular (1 cosa)', hint: 'Es un solo coche → azul.' }
+        ],
+        '3': [
+          { before: 'Estas mochilas', after: 'son de la clase de 3.º.', correct: 'ligeras', options: ['ligeras', 'ligero', 'ligera', 'ligeros'], cue: 'femenino · plural', hint: '«Mochilas» está en femenino plural → ligeras.' },
+          { before: 'Vera y su abuelo', after: 'juntos por Alhama.', correct: 'pasean', options: ['pasean', 'pasea', 'paseo', 'paseas'], cue: '3.ª persona · plural (ellos)', hint: 'Son dos personas (Vera y su abuelo = ellos) → pasean.' },
+          { before: '', after: 'árboles del patio dan buena sombra.', correct: 'Aquellos', options: ['Aquellos', 'Aquellas', 'Aquel', 'Aquella'], cue: 'masculino · plural', hint: '«Árboles» es masculino plural → Aquellos.' },
+          { before: 'Comimos unas cerezas muy', after: 'en el recreo.', correct: 'dulces', options: ['dulces', 'dulce', 'dulzo'], cue: 'plural', hint: 'Como son varias cerezas (plural), añadimos -s: dulces.' },
+          { before: 'Mi hermana y yo', after: 'un mural sobre Aragón.', correct: 'pintamos', options: ['pintamos', 'pinta', 'pintan', 'pintas'], cue: '1.ª persona · plural (nosotros/as)', hint: '«Mi hermana y yo» equivale a nosotros/as → pintamos.' },
+          { before: 'El agua del río estaba', after: 'esta mañana.', correct: 'fría', options: ['fría', 'frío', 'frías', 'fríos'], cue: '«agua» es sustantivo femenino singular', hint: '¡Ojo! Aunque decimos «el agua», agua es femenino singular → fría.' }
+        ],
+        '4': [
+          { before: 'Los puentes', after: 'cruzan el río Ebro.', correct: 'antiguos', options: ['antiguos', 'antiguas', 'antiguo', 'antigua'], cue: 'masculino · plural', hint: '«Puentes» es masculino plural → antiguos.' },
+          { before: 'Vosotros', after: 'muy bien el mapa de Huesca.', correct: 'explicasteis', options: ['explicasteis', 'explicaron', 'explicamos', 'explicaste'], cue: '2.ª persona · plural (vosotros)', hint: 'Con el pronombre «vosotros» el verbo termina en -eis: explicasteis.' },
+          { before: 'La águila no se dice así; decimos', after: 'águila real vuela alto.', correct: 'el', options: ['el', 'la', 'los', 'las'], cue: 'artículo ante «a-» tónica', hint: 'Delante de sustantivo femenino que empieza por «a-» tónica usamos «el»: el águila.' },
+          { before: 'Nuestras amigas de Calatayud', after: 'el sábado.', correct: 'vendrán', options: ['vendrán', 'vendrá', 'vendremos', 'vendrás'], cue: '3.ª persona · plural (ellas)', hint: '«Nuestras amigas» equivale a ellas → vendrán.' },
+          { before: 'Ellas estaban muy', after: 'con el resultado del taller.', correct: 'contentas', options: ['contentas', 'contentos', 'contenta', 'contento'], cue: 'femenino · plural', hint: 'El pronombre «ellas» es femenino plural → contentas.' },
+          { before: 'El equipo de baloncesto', after: 'todos los martes.', correct: 'entrena', options: ['entrena', 'entrenan', 'entrenamos', 'entrenas'], cue: 'sustantivo colectivo en singular', hint: '«El equipo» es un sustantivo colectivo en singular → entrena.' }
+        ]
+      },
+
+      sentence: {
+        inicial: [
+          { kind: 'order', tokens: [['El','det'],['gato','sus'],['duerme','ver'],['en','prep'],['la','det'],['cama.','sus']], hint: 'Empieza por la palabra con mayúscula (El) y termina con el punto (cama.).' },
+          { kind: 'order', tokens: [['Vera','sus'],['come','ver'],['una','det'],['pera','sus'],['dulce.','adj']], hint: 'Primero quién (Vera), luego qué hace (come) y después qué come (una pera dulce.).' },
+          { kind: 'order', tokens: [['Los','det'],['niños','sus'],['juegan','ver'],['en','prep'],['el','det'],['patio.','sus']], hint: 'Sujeto (Los niños) + verbo (juegan) + lugar (en el patio.).' },
+          { kind: 'order', tokens: [['Mi','det'],['abuelo','sus'],['lee','ver'],['un','det'],['libro','sus'],['grande.','adj']], hint: 'Empieza por «Mi abuelo» y acaba en «grande.».' }
+        ],
+        '3': [
+          { kind: 'order', tokens: [['La','det'],['perra','sus'],['alegre','adj'],['corre','ver'],['por','prep'],['el','det'],['parque.','sus']], hint: 'Empieza con «La perra alegre» y sigue con el verbo «corre».' },
+          { kind: 'order', tokens: [['Hugo','sus'],['y','conj'],['Nora','sus'],['visitan','ver'],['la','det'],['biblioteca','sus'],['nueva.','adj']], hint: 'Primero las personas (Hugo y Nora), luego la acción (visitan).' },
+          { kind: 'order', tokens: [['Las','det'],['estrellas','sus'],['brillan','ver'],['en','prep'],['el','det'],['cielo','sus'],['oscuro.','adj']], hint: 'Empieza con «Las estrellas brillan».' },
+          { kind: 'order', tokens: [['Nuestro','det'],['colegio','sus'],['celebra','ver'],['una','det'],['fiesta','sus'],['divertida.','adj']], hint: '¿Quién celebra? Nuestro colegio.' }
+        ],
+        '4': [
+          {
+            kind: 'sp',
+            words: ['Los','alumnos','de','cuarto','preparan','un','mural','sobre','Aragón.'],
+            subjectEnd: 4,
+            hint: 'Pregunta al verbo «preparan»: ¿quiénes preparan el mural? → «Los alumnos de cuarto».'
+          },
+          {
+            kind: 'order',
+            tokens: [['Ella','pro'],['escribió','ver'],['una','det'],['carta','sus'],['muy','adv'],['interesante','adj'],['ayer.','adv']],
+            hint: 'Empieza por el pronombre con mayúscula (Ella) y termina en «ayer.».'
+          },
+          {
+            kind: 'sp',
+            words: ['El','abuelo','de','Vera','cuenta','historias','antiguas','en','la','plaza.'],
+            subjectEnd: 4,
+            hint: 'Pregunta al verbo «cuenta»: ¿quién cuenta historias? → «El abuelo de Vera».'
+          },
+          {
+            kind: 'sp',
+            words: ['Las','montañas','del','Pirineo','tienen','nieve','en','invierno.'],
+            subjectEnd: 4,
+            hint: 'Pregunta al verbo «tienen»: ¿qué tienen nieve? → «Las montañas del Pirineo».'
+          },
+          {
+            kind: 'order',
+            tokens: [['Nosotros','pro'],['cruzamos','ver'],['el','det'],['puente','sus'],['de','prep'],['piedra','sus'],['juntos.','adj']],
+            hint: 'Empieza por «Nosotros cruzamos» y termina en «juntos.».'
+          },
+          {
+            kind: 'sp',
+            words: ['El','río','Ebro','atraviesa','la','ciudad','de','Zaragoza.'],
+            subjectEnd: 3,
+            hint: 'Pregunta al verbo «atraviesa»: ¿qué atraviesa Zaragoza? → «El río Ebro».'
+          }
+        ]
+      }
+    };
+
+    const $ = id => document.getElementById(id);
+    const Aula = window.Aula || {
+      begin() {}, activate() {}, attempt() {}, hint() {}, reveal() {}
+    };
+
+    let currentLevel = null;
+    let currentTab = 'detect';
+    let idxByTab = { detect: 0, classify: 0, agree: 0, sentence: 0 };
+    let score = 0;
+    let solved = false;
+    let selectedWordIdx = null;
+    let placedBins = {};
+    let chosenOrder = [];
+
+    function shuffle(arr) {
+      const c = [...arr];
+      for (let i = c.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [c[i], c[j]] = [c[j], c[i]];
+      }
+      return c;
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function speakText(text) {
+      try {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'es-ES';
+        u.rate = 0.94;
+        window.speechSynthesis.speak(u);
+      } catch {}
+    }
+
+    function setFeedback(text, kind = '') {
+      const el = $('feedbackBox');
+      el.textContent = text;
+      el.className = kind ? `feedback ${kind}` : 'feedback';
+    }
+
+    function setHint(text) {
+      $('hintBox').textContent = text;
+    }
+
+    function renderLegend() {
+      const cats = LEVEL_CATS[currentLevel];
+      $('activeLegend').innerHTML =
+        '<span class="legend-title">Guía DUA:</span>' +
+        cats.map(code => {
+          const c = CATS[code];
+          return `<span class="tag ${code}" title="${escapeHtml(c.desc)}">${c.icon} ${c.name}</span>`;
+        }).join('');
+    }
+
+    function selectLevel(lvl) {
+      currentLevel = lvl;
+      document.querySelectorAll('.level-btn').forEach(b => {
+        b.setAttribute('aria-pressed', String(b.dataset.pick === lvl));
+      });
+      $('welcomeView').hidden = true;
+      $('workView').hidden = false;
+      idxByTab = { detect: 0, classify: 0, agree: 0, sentence: 0 };
+      renderLegend();
+      loadCurrentActivity();
+    }
+
+    function selectTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+      });
+      loadCurrentActivity();
+    }
+
+    function currentItem() {
+      const list = DATA[currentTab][currentLevel];
+      return list[idxByTab[currentTab] % list.length];
+    }
+
+    function nextItem() {
+      const list = DATA[currentTab][currentLevel];
+      idxByTab[currentTab] = (idxByTab[currentTab] + 1) % list.length;
+      loadCurrentActivity();
+    }
+
+    function addScoreOnce() {
+      if (!solved) {
+        solved = true;
+        score++;
+        $('scorePill').textContent = `${score} ${score === 1 ? 'acierto' : 'aciertos'}`;
+      }
+    }
+
+    function loadCurrentActivity() {
+      solved = false;
+      setFeedback('');
+      setHint('');
+
+      if (currentTab === 'detect') renderDetect();
+      else if (currentTab === 'classify') renderClassify();
+      else if (currentTab === 'agree') renderAgree();
+      else renderSentence();
+    }
+
+    // ---- TAB 1: DETECT IN SENTENCE ----
+    function renderDetect() {
+      const item = currentItem();
+      const cat = CATS[item.target];
+      const sentenceText = item.tokens.map(t => t[0]).join(' ') + '.';
+      const selected = new Set();
+      const modeName = 'Detecta en la oración';
+
+      Aula.activate(modeName);
+      Aula.begin(modeName, `Toca ${cat.name}: ${sentenceText}`, LEVEL_LABELS[currentLevel]);
+
+      const area = $('activityArea');
+      area.innerHTML = `
+        <div class="prompt-card" data-aula-read>
+          <div class="prompt-head">
+            <span class="prompt-eyebrow">${LEVEL_LABELS[currentLevel]} · Detecta en la oración</span>
+            <button type="button" class="read-btn" id="readSentenceBtn">🔊 Escuchar oración</button>
+          </div>
+          <p class="prompt-title">Toca todas las palabras que son: <span class="tag ${cat.code}">${cat.icon} ${cat.name}</span></p>
+          <p class="prompt-sub">Recuerda: un ${cat.name.toLowerCase()} ${cat.desc}.</p>
+        </div>
+
+        <div class="sentence-box" id="sentenceBox">
+          ${item.tokens.map((t, i) => `<button type="button" class="tok" data-tok="${i}" aria-pressed="false">${escapeHtml(t[0])}</button>`).join('')}
+          <span class="punct">.</span>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="checkBtn">Comprobar</button>
+          <button type="button" class="btn" id="hintBtn">💡 Pista</button>
+          <button type="button" class="btn" id="revealBtn">Ver solución</button>
+          <button type="button" class="btn btn-primary" id="nextBtn" hidden>Siguiente →</button>
+        </div>
+      `;
+
+      $('readSentenceBtn').addEventListener('click', () => speakText(sentenceText));
+
+      function paintSolutionColors() {
+        area.querySelectorAll('[data-tok]').forEach(btn => {
+          const i = Number(btn.dataset.tok);
+          const cls = item.tokens[i][1];
+          if (CATS[cls]) {
+            btn.className = `tok cls-${cls}`;
+            btn.innerHTML = `${escapeHtml(item.tokens[i][0])}<small>${CATS[cls].name}</small>`;
+          }
+        });
+      }
+
+      area.querySelectorAll('[data-tok]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (solved) return;
+          const i = Number(btn.dataset.tok);
+          if (selected.has(i)) selected.delete(i);
+          else selected.add(i);
+          btn.setAttribute('aria-pressed', String(selected.has(i)));
+          btn.classList.remove('is-wrong', 'is-right');
+        });
+      });
+
+      $('checkBtn').addEventListener('click', () => {
+        if (!selected.size) {
+          setFeedback('Toca primero al menos una palabra de la oración.', 'try');
+          return;
+        }
+        const expected = item.tokens.map((t, i) => t[1] === item.target ? i : -1).filter(i => i >= 0);
+        const chosen = [...selected].sort((a, b) => a - b);
+        const ok = expected.length === chosen.length && expected.every((v, k) => v === chosen[k]);
+        const answerStr = chosen.map(i => item.tokens[i][0]).join(', ');
+        Aula.attempt(modeName, ok, answerStr);
+
+        if (ok) {
+          addScoreOnce();
+          paintSolutionColors();
+          setFeedback(`¡Muy bien! Has encontrado ${expected.length === 1 ? 'la palabra correcta' : 'todas las palabras correctas'}. Mira los colores de toda la oración.`, 'good');
+          $('nextBtn').hidden = false;
+        } else {
+          area.querySelectorAll('[data-tok]').forEach(btn => {
+            const i = Number(btn.dataset.tok);
+            if (!selected.has(i)) return;
+            btn.classList.add(item.tokens[i][1] === item.target ? 'is-right' : 'is-wrong');
+          });
+          setFeedback(`Revisa tu selección: en esta oración hay ${expected.length} ${expected.length === 1 ? cat.name.toLowerCase() : cat.name.toLowerCase() + 's'}.`, 'try');
+        }
+      });
+
+      $('hintBtn').addEventListener('click', () => {
+        Aula.hint(modeName);
+        setHint(item.hint);
+      });
+
+      $('revealBtn').addEventListener('click', () => {
+        const expectedWords = item.tokens.filter(t => t[1] === item.target).map(t => t[0]).join(', ');
+        Aula.reveal(modeName);
+        paintSolutionColors();
+        setHint(`Solución (${cat.name}): ${expectedWords}.`);
+        $('nextBtn').hidden = false;
+      });
+
+      $('nextBtn').addEventListener('click', nextItem);
+    }
+
+    // ---- TAB 2: CLASSIFY WORDS ----
+    function renderClassify() {
+      const item = currentItem();
+      const cats = LEVEL_CATS[currentLevel];
+      const words = shuffle(item.words.map((w, i) => ({ id: i, text: w[0], cat: w[1] })));
+      selectedWordIdx = null;
+      placedBins = {};
+      const modeName = 'Clasifica palabras';
+
+      Aula.activate(modeName);
+      Aula.begin(modeName, `Clasifica: ${words.map(w => w.text).join(', ')}`, LEVEL_LABELS[currentLevel]);
+
+      function paint() {
+        const area = $('activityArea');
+        const unplaced = words.filter(w => !placedBins[w.id]);
+        area.innerHTML = `
+          <div class="prompt-card" data-aula-read>
+            <div class="prompt-head">
+              <span class="prompt-eyebrow">${LEVEL_LABELS[currentLevel]} · Clasifica palabras</span>
+              <button type="button" class="read-btn" id="readBankBtn">🔊 Escuchar palabras</button>
+            </div>
+            <p class="prompt-title">Toca una palabra y después toca la caja de su clase.</p>
+            <p class="prompt-sub">Si quieres cambiar una palabra de caja, tócala para devolverla arriba.</p>
+          </div>
+
+          <div class="bank-row" aria-label="Palabras por clasificar">
+            ${unplaced.length
+              ? unplaced.map(w => `<button type="button" class="tok" data-word="${w.id}" aria-pressed="${selectedWordIdx === w.id}">${escapeHtml(w.text)}</button>`).join('')
+              : '<span class="compose-placeholder">Todas las palabras están colocadas. Pulsa «Comprobar».</span>'}
+          </div>
+
+          <div class="bins-grid">
+            ${cats.map(code => {
+              const c = CATS[code];
+              const inBin = words.filter(w => placedBins[w.id] === code);
+              return `
+                <div class="bin-card ${code}" data-bin="${code}" tabindex="0" role="button" aria-label="Caja ${c.name}">
+                  <div class="bin-head"><span>${c.icon} ${c.name}</span></div>
+                  <div class="bin-hint">${c.desc}</div>
+                  <div class="bin-items">
+                    ${inBin.map(w => `<button type="button" class="bin-chip" data-placed="${w.id}">${escapeHtml(w.text)}</button>`).join('')}
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="checkBtn">Comprobar</button>
+            <button type="button" class="btn" id="hintBtn">💡 Pista</button>
+            <button type="button" class="btn" id="revealBtn">Ver solución</button>
+            <button type="button" class="btn btn-primary" id="nextBtn" ${solved ? '' : 'hidden'}>Siguiente →</button>
+          </div>
+        `;
+
+        $('readBankBtn').addEventListener('click', () => speakText(words.map(w => w.text).join(', ')));
+
+        area.querySelectorAll('[data-word]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = Number(btn.dataset.word);
+            selectedWordIdx = selectedWordIdx === id ? null : id;
+            paint();
+          });
+        });
+
+        area.querySelectorAll('[data-placed]').forEach(btn => {
+          btn.addEventListener('click', e => {
+            e.stopPropagation();
+            if (solved) return;
+            const id = Number(btn.dataset.placed);
+            delete placedBins[id];
+            selectedWordIdx = id;
+            paint();
+          });
+        });
+
+        area.querySelectorAll('[data-bin]').forEach(bin => {
+          const placeHere = () => {
+            if (solved || selectedWordIdx === null) return;
+            placedBins[selectedWordIdx] = bin.dataset.bin;
+            selectedWordIdx = null;
+            paint();
+          };
+          bin.addEventListener('click', placeHere);
+          bin.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); placeHere(); }
+          });
+        });
+
+        $('checkBtn').addEventListener('click', () => {
+          if (Object.keys(placedBins).length < words.length) {
+            setFeedback('Coloca todas las palabras en alguna caja antes de comprobar.', 'try');
+            return;
+          }
+          let allOk = true;
+          area.querySelectorAll('[data-placed]').forEach(btn => {
+            const id = Number(btn.dataset.placed);
+            const w = words.find(x => x.id === id);
+            const ok = placedBins[id] === w.cat;
+            btn.classList.add(ok ? 'is-right' : 'is-wrong');
+            if (!ok) allOk = false;
+          });
+          const summary = words.map(w => `${w.text}→${placedBins[w.id]}`).join(', ');
+          Aula.attempt(modeName, allOk, summary);
+          if (allOk) {
+            addScoreOnce();
+            setFeedback('¡Fantástico! Has clasificado todas las palabras correctamente.', 'good');
+            $('nextBtn').hidden = false;
+          } else {
+            setFeedback('Algunas palabras marcadas en naranja pertenecen a otra caja. Tócalas para cambiarlas.', 'try');
+          }
+        });
+
+        $('hintBtn').addEventListener('click', () => {
+          Aula.hint(modeName);
+          setHint(item.hint);
+        });
+
+        $('revealBtn').addEventListener('click', () => {
+          words.forEach(w => { placedBins[w.id] = w.cat; });
+          selectedWordIdx = null;
+          Aula.reveal(modeName);
+          paint();
+          setHint(`Solución: ${words.map(w => `${w.text} (${CATS[w.cat].name})`).join(' · ')}.`);
+          $('nextBtn').hidden = false;
+        });
+
+        $('nextBtn').addEventListener('click', nextItem);
+      }
+
+      paint();
+    }
+
+    // ---- TAB 3: AGREEMENT ----
+    function renderAgree() {
+      const item = currentItem();
+      const opts = shuffle(item.options);
+      const fullPreview = `${item.before ? item.before + ' ' : ''}___${item.after ? ' ' + item.after : ''}`;
+      const modeName = 'Concordancia';
+
+      Aula.activate(modeName);
+      Aula.begin(modeName, fullPreview, LEVEL_LABELS[currentLevel]);
+
+      const area = $('activityArea');
+      area.innerHTML = `
+        <div class="prompt-card" data-aula-read>
+          <div class="prompt-head">
+            <span class="prompt-eyebrow">${LEVEL_LABELS[currentLevel]} · Concordancia</span>
+            <button type="button" class="read-btn" id="readAgreeBtn">🔊 Escuchar oración</button>
+          </div>
+          <p class="prompt-title" id="agreeSentence">${escapeHtml(fullPreview)}</p>
+          <p class="prompt-sub">${currentLevel === 'inicial' ? `Ayuda visual: ${escapeHtml(item.cue)}.` : 'Elige la palabra que concuerda en género y número.'}</p>
+        </div>
+
+        <div class="options-grid">
+          ${opts.map(o => `<button type="button" class="opt-btn" data-opt="${escapeHtml(o)}">${escapeHtml(o)}</button>`).join('')}
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="hintBtn">💡 Pista</button>
+          <button type="button" class="btn" id="revealBtn">Ver solución</button>
+          <button type="button" class="btn btn-primary" id="nextBtn" hidden>Siguiente →</button>
+        </div>
+      `;
+
+      $('readAgreeBtn').addEventListener('click', () => {
+        const spoken = `${item.before ? item.before + ' ' : ''}espacio en blanco${item.after ? ' ' + item.after : ''}`;
+        speakText(spoken);
+      });
+
+      area.querySelectorAll('[data-opt]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (solved) return;
+          const chosen = btn.dataset.opt;
+          const ok = chosen === item.correct;
+          Aula.attempt(modeName, ok, chosen);
+          btn.classList.add(ok ? 'is-right' : 'is-wrong');
+          if (ok) {
+            addScoreOnce();
+            const completed = `${item.before ? item.before + ' ' : ''}${chosen}${item.after ? ' ' + item.after : ''}`;
+            $('agreeSentence').textContent = completed;
+            setFeedback(`¡Correcto! «${completed}» concuerda perfectamente.`, 'good');
+            $('nextBtn').hidden = false;
+            area.querySelectorAll('[data-opt]').forEach(b => { b.disabled = true; });
+          } else {
+            setFeedback(`Prueba otra opción. Pista de concordancia: ${item.cue}.`, 'try');
+          }
+        });
+      });
+
+      $('hintBtn').addEventListener('click', () => {
+        Aula.hint(modeName);
+        setHint(item.hint);
+      });
+
+      $('revealBtn').addEventListener('click', () => {
+        const completed = `${item.before ? item.before + ' ' : ''}${item.correct}${item.after ? ' ' + item.after : ''}`;
+        Aula.reveal(modeName);
+        $('agreeSentence').textContent = completed;
+        setHint(`Solución: «${item.correct}» (${item.cue}).`);
+        $('nextBtn').hidden = false;
+      });
+
+      $('nextBtn').addEventListener('click', nextItem);
+    }
+
+    // ---- TAB 4: BUILD SENTENCE / SUBJECT-PREDICATE ----
+    function renderSentence() {
+      const item = currentItem();
+      if (item.kind === 'sp') {
+        renderSubjectPredicate(item);
+        return;
+      }
+
+      const pieces = shuffle(item.tokens.map((t, i) => ({ id: i, text: t[0], cls: t[1] })));
+      chosenOrder = [];
+      const expectedText = item.tokens.map(t => t[0]).join(' ');
+      const modeName = 'Construye oraciones';
+
+      Aula.activate(modeName);
+      Aula.begin(modeName, `Ordena la oración: ${expectedText}`, LEVEL_LABELS[currentLevel]);
+
+      function paint() {
+        const area = $('activityArea');
+        const remaining = pieces.filter(p => !chosenOrder.includes(p.id));
+        const showColorAid = currentLevel === 'inicial';
+
+        area.innerHTML = `
+          <div class="prompt-card" data-aula-read>
+            <div class="prompt-head">
+              <span class="prompt-eyebrow">${LEVEL_LABELS[currentLevel]} · Construye la oración</span>
+              <button type="button" class="read-btn" id="readOrderBtn">🔊 Escuchar lo construido</button>
+            </div>
+            <p class="prompt-title">Ordena las fichas para formar una oración con sentido.</p>
+            <p class="prompt-sub">Toca las palabras en orden. Si te equivocas, toca una ficha arriba para devolverla.</p>
+          </div>
+
+          <div class="compose-zone" aria-label="Oración construida">
+            ${chosenOrder.length
+              ? chosenOrder.map(id => {
+                  const p = pieces.find(x => x.id === id);
+                  const cls = showColorAid && CATS[p.cls] ? ` cls-${p.cls}` : '';
+                  return `<button type="button" class="tok${cls}" data-remove="${p.id}">${escapeHtml(p.text)}</button>`;
+                }).join('')
+              : '<span class="compose-placeholder">Toca las fichas de abajo para formar la oración…</span>'}
+          </div>
+
+          <div class="bank-row">
+            ${remaining.map(p => {
+              const cls = showColorAid && CATS[p.cls] ? ` cls-${p.cls}` : '';
+              return `<button type="button" class="tok${cls}" data-add="${p.id}">${escapeHtml(p.text)}</button>`;
+            }).join('')}
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="checkBtn">Comprobar oración</button>
+            <button type="button" class="btn" id="clearBtn">Limpiar</button>
+            <button type="button" class="btn" id="hintBtn">💡 Pista</button>
+            <button type="button" class="btn" id="revealBtn">Ver solución</button>
+            <button type="button" class="btn btn-primary" id="nextBtn" ${solved ? '' : 'hidden'}>Siguiente →</button>
+          </div>
+        `;
+
+        $('readOrderBtn').addEventListener('click', () => {
+          const txt = chosenOrder.map(id => pieces.find(x => x.id === id).text).join(' ');
+          speakText(txt || 'Toca las palabras para construir la oración.');
+        });
+
+        area.querySelectorAll('[data-add]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (solved) return;
+            chosenOrder.push(Number(btn.dataset.add));
+            paint();
+          });
+        });
+
+        area.querySelectorAll('[data-remove]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (solved) return;
+            const id = Number(btn.dataset.remove);
+            chosenOrder = chosenOrder.filter(x => x !== id);
+            paint();
+          });
+        });
+
+        $('clearBtn').addEventListener('click', () => {
+          if (solved) return;
+          chosenOrder = [];
+          setFeedback('');
+          paint();
+        });
+
+        $('checkBtn').addEventListener('click', () => {
+          if (chosenOrder.length < pieces.length) {
+            setFeedback('Coloca todas las palabras antes de comprobar.', 'try');
+            return;
+          }
+          const built = chosenOrder.map(id => pieces.find(x => x.id === id).text).join(' ');
+          const ok = built === expectedText;
+          Aula.attempt(modeName, ok, built);
+          if (ok) {
+            addScoreOnce();
+            setFeedback(`¡Oración perfecta! «${built}»`, 'good');
+            $('nextBtn').hidden = false;
+          } else {
+            setFeedback('El orden todavía no coincide. Fíjate en la mayúscula inicial y en el punto final.', 'try');
+          }
+        });
+
+        $('hintBtn').addEventListener('click', () => {
+          Aula.hint(modeName);
+          setHint(item.hint);
+        });
+
+        $('revealBtn').addEventListener('click', () => {
+          chosenOrder = item.tokens.map((_, i) => i);
+          Aula.reveal(modeName);
+          paint();
+          setHint(`Solución: ${expectedText}`);
+          $('nextBtn').hidden = false;
+        });
+
+        $('nextBtn').addEventListener('click', nextItem);
+      }
+
+      paint();
+    }
+
+    function renderSubjectPredicate(item) {
+      const sentenceText = item.words.join(' ');
+      const selectedSuj = new Set();
+      const modeName = 'Sujeto y predicado';
+
+      Aula.activate(modeName);
+      Aula.begin(modeName, `Identifica el sujeto: ${sentenceText}`, LEVEL_LABELS[currentLevel]);
+
+      const area = $('activityArea');
+      area.innerHTML = `
+        <div class="prompt-card" data-aula-read>
+          <div class="prompt-head">
+            <span class="prompt-eyebrow">4.º Primaria · Sujeto y predicado</span>
+            <button type="button" class="read-btn" id="readSpBtn">🔊 Escuchar oración</button>
+          </div>
+          <p class="prompt-title">Toca todas las palabras que forman el <strong>SUJETO</strong> de la oración.</p>
+          <p class="prompt-sub">El resto de la oración será el <strong>predicado</strong> (incluye el verbo).</p>
+        </div>
+
+        <div class="sentence-box" id="spBox">
+          ${item.words.map((w, i) => `<button type="button" class="tok" data-sp="${i}" aria-pressed="false">${escapeHtml(w)}</button>`).join('')}
+        </div>
+
+        <div class="sp-split" id="spResult" hidden>
+          <div class="sp-box suj">
+            <strong>🟦 Sujeto (quién realiza la acción)</strong>
+            <small>${escapeHtml(item.words.slice(0, item.subjectEnd).join(' '))}</small>
+          </div>
+          <div class="sp-box pred">
+            <strong>🟥 Predicado (qué se dice del sujeto)</strong>
+            <small>${escapeHtml(item.words.slice(item.subjectEnd).join(' '))}</small>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="checkBtn">Comprobar sujeto</button>
+          <button type="button" class="btn" id="hintBtn">💡 Pista</button>
+          <button type="button" class="btn" id="revealBtn">Ver solución</button>
+          <button type="button" class="btn btn-primary" id="nextBtn" hidden>Siguiente →</button>
+        </div>
+      `;
+
+      $('readSpBtn').addEventListener('click', () => speakText(sentenceText));
+
+      area.querySelectorAll('[data-sp]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (solved) return;
+          const i = Number(btn.dataset.sp);
+          if (selectedSuj.has(i)) selectedSuj.delete(i);
+          else selectedSuj.add(i);
+          btn.setAttribute('aria-pressed', String(selectedSuj.has(i)));
+          btn.classList.remove('is-wrong', 'is-right');
+        });
+      });
+
+      function showSplit() {
+        area.querySelectorAll('[data-sp]').forEach(btn => {
+          const i = Number(btn.dataset.sp);
+          btn.className = i < item.subjectEnd ? 'tok cls-sus' : 'tok cls-ver';
+        });
+        $('spResult').hidden = false;
+      }
+
+      $('checkBtn').addEventListener('click', () => {
+        if (!selectedSuj.size) {
+          setFeedback('Toca primero las palabras que forman el sujeto.', 'try');
+          return;
+        }
+        const expected = Array.from({ length: item.subjectEnd }, (_, i) => i);
+        const chosen = [...selectedSuj].sort((a, b) => a - b);
+        const ok = expected.length === chosen.length && expected.every((v, k) => v === chosen[k]);
+        Aula.attempt(modeName, ok, chosen.map(i => item.words[i]).join(' '));
+        if (ok) {
+          addScoreOnce();
+          showSplit();
+          setFeedback('¡Excelente! Has separado perfectamente el sujeto y el predicado.', 'good');
+          $('nextBtn').hidden = false;
+        } else {
+          area.querySelectorAll('[data-sp]').forEach(btn => {
+            const i = Number(btn.dataset.sp);
+            if (!selectedSuj.has(i)) return;
+            btn.classList.add(i < item.subjectEnd ? 'is-right' : 'is-wrong');
+          });
+          setFeedback('Aún falta o sobra alguna palabra del sujeto. Recuerda: el verbo siempre va en el predicado.', 'try');
+        }
+      });
+
+      $('hintBtn').addEventListener('click', () => {
+        Aula.hint(modeName);
+        setHint(item.hint);
+      });
+
+      $('revealBtn').addEventListener('click', () => {
+        const sujStr = item.words.slice(0, item.subjectEnd).join(' ');
+        Aula.reveal(modeName);
+        showSplit();
+        setHint(`Sujeto: «${sujStr}» · Predicado: «${item.words.slice(item.subjectEnd).join(' ')}».`);
+        $('nextBtn').hidden = false;
+      });
+
+      $('nextBtn').addEventListener('click', nextItem);
+    }
+
+    document.querySelectorAll('.pick-card').forEach(btn => {
+      btn.addEventListener('click', () => selectLevel(btn.dataset.level));
+    });
+    document.querySelectorAll('.level-btn').forEach(btn => {
+      btn.addEventListener('click', () => selectLevel(btn.dataset.pick));
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => selectTab(btn.dataset.tab));
+    });
+  })();
+  </script>
+</body>
+</html>

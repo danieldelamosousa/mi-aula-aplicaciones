@@ -25,6 +25,7 @@ import {
   summarizeSessionRow,
   buildTasksFromDbEvents
 } from '../_lib/db.js';
+import { aggregateDashboard, buildStudentReport } from '../_lib/core.mjs';
 
 async function readJson(request) {
   try {
@@ -613,84 +614,22 @@ export async function onRequest(context) {
           summarizeSessionFromAgg(row, aggByToken.get(row.token))
         );
 
-        let totalAttempts = 0, totalCorrect = 0, totalActiveMs = 0, activeSessions = 0;
-        const byApp = {};
-        const byStudent = {};
-        const nowMs = Date.now();
-        const liveSessions = [];
+        const page = Number(url.searchParams.get('page')) || 1;
+        const pageSize = Number(url.searchParams.get('pageSize')) || 50;
+        const filters = {
+          student: url.searchParams.get('student') || '',
+          app: url.searchParams.get('app') || '',
+          status: url.searchParams.get('status') || ''
+        };
 
-        for (const st of students) {
-          byStudent[st.name] = { name: st.name, course: st.course, sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} };
-        }
-
-        for (const s of summaries) {
-          totalAttempts += s.attempts;
-          totalCorrect += s.correct;
-          totalActiveMs += s.activeMs;
-          if (s.status === 'activa') {
-            activeSessions++;
-            const lastMs = new Date(s.lastActivityAt || s.createdAt).getTime() || 0;
-            const isRecentlyActive = nowMs - lastMs < 5 * 60 * 1000;
-            const needsAttention = (s.attempts >= 2 && s.accuracy !== null && s.accuracy < 55) || (s.hints + s.reveals >= 3);
-            liveSessions.push({
-              ...s,
-              isRecentlyActive,
-              needsAttention
-            });
-          }
-
-          if (!byApp[s.app]) {
-            byApp[s.app] = { app: s.app, title: s.appTitle, sessions: 0, attempts: 0, correct: 0, activeMs: 0 };
-          }
-          byApp[s.app].sessions++;
-          byApp[s.app].attempts += s.attempts;
-          byApp[s.app].correct += s.correct;
-          byApp[s.app].activeMs += s.activeMs;
-
-          for (const studentName of s.students) {
-            if (!byStudent[studentName]) {
-              byStudent[studentName] = { name: studentName, course: '', sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} };
-            }
-            const rec = byStudent[studentName];
-            rec.sessions++;
-            rec.attempts += s.attempts;
-            rec.correct += s.correct;
-            rec.hints += s.hints;
-            rec.activeMs += s.activeMs;
-            if (!rec.apps[s.app]) {
-              rec.apps[s.app] = { title: s.appTitle, sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0 };
-            }
-            rec.apps[s.app].sessions++;
-            rec.apps[s.app].attempts += s.attempts;
-            rec.apps[s.app].correct += s.correct;
-            rec.apps[s.app].hints += s.hints;
-            rec.apps[s.app].activeMs += s.activeMs;
-          }
-        }
-
-        liveSessions.sort((a, b) =>
-          Number(b.needsAttention) - Number(a.needsAttention) ||
-          new Date(b.lastActivityAt || b.createdAt).getTime() - new Date(a.lastActivityAt || a.createdAt).getTime()
-        );
-
-        const weakSpots = (weakRes.results || [])
-          .map(r => {
-            const attempts = Number(r.attempts) || 0;
-            const correct = Number(r.correct) || 0;
-            const accuracy = attempts > 0 ? Math.round((correct / attempts) * 100) : 100;
-            return {
-              app: r.app_id,
-              appTitle: r.app_title,
-              mode: r.mode || '',
-              level: r.level || '',
-              attempts,
-              correct,
-              accuracy
-            };
-          })
-          .filter(w => w.accuracy < 80)
-          .sort((a, b) => a.accuracy - b.accuracy || b.attempts - a.attempts)
-          .slice(0, 6);
+        const aggregated = aggregateDashboard({
+          summaries,
+          students,
+          weakRows: weakRes.results || [],
+          page,
+          pageSize,
+          filters
+        });
 
         return jsonResponse({
           range,
@@ -705,23 +644,102 @@ export async function onRequest(context) {
             allowGuestStudents: cfg.allowGuestStudents,
             allowedTeacherEmail: cfg.allowedTeacherEmail
           },
-          metrics: {
-            totalSessions: summaries.length,
-            activeSessions,
-            totalAttempts,
-            totalCorrect,
-            accuracy: totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : null,
-            totalActiveMs
-          },
-          byApp: Object.values(byApp),
-          byStudent: Object.values(byStudent),
-          weakSpots,
-          liveSessions: liveSessions.slice(0, 40),
+          ...aggregated,
           students,
+          apps
+        });
+      }
+
+      if (method === 'GET' && pathname === '/api/teacher/student-report') {
+        const studentName = String(url.searchParams.get('student') || '').trim();
+        if (!studentName) {
+          return jsonResponse({ error: 'Indica el nombre del alumno.' }, 400);
+        }
+        const range = url.searchParams.get('range') || 'all';
+        const cutoffIso = resolveDateCutoff(range);
+
+        const sessionsStmt = cutoffIso
+          ? db.prepare('SELECT * FROM sessions WHERE created_at >= ? ORDER BY created_at DESC').bind(cutoffIso)
+          : db.prepare('SELECT * FROM sessions ORDER BY created_at DESC');
+
+        const aggStmt = cutoffIso
+          ? db.prepare(
+              `SELECT
+                 e.session_token,
+                 SUM(CASE WHEN e.kind = 'attempt' THEN 1 ELSE 0 END) AS attempts,
+                 SUM(CASE WHEN e.kind = 'attempt' AND e.correct = 1 THEN 1 ELSE 0 END) AS correct,
+                 SUM(CASE WHEN e.kind = 'hint' THEN 1 ELSE 0 END) AS hints,
+                 SUM(CASE WHEN e.kind = 'reveal' THEN 1 ELSE 0 END) AS reveals,
+                 COUNT(DISTINCT CASE WHEN e.task_id IS NOT NULL AND e.task_id != '' AND e.task_id != 'session' THEN e.task_id END) AS task_count
+               FROM events e
+               JOIN sessions s ON s.token = e.session_token
+               WHERE s.created_at >= ?
+               GROUP BY e.session_token`
+            ).bind(cutoffIso)
+          : db.prepare(
+              `SELECT
+                 session_token,
+                 SUM(CASE WHEN kind = 'attempt' THEN 1 ELSE 0 END) AS attempts,
+                 SUM(CASE WHEN kind = 'attempt' AND correct = 1 THEN 1 ELSE 0 END) AS correct,
+                 SUM(CASE WHEN kind = 'hint' THEN 1 ELSE 0 END) AS hints,
+                 SUM(CASE WHEN kind = 'reveal' THEN 1 ELSE 0 END) AS reveals,
+                 COUNT(DISTINCT CASE WHEN task_id IS NOT NULL AND task_id != '' AND task_id != 'session' THEN task_id END) AS task_count
+               FROM events
+               GROUP BY session_token`
+            );
+
+        const [students, apps, sessionsRes, aggRes] = await Promise.all([
+          getStudents(db),
+          getApps(db, false),
+          sessionsStmt.all(),
+          aggStmt.all()
+        ]);
+
+        const aggByToken = new Map();
+        for (const row of aggRes.results || []) {
+          aggByToken.set(row.session_token, row);
+        }
+
+        const summaries = (sessionsRes.results || [])
+          .map(row => summarizeSessionFromAgg(row, aggByToken.get(row.token)))
+          .filter(s => s.students.includes(studentName));
+
+        const matchingTokens = summaries.map(s => s.token);
+        const attemptEvents = [];
+        // Query attempt events in chunks to stay safely below SQLite parameter limits
+        for (let i = 0; i < matchingTokens.length; i += 80) {
+          const chunk = matchingTokens.slice(i, i + 80);
+          const placeholders = chunk.map(() => '?').join(',');
+          const { results } = await db.prepare(
+            `SELECT s.app_id, s.app_title, e.mode, e.level, e.correct
+             FROM events e
+             JOIN sessions s ON s.token = e.session_token
+             WHERE e.kind = 'attempt' AND e.session_token IN (${placeholders})`
+          ).bind(...chunk).all();
+          for (const ev of results || []) {
+            attemptEvents.push({
+              app: ev.app_id,
+              appTitle: ev.app_title,
+              mode: ev.mode || '',
+              level: ev.level || '',
+              correct: Boolean(ev.correct)
+            });
+          }
+        }
+
+        const studentRec = students.find(st => st.name === studentName);
+        const report = buildStudentReport({
+          studentName,
+          studentCourse: studentRec?.course || '',
+          summaries,
+          attemptEvents,
           apps,
-          totalSessionsCount: summaries.length,
-          sessionsTruncated: summaries.length > 300,
-          sessions: summaries.slice(0, 300)
+          range
+        });
+
+        return jsonResponse({
+          aulaName: cfg.aulaName,
+          ...report
         });
       }
 
