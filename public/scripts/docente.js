@@ -76,6 +76,11 @@
     const res = await fetch('/api/teacher/status', { cache: 'no-store' });
     const status = await res.json();
     if (status.aulaName) $('headerAulaName').textContent = status.aulaName;
+    if ($('headerSub')) {
+      $('headerSub').textContent = status.accessEmail
+        ? `Panel docente · ${status.accessEmail}`
+        : 'Panel docente';
+    }
 
     if (status.authenticated) {
       $('loginView').hidden = true;
@@ -87,6 +92,14 @@
       $('loginView').hidden = false;
       $('logoutBtn').hidden = true;
       $('defaultPinTip').hidden = !status.isDefaultPin;
+      if ($('accessLoginBadge')) {
+        if (status.accessEmail) {
+          $('accessLoginBadge').textContent = `Sesión Cloudflare Access verificada: ${status.accessEmail}`;
+          $('accessLoginBadge').hidden = false;
+        } else {
+          $('accessLoginBadge').hidden = true;
+        }
+      }
       $('pinInput').focus();
     }
   }
@@ -118,7 +131,9 @@
 
   // Load Dashboard
   async function loadDashboard() {
-    const res = await fetch('/api/teacher/dashboard', { cache: 'no-store' });
+    const range = $('filterRange') ? $('filterRange').value : 'all';
+    const qs = range && range !== 'all' ? `?range=${encodeURIComponent(range)}` : '';
+    const res = await fetch(`/api/teacher/dashboard${qs}`, { cache: 'no-store' });
     if (res.status === 401) return checkAuth();
     state = await res.json();
     renderAll();
@@ -128,6 +143,11 @@
     if (!state) return;
 
     $('headerAulaName').textContent = state.config.aulaName || 'Mi aula';
+    if ($('headerSub')) {
+      $('headerSub').textContent = state.accessEmail
+        ? `Panel docente · ${state.accessEmail}`
+        : 'Panel docente';
+    }
     $('logoutBtn').hidden = !state.config.pinEnabled;
 
     // Metrics
@@ -162,12 +182,14 @@
   }
 
   function renderSessionsTable() {
+    const fRange = $('filterRange') ? $('filterRange').value : 'all';
     const fStudent = $('filterStudent').value;
     const fApp = $('filterApp').value;
     const fStatus = $('filterStatus').value;
 
     // Update CSV export link with active filters
     const csvUrl = new URL('/api/teacher/export.csv', location.origin);
+    if (fRange && fRange !== 'all') csvUrl.searchParams.set('range', fRange);
     if (fStudent) csvUrl.searchParams.set('student', fStudent);
     if (fApp) csvUrl.searchParams.set('app', fApp);
     $('exportCsvBtn').href = csvUrl.pathname + csvUrl.search;
@@ -445,6 +467,10 @@
     $('cfgTtl').value = state.config.sessionTtlHours || 8;
     $('cfgPinEnabled').checked = Boolean(state.config.pinEnabled);
     $('cfgNewPin').value = '';
+    if ($('cfgClassCodeEnabled')) $('cfgClassCodeEnabled').checked = Boolean(state.config.classCodeEnabled);
+    if ($('cfgNewClassCode')) $('cfgNewClassCode').value = '';
+    if ($('cfgAllowGuests')) $('cfgAllowGuests').checked = state.config.allowGuestStudents !== false;
+    if ($('cfgAllowedEmail')) $('cfgAllowedEmail').value = state.config.allowedTeacherEmail || '';
   }
 
   $('configForm').addEventListener('submit', async e => {
@@ -454,28 +480,39 @@
       showNotice('El nuevo PIN debe tener al menos 4 caracteres.', true);
       return;
     }
+    const newClassCode = $('cfgNewClassCode') ? $('cfgNewClassCode').value.trim() : '';
+    if (newClassCode && newClassCode.length < 4) {
+      showNotice('La clave de aula debe tener al menos 4 caracteres.', true);
+      return;
+    }
     const payload = {
       aulaName: $('cfgAulaName').value.trim(),
       subtitle: $('cfgSubtitle').value.trim(),
       sessionTtlHours: Number($('cfgTtl').value) || 8,
-      pinEnabled: $('cfgPinEnabled').checked
+      pinEnabled: $('cfgPinEnabled').checked,
+      classCodeEnabled: $('cfgClassCodeEnabled') ? $('cfgClassCodeEnabled').checked : false,
+      allowGuestStudents: $('cfgAllowGuests') ? $('cfgAllowGuests').checked : true,
+      allowedTeacherEmail: $('cfgAllowedEmail') ? $('cfgAllowedEmail').value.trim() : ''
     };
     if (newPin) payload.newPin = newPin;
+    if (newClassCode) payload.newClassCode = newClassCode;
 
     const res = await fetch('/api/teacher/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       showNotice('Configuración guardada correctamente.');
       await loadDashboard();
     } else {
-      showNotice('No se pudo guardar la configuración.', true);
+      showNotice(data.error || 'No se pudo guardar la configuración.', true);
     }
   });
 
   // Filter & toolbar listeners
+  if ($('filterRange')) $('filterRange').addEventListener('change', loadDashboard);
   $('filterStudent').addEventListener('change', renderSessionsTable);
   $('filterApp').addEventListener('change', renderSessionsTable);
   $('filterStatus').addEventListener('change', renderSessionsTable);

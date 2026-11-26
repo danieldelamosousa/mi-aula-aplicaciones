@@ -17,7 +17,8 @@ export async function onRequestGet(context) {
       return Response.redirect(`${origin}/?codigo_invalido=1`, 302);
     }
 
-    const dest = `${origin}/apps/${encodeURIComponent(session.app_id)}/index.html?aula=1#sesion=${encodeURIComponent(session.token)}`;
+    // Use canonical trailing-slash URL to avoid a 302 -> 308 redirect chain on Cloudflare Pages
+    const dest = `${origin}/apps/${encodeURIComponent(session.app_id)}/?aula=1#sesion=${encodeURIComponent(session.token)}`;
     return Response.redirect(dest, 302);
   } catch {
     return Response.redirect(`${origin}/?codigo_invalido=1`, 302);

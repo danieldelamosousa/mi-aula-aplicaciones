@@ -64,6 +64,19 @@ CREATE TABLE IF NOT EXISTS teacher_tokens (
   expires_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS classroom_tokens (
+  sid TEXT PRIMARY KEY,
+  expires_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS auth_attempts (
+  key TEXT PRIMARY KEY,
+  failures INTEGER NOT NULL DEFAULT 0,
+  locked_until INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_sessions_code ON sessions(code);
 CREATE INDEX IF NOT EXISTS idx_sessions_created ON sessions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_token);
+CREATE INDEX IF NOT EXISTS idx_events_session_kind ON events(session_token, kind);
