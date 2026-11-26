@@ -210,6 +210,29 @@
             </details>
           </section>
         </div>
+
+        <section class="panel" id="matrixPanel">
+          <div class="panel-head">
+            <div>
+              <h2>Matriz Alumno × Aplicación</h2>
+              <p class="dash-sub" id="matrixSubtitle">Pulsa cualquier celda con resultados para ver sus sesiones detalladas.</p>
+            </div>
+            <div class="matrix-controls no-print">
+              <label class="sr-only" for="matrixScale">Escala de evaluación</label>
+              <select id="matrixScale" class="matrix-select">
+                <option value="10">Escala: Nota (/10)</option>
+                <option value="100">Escala: Acierto (%)</option>
+              </select>
+              <a id="exportAdditioBtn" class="btn btn-primary btn-sm" href="/api/teacher/export-additio.csv?scale=10">Exportar para Additio (CSV)</a>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="matrix-table">
+              <thead id="matrixHead"></thead>
+              <tbody id="matrixBody"></tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
       <!-- TAB 3: APLICACIONES -->

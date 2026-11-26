@@ -519,9 +519,14 @@ export async function onRequest(context) {
             rec.correct += s.correct;
             rec.hints += s.hints;
             rec.activeMs += s.activeMs;
-            if (!rec.apps[s.app]) rec.apps[s.app] = { title: s.appTitle, attempts: 0, correct: 0 };
+            if (!rec.apps[s.app]) {
+              rec.apps[s.app] = { title: s.appTitle, sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0 };
+            }
+            rec.apps[s.app].sessions++;
             rec.apps[s.app].attempts += s.attempts;
             rec.apps[s.app].correct += s.correct;
+            rec.apps[s.app].hints += s.hints;
+            rec.apps[s.app].activeMs += s.activeMs;
           }
         }
 
@@ -798,6 +803,135 @@ export async function onRequest(context) {
           headers: {
             'Content-Type': 'text/csv; charset=utf-8',
             'Content-Disposition': `attachment; filename="mi-aula-resultados-${new Date().toISOString().slice(0, 10)}.csv"`,
+            'Cache-Control': 'no-store',
+            'X-Robots-Tag': 'noindex, nofollow'
+          }
+        });
+      }
+
+      if (method === 'GET' && pathname === '/api/teacher/export-additio.csv') {
+        const range = url.searchParams.get('range') || 'all';
+        const scale = url.searchParams.get('scale') === '100' ? '100' : '10';
+        const cutoffIso = resolveDateCutoff(range);
+
+        const sessionsStmt = cutoffIso
+          ? db.prepare('SELECT * FROM sessions WHERE created_at >= ? ORDER BY created_at DESC').bind(cutoffIso)
+          : db.prepare('SELECT * FROM sessions ORDER BY created_at DESC');
+
+        const aggStmt = cutoffIso
+          ? db.prepare(
+              `SELECT
+                 e.session_token,
+                 SUM(CASE WHEN e.kind = 'attempt' THEN 1 ELSE 0 END) AS attempts,
+                 SUM(CASE WHEN e.kind = 'attempt' AND e.correct = 1 THEN 1 ELSE 0 END) AS correct,
+                 SUM(CASE WHEN e.kind = 'hint' THEN 1 ELSE 0 END) AS hints
+               FROM events e
+               JOIN sessions s ON s.token = e.session_token
+               WHERE s.created_at >= ?
+               GROUP BY e.session_token`
+            ).bind(cutoffIso)
+          : db.prepare(
+              `SELECT
+                 session_token,
+                 SUM(CASE WHEN kind = 'attempt' THEN 1 ELSE 0 END) AS attempts,
+                 SUM(CASE WHEN kind = 'attempt' AND correct = 1 THEN 1 ELSE 0 END) AS correct,
+                 SUM(CASE WHEN kind = 'hint' THEN 1 ELSE 0 END) AS hints
+               FROM events
+               GROUP BY session_token`
+            );
+
+        const [students, apps, sessionsRes, aggRes] = await Promise.all([
+          getStudents(db),
+          getApps(db, false),
+          sessionsStmt.all(),
+          aggStmt.all()
+        ]);
+
+        const builtInApps = apps.filter(a => a.builtIn);
+        const aggByToken = new Map();
+        for (const row of aggRes.results || []) aggByToken.set(row.session_token, row);
+
+        const byStudent = new Map();
+        for (const st of students) {
+          byStudent.set(st.name, { name: st.name, course: st.course || '', sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} });
+        }
+
+        for (const row of sessionsRes.results || []) {
+          const agg = aggByToken.get(row.token) || {};
+          const attempts = Number(agg.attempts) || 0;
+          const correct = Number(agg.correct) || 0;
+          const hints = Number(agg.hints) || 0;
+          const activeMs = Number(row.active_ms) || 0;
+          let stList = [];
+          try { stList = JSON.parse(row.students_json || '[]'); } catch {}
+
+          for (const studentName of stList) {
+            if (!byStudent.has(studentName)) {
+              byStudent.set(studentName, { name: studentName, course: '', sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} });
+            }
+            const rec = byStudent.get(studentName);
+            rec.sessions++;
+            rec.attempts += attempts;
+            rec.correct += correct;
+            rec.hints += hints;
+            rec.activeMs += activeMs;
+            if (!rec.apps[row.app_id]) rec.apps[row.app_id] = { attempts: 0, correct: 0 };
+            rec.apps[row.app_id].attempts += attempts;
+            rec.apps[row.app_id].correct += correct;
+          }
+        }
+
+        const formatScore = (correct, attempts) => {
+          if (!attempts) return '';
+          if (scale === '100') return String(Math.round((correct / attempts) * 100));
+          return ((correct / attempts) * 10).toFixed(1).replace('.', ',');
+        };
+
+        const sortedStudents = [...byStudent.values()].sort((a, b) =>
+          (a.course || 'ZZ').localeCompare(b.course || 'ZZ', 'es') || a.name.localeCompare(b.name, 'es')
+        );
+
+        const suffix = scale === '100' ? '(%)' : '(/10)';
+        const header = [
+          'Alumno',
+          'Curso',
+          'Sesiones',
+          'Intentos',
+          'Aciertos',
+          'Acierto global (%)',
+          'Nota global (/10)',
+          'Tiempo activo (min)',
+          ...builtInApps.map(a => `${a.title} ${suffix}`)
+        ];
+
+        const rows = [header.map(csvEscape).join(';')];
+        for (const st of sortedStudents) {
+          const globalPct = st.attempts > 0 ? String(Math.round((st.correct / st.attempts) * 100)) : '';
+          const globalGrade = st.attempts > 0 ? ((st.correct / st.attempts) * 10).toFixed(1).replace('.', ',') : '';
+          const mins = (st.activeMs / 60000).toFixed(1).replace('.', ',');
+          const appCells = builtInApps.map(a => {
+            const cell = st.apps[a.id];
+            return cell ? formatScore(cell.correct, cell.attempts) : '';
+          });
+          rows.push([
+            st.name,
+            st.course,
+            st.sessions,
+            st.attempts,
+            st.correct,
+            globalPct,
+            globalGrade,
+            mins,
+            ...appCells
+          ].map(csvEscape).join(';'));
+        }
+
+        const csv = '\uFEFF' + rows.join('\r\n');
+        return new Response(csv, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': `attachment; filename="mi-aula-additio-${range}-${new Date().toISOString().slice(0, 10)}.csv"`,
             'Cache-Control': 'no-store',
             'X-Robots-Tag': 'noindex, nofollow'
           }
