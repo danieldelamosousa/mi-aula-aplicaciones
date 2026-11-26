@@ -8,8 +8,7 @@ const PUBLIC = path.join(ROOT, 'public');
 const APPS_DIR = path.join(PUBLIC, 'apps');
 
 const OUT_PATHS = [
-  path.join(ROOT, 'mi-aula-offline.html'),
-  '/home/antigravity/.gemini/jetski/brain/v1/default/jetski_remote_agents_3p_devbox/6e2e32c0-be30-4cfa-9d87-a5c41783cfed/mi_aula_interactiva.html'
+  path.join(ROOT, 'mi-aula-offline.html')
 ];
 
 const APP_IDS = [

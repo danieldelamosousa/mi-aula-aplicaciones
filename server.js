@@ -707,6 +707,99 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
+    if (method === 'POST' && pathname === '/api/sessions/batch') {
+      if (!isClassroomUnlocked(req)) {
+        return sendJson(res, 403, { error: 'Introduce la clave de aula antes de preparar sesiones.' });
+      }
+      const clientHash = getClientHash(req);
+      const rate = checkWindowRateLimit(`batch:${clientHash}`, 15, 10 * 60 * 1000);
+      if (!rate.allowed) {
+        return sendJson(res, 429, { error: 'Has preparado demasiados lotes seguidos desde esta red. Espera unos minutos.' }, { 'Retry-After': String(rate.retryAfterSec) });
+      }
+
+      const body = await readJsonBody(req);
+      const appId = String(body.app || '').trim();
+      const appObj = db.apps.find(a => a.id === appId && a.builtIn);
+      if (!appObj) {
+        return sendJson(res, 400, { error: 'Aplicación no válida.' });
+      }
+
+      const rawGroups = Array.isArray(body.groups) ? body.groups.slice(0, 32) : [];
+      if (!rawGroups.length) {
+        return sendJson(res, 400, { error: 'Selecciona al menos un alumno o grupo.' });
+      }
+
+      const byLower = new Map(db.students.map(s => {
+        const n = typeof s === 'string' ? s : s.name;
+        return [n.toLocaleLowerCase('es'), n];
+      }));
+
+      const cleanGroups = [];
+      for (const grp of rawGroups) {
+        let members = Array.isArray(grp)
+          ? [...new Set(grp.map(s => String(s).trim().slice(0, 60)).filter(Boolean))].slice(0, 12)
+          : [];
+        if (!members.length) continue;
+        if (db.config.allowGuestStudents === false) {
+          const matched = [];
+          for (const name of members) {
+            const canonical = byLower.get(name.toLocaleLowerCase('es'));
+            if (!canonical) {
+              return sendJson(res, 400, { error: 'Solo pueden participar alumnos incluidos en la lista oficial de clase.' });
+            }
+            matched.push(canonical);
+          }
+          members = [...new Set(matched)];
+        }
+        cleanGroups.push(members);
+      }
+
+      if (!cleanGroups.length) {
+        return sendJson(res, 400, { error: 'Selecciona al menos un alumno o grupo.' });
+      }
+
+      const now = new Date();
+      const ttlHours = Math.max(1, Math.min(24, Number(db.config.sessionTtlHours) || 8));
+      const expiresAt = new Date(now.getTime() + ttlHours * 3600 * 1000).toISOString();
+      const nowIso = now.toISOString();
+      const created = [];
+
+      for (const students of cleanGroups) {
+        const token = crypto.randomBytes(18).toString('base64url');
+        const code = generateShortCode();
+        const session = {
+          token,
+          code,
+          app: appObj.id,
+          appTitle: appObj.title,
+          students,
+          createdAt: nowIso,
+          expiresAt,
+          lastActivityAt: nowIso,
+          endedAt: null,
+          activeMs: 0,
+          events: []
+        };
+        db.sessions.unshift(session);
+        created.push({
+          token,
+          code,
+          students,
+          expiresAt,
+          directUrl: `/apps/${encodeURIComponent(appObj.id)}/?aula=1#sesion=${encodeURIComponent(token)}`,
+          shortUrl: `/codigo/${encodeURIComponent(code)}`
+        });
+      }
+
+      saveDb(db);
+      return sendJson(res, 201, {
+        app: appObj.id,
+        appTitle: appObj.title,
+        ttlHours,
+        sessions: created
+      });
+    }
+
     if (method === 'GET' && pathname === '/api/sessions/resolve') {
       const code = String(parsedUrl.searchParams.get('code') || '').trim().toUpperCase().replace(/\s+/g, '');
       const normalized = code.includes('-') ? code : (code.length === 6 ? `${code.slice(0, 3)}-${code.slice(3)}` : code);
@@ -877,10 +970,9 @@ const server = http.createServer(async (req, res) => {
       if (method === 'GET' && pathname === '/api/teacher/dashboard') {
         const range = parsedUrl.searchParams.get('range') || 'all';
         const cutoffIso = resolveDateCutoff(range);
-        const scopedSessions = (cutoffIso
+        const scopedSessions = cutoffIso
           ? db.sessions.filter(s => (s.createdAt || '') >= cutoffIso)
-          : db.sessions
-        ).slice(0, 300);
+          : db.sessions;
         const summaries = scopedSessions.map(summarizeSession);
         let totalAttempts = 0;
         let totalCorrect = 0;
@@ -888,6 +980,9 @@ const server = http.createServer(async (req, res) => {
         let activeSessions = 0;
         const byApp = {};
         const byStudent = {};
+        const weakMap = new Map();
+        const nowMs = Date.now();
+        const liveSessions = [];
 
         for (const st of db.students) {
           const name = typeof st === 'string' ? st : st.name;
@@ -895,11 +990,41 @@ const server = http.createServer(async (req, res) => {
           byStudent[name] = { name, course, sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} };
         }
 
+        for (const rawSession of scopedSessions) {
+          for (const ev of rawSession.events || []) {
+            if (ev.kind !== 'attempt') continue;
+            const key = `${rawSession.app}\0${ev.mode || ''}\0${ev.level || ''}`;
+            if (!weakMap.has(key)) {
+              weakMap.set(key, {
+                app: rawSession.app,
+                appTitle: rawSession.appTitle,
+                mode: ev.mode || '',
+                level: ev.level || '',
+                attempts: 0,
+                correct: 0
+              });
+            }
+            const item = weakMap.get(key);
+            item.attempts++;
+            if (ev.correct) item.correct++;
+          }
+        }
+
         for (const s of summaries) {
           totalAttempts += s.attempts;
           totalCorrect += s.correct;
           totalActiveMs += s.activeMs;
-          if (s.status === 'activa') activeSessions++;
+          if (s.status === 'activa') {
+            activeSessions++;
+            const lastMs = new Date(s.lastActivityAt || s.createdAt).getTime() || 0;
+            const isRecentlyActive = nowMs - lastMs < 5 * 60 * 1000;
+            const needsAttention = (s.attempts >= 2 && s.accuracy !== null && s.accuracy < 55) || (s.hints + s.reveals >= 3);
+            liveSessions.push({
+              ...s,
+              isRecentlyActive,
+              needsAttention
+            });
+          }
 
           if (!byApp[s.app]) {
             byApp[s.app] = { app: s.app, title: s.appTitle, sessions: 0, attempts: 0, correct: 0, activeMs: 0 };
@@ -930,6 +1055,18 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
+        liveSessions.sort((a, b) =>
+          Number(b.needsAttention) - Number(a.needsAttention) ||
+          new Date(b.lastActivityAt || b.createdAt).getTime() - new Date(a.lastActivityAt || a.createdAt).getTime()
+        );
+
+        const weakSpots = [...weakMap.values()]
+          .filter(w => w.attempts >= 3)
+          .map(w => ({ ...w, accuracy: Math.round((w.correct / w.attempts) * 100) }))
+          .filter(w => w.accuracy < 80)
+          .sort((a, b) => a.accuracy - b.accuracy || b.attempts - a.attempts)
+          .slice(0, 6);
+
         return sendJson(res, 200, {
           range,
           accessEmail: getAccessEmail(req) || null,
@@ -953,9 +1090,13 @@ const server = http.createServer(async (req, res) => {
           },
           byApp: Object.values(byApp),
           byStudent: Object.values(byStudent),
+          weakSpots,
+          liveSessions: liveSessions.slice(0, 40),
           students: db.students,
           apps: db.apps,
-          sessions: summaries
+          totalSessionsCount: summaries.length,
+          sessionsTruncated: summaries.length > 300,
+          sessions: summaries.slice(0, 300)
         });
       }
 

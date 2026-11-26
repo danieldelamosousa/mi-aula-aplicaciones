@@ -41,10 +41,11 @@
   .art-number span:nth-child(3){background:#ffdadd;color:#a52f40;box-shadow:0 6px 0 #f39cab;transform:translateY(.25rem)}
   .art-number span:nth-child(4){background:#ffe581;color:#624600;box-shadow:0 6px 0 #e6b737;transform:translateY(-.4rem)}
   .choose-title{font-size:clamp(1.5rem,3.2vw,2rem);margin:1.5rem 0 .75rem}
-  .course-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .course-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
   .course{display:flex;align-items:center;gap:1rem;text-align:left;color:var(--ink);padding:1rem;border:1px solid var(--line);border-radius:18px;background:white;min-height:94px}
   .course:hover{border-color:var(--blue);background:#f8fbff}
   .course-icon{flex:none;border-radius:13px;display:grid;place-items:center;width:58px;height:58px;background:#dce9ff;color:#163f9d;font-size:1.55rem;font-weight:850}
+  .course[data-grade="2"] .course-icon{background:#fff0c7;color:#7a4e05;font-size:1.25rem}
   .course[data-grade="4"] .course-icon{background:#d4f6eb;color:#135d50}
   .course strong,.course small{display:block}
   .course strong{font-size:1.15rem}.course small{font-size:.95rem;color:var(--muted)}
@@ -170,8 +171,9 @@
         <div class="art-number"><span>2</span><span>4</span><span>0</span><span>8</span></div>
       </div>
     </div>
-    <h2 class="choose-title">Elige tu curso</h2>
+    <h2 class="choose-title">Elige tu nivel</h2>
     <div class="course-grid">
+      <button class="course" type="button" data-grade="2"><span class="course-icon" aria-hidden="true">3 c.</span><span><strong>Nivel inicial</strong><small>Números de 3 cifras</small></span></button>
       <button class="course" type="button" data-grade="3"><span class="course-icon" aria-hidden="true">3.º</span><span><strong>3.º de Primaria</strong><small>Números de 4 cifras</small></span></button>
       <button class="course" type="button" data-grade="4"><span class="course-icon" aria-hidden="true">4.º</span><span><strong>4.º de Primaria</strong><small>Números de 6 cifras</small></span></button>
     </div>
@@ -180,13 +182,13 @@
   <section class="workspace" id="workspace" hidden aria-labelledby="activity-title">
     <div class="number-banner">
       <div><p class="number-caption" id="number-caption">Número protagonista</p><p class="grade-label" id="grade-label"></p></div>
-      <p class="target" id="target"></p>
+      <p class="target" id="target" data-aula-read="3"></p>
     </div>
     <div class="progress-row"><span id="progress-label"></span><span id="completed-label"></span></div>
     <div class="meter" id="meter" aria-hidden="true"></div>
     <form class="card" id="activity" novalidate>
-      <h2 id="activity-title" tabindex="-1"></h2>
-      <p class="instructions" id="instructions"></p>
+      <h2 id="activity-title" tabindex="-1" data-aula-read="1"></h2>
+      <p class="instructions" id="instructions" data-aula-read="2"></p>
       <div class="entry-panel" id="entry-panel">
         <div id="fields"></div>
         <button type="button" class="secondary letters-toggle" id="letters-toggle" aria-expanded="false" aria-controls="keypad" hidden>Mostrar teclado de letras</button>
@@ -291,17 +293,40 @@ function drawNumber(key, minimum) {
   return value;
 }
 
+function placesForGrade(grade) {
+  return placeValues.slice(grade === 2 ? 3 : grade === 3 ? 2 : 0);
+}
+
+function gradeLabelText(grade) {
+  return grade === 2 ? "Nivel inicial (3 cifras)" : grade + ".º de Primaria";
+}
+
+function speakText(text) {
+  if (!("speechSynthesis" in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.lang = "es-ES";
+    u.rate = 0.88;
+    const voices = window.speechSynthesis.getVoices() || [];
+    const v = voices.find(x => /^es[-_]ES$/i.test(x.lang)) || voices.find(x => /^es/i.test(x.lang));
+    if (v) u.voice = v;
+    window.speechSynthesis.speak(u);
+  } catch {}
+}
+
 function start(grade) {
+  const minVal = grade === 2 ? 100 : grade === 3 ? 1000 : 100000;
   session = {
     grade,
-    target: drawNumber(grade, grade === 3 ? 1000 : 100000),
-    sunTarget: drawNumber("sun", 100),
+    target: drawNumber(grade, minVal),
+    sunTarget: drawNumber("sun", grade === 2 ? 20 : 100),
     step: 0,
     pages: activityNames.map(() => ({values: {}, solved: false})),
     scale: 10
   };
   showScreen("workspace");
-  $("grade-label").textContent = grade + ".º de Primaria";
+  $("grade-label").textContent = gradeLabelText(grade);
   renderActivity();
 }
 
@@ -404,7 +429,7 @@ function renderActivity() {
   const {step, grade, target, sunTarget, pages} = session;
   const solvedCount = pages.filter(page => page.solved).length;
   const activePage = pages[step];
-  const places = placeValues.slice(grade === 3 ? 2 : 0);
+  const places = placesForGrade(grade);
   const layout = buildActivity(step, places, target);
   const displayedNumber = step === 5 ? sunTarget : target;
 
@@ -423,6 +448,10 @@ function renderActivity() {
   $("meter").innerHTML = pages.map((page, index) =>
     '<span class="' + (index === step ? "current" : page.solved ? "done" : "") + '"></span>').join("");
 
+  if (step === 0 && $("speak-number")) {
+    $("speak-number").hidden = !("speechSynthesis" in window);
+    $("speak-number").addEventListener("click", () => speakText(numberInWords(target)));
+  }
   if (step === 4) {
     $("scale").value = String(session.scale);
     $("scale").disabled = activePage.solved;
@@ -440,7 +469,7 @@ function renderActivity() {
   else clearFeedback();
   const mode = activityModes[step];
   if (!activePage.tracked) {
-    window.Aula?.begin(mode, activityNames[step] + " · " + numberFormat(displayedNumber), grade + ".º de Primaria");
+    window.Aula?.begin(mode, activityNames[step] + " · " + numberFormat(displayedNumber), gradeLabelText(grade));
     activePage.tracked = true;
   }
   window.Aula?.activate(mode);
@@ -451,15 +480,17 @@ function buildActivity(step, places, target) {
   switch (step) {
     case 0:
       return {
-        instruction: "Copia con cifras el número que aparece arriba.",
-        html: '<div class="single">' + field("number-answer", "Mi número") + "</div>",
+        instruction: "Escucha o observa el número de arriba y escríbelo con cifras.",
+        html: '<div class="single">' +
+          '<button type="button" class="secondary" id="speak-number" style="margin-bottom:.75rem;">🔊 Escuchar el número</button>' +
+          field("number-answer", "Mi número") + "</div>",
         hint: "Empieza por la primera cifra y sigue de izquierda a derecha."
       };
     case 1:
       return {
         instruction: "Escribe el número completo con palabras.",
         html: '<div class="single">' + field("words-answer", "Número con letra", {type: "text", max: 175}) + "</div>",
-        hint: "Lee primero la parte de los miles y después lo que queda. Por ejemplo, 5 024 se lee cinco mil veinticuatro."
+        hint: "Lee primero la parte de los miles (si tiene) y después las centenas, decenas y unidades. Por ejemplo, 5 024 se lee cinco mil veinticuatro."
       };
     case 2:
       return {
@@ -490,14 +521,14 @@ function buildActivity(step, places, target) {
     }
     case 5: {
       const rays = Array.from({length: 6}, (_, index) => field("ray-" + (index + 1), "Operación " + (index + 1), {
-        max: 65, placeholder: index === 0 ? "Ej. 120 + 30" : ""
+        max: 65, placeholder: index === 0 ? "Ej. 100 + 20 + 5" : ""
       }));
       return {
-        instruction: "Escribe seis operaciones distintas que den el número del centro. Puedes usar +, −, × o ÷.",
+        instruction: "Escribe seis operaciones distintas que den el número del centro. Puedes usar +, −, × o ÷ (también con varios sumandos).",
         html: '<div class="sun-board"><div class="sun-fields">' + rays.slice(0, 3).join("") +
           '</div><div class="sun" aria-label="' + session.sunTarget + '">' + numberFormat(session.sunTarget) +
           '</div><div class="sun-fields">' + rays.slice(3).join("") + "</div></div>",
-        hint: "Para encontrar una suma, separa el número en dos partes. Para una resta, suma una cantidad al número y luego réstala. Cambia los números para crear otras operaciones."
+        hint: "Para encontrar una suma, separa el número en dos o más partes (por ejemplo, centenas + decenas + unidades). Para una resta, suma una cantidad al número y luego réstala."
       };
     }
   }
@@ -521,32 +552,59 @@ function roundingClues(target, scale) {
 function operation(value, target) {
   const parts = value.trim().split("=");
   if (parts.length > 2 || (parts.length === 2 && wholeNumber(parts[1]) !== target)) return {error: "Revisa el resultado escrito."};
-  const match = parts[0].match(/^([\d.\s]+?)\s*([+\-−×xX*÷/:])\s*([\d.\s]+)$/u);
-  if (!match) return {error: "Escribe dos números unidos por un signo."};
-  const left = wholeNumber(match[1]);
-  const right = wholeNumber(match[3]);
-  if (!Number.isSafeInteger(left) || !Number.isSafeInteger(right)) return {error: "Revisa los números de la operación."};
+  const expr = parts[0].trim();
+  const tokens = expr.match(/[\d.\u202f\u00a0 ]+|[+\-−×xX*÷/:]/gu);
+  if (!tokens || tokens.length < 3 || tokens.length % 2 === 0 || tokens.join("").replace(/\s+/g, "") !== expr.replace(/\s+/g, "")) {
+    return {error: "Escribe una operación con números y signos (+, −, ×, ÷)."};
+  }
   const aliases = {"−": "-", "×": "*", x: "*", X: "*", "÷": "/", ":": "/"};
-  const operator = aliases[match[2]] ?? match[2];
-  let result;
-  switch (operator) {
-    case "+": result = left + right; break;
-    case "-": result = left - right; break;
-    case "*": result = left * right; break;
-    case "/":
-      if (right === 0) return {error: "Elige un divisor distinto de cero."};
-      result = left / right;
-      break;
+  const nums = [];
+  const ops = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (i % 2 === 0) {
+      const n = wholeNumber(tokens[i]);
+      if (!Number.isSafeInteger(n)) return {error: "Revisa los números de la operación."};
+      nums.push(n);
+    } else {
+      const op = aliases[tokens[i]] ?? tokens[i];
+      if (!["+", "-", "*", "/"].includes(op)) return {error: "Usa los signos +, −, × o ÷."};
+      ops.push(op);
+    }
+  }
+  // Evaluate respecting * and / before + and -
+  const vals = [nums[0]];
+  const addOps = [];
+  for (let i = 0; i < ops.length; i++) {
+    const op = ops[i];
+    const next = nums[i + 1];
+    if (op === "*") vals[vals.length - 1] *= next;
+    else if (op === "/") {
+      if (next === 0) return {error: "Elige un divisor distinto de cero."};
+      vals[vals.length - 1] /= next;
+    } else {
+      addOps.push(op);
+      vals.push(next);
+    }
+  }
+  let result = vals[0];
+  for (let i = 0; i < addOps.length; i++) {
+    result += addOps[i] === "+" ? vals[i + 1] : -vals[i + 1];
   }
   if (result !== target) return {error: "El resultado debe ser " + numberFormat(target) + "."};
-  const operands = operator === "+" || operator === "*" ? [Math.min(left, right), Math.max(left, right)] : [left, right];
-  return {key: operands.join(operator)};
+  const allPlus = ops.every(o => o === "+");
+  const allMul = ops.every(o => o === "*");
+  const key = allPlus
+    ? [...nums].sort((a, b) => a - b).join("+")
+    : allMul
+      ? [...nums].sort((a, b) => a - b).join("*")
+      : nums.map((n, i) => (i > 0 ? ops[i - 1] : "") + n).join("");
+  return {key};
 }
 
 function checkAnswers(values) {
   const {step, target, grade, scale, sunTarget} = session;
   const errors = {};
-  const places = placeValues.slice(grade === 3 ? 2 : 0);
+  const places = placesForGrade(grade);
   const expectNumber = (id, expected, message) => {
     if (wholeNumber(values[id]) !== expected) errors[id] = message;
   };
@@ -687,7 +745,7 @@ $("next").addEventListener("click", () => {
   if (session.step === activityNames.length - 1) {
     showScreen("result");
     $("result-number").textContent = numberFormat(session.sunTarget);
-    $("result-message").textContent = "Has completado las seis actividades de " + session.grade + ".º de Primaria.";
+    $("result-message").textContent = "Has completado las seis actividades de " + gradeLabelText(session.grade) + ".";
     focusHeading("result-title");
     return;
   }

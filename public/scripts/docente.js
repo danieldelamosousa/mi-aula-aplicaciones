@@ -3,6 +3,9 @@
 
   const $ = id => document.getElementById(id);
   let state = null;
+  let liveMode = false;
+  let liveTimer = null;
+  let lastLoadedAt = null;
 
   function escapeHtml(text) {
     const div = document.createElement('div');
@@ -134,9 +137,108 @@
     const range = $('filterRange') ? $('filterRange').value : 'all';
     const qs = range && range !== 'all' ? `?range=${encodeURIComponent(range)}` : '';
     const res = await fetch(`/api/teacher/dashboard${qs}`, { cache: 'no-store' });
-    if (res.status === 401) return checkAuth();
+    if (res.status === 401) {
+      setLiveMode(false);
+      return checkAuth();
+    }
     state = await res.json();
+    lastLoadedAt = new Date();
     renderAll();
+  }
+
+  function formatTimeShort(dateObj) {
+    if (!dateObj) return '';
+    try {
+      return new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(dateObj);
+    } catch {
+      return '';
+    }
+  }
+
+  function renderLiveSection() {
+    const panel = $('livePanel');
+    const grid = $('liveGrid');
+    if (!panel || !grid || !state) return;
+
+    const live = Array.isArray(state.liveSessions) ? state.liveSessions : [];
+    if (!live.length) {
+      panel.hidden = true;
+      return;
+    }
+
+    panel.hidden = false;
+    if ($('liveUpdated')) {
+      const t = formatTimeShort(lastLoadedAt);
+      $('liveUpdated').textContent = t ? `Actualizado: ${t}` : '';
+    }
+    if ($('livePanelSub')) {
+      const attentionCount = live.filter(s => s.needsAttention).length;
+      $('livePanelSub').textContent = attentionCount > 0
+        ? `${live.length} ${live.length === 1 ? 'sesión activa' : 'sesiones activas'} · ${attentionCount} con aviso de apoyo recomendado.`
+        : `${live.length} ${live.length === 1 ? 'sesión activa' : 'sesiones activas'} ahora. Pulsa una tarjeta para ver las respuestas.`;
+    }
+
+    grid.replaceChildren();
+    for (const s of live) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'live-card' + (s.needsAttention ? ' attention' : '');
+
+      const badge = s.needsAttention
+        ? '<span class="live-flag">Apoyo recomendado</span>'
+        : (s.isRecentlyActive ? '<span class="live-flag ok">Trabajando</span>' : '<span class="code-chip">' + escapeHtml(s.code) + '</span>');
+
+      btn.innerHTML = `
+        <div class="live-card-top">
+          <span class="live-card-who">${escapeHtml(s.students.join(', '))}</span>
+          ${badge}
+        </div>
+        <div class="live-card-app">${escapeHtml(s.appTitle)} · <span style="font-family:var(--font-mono);font-size:11.5px;">${escapeHtml(s.code)}</span></div>
+        <div>${renderAccuracy(s.accuracy, s.attempts)}</div>
+        <div class="live-card-meta">
+          <span>${s.correct}/${s.attempts} aciertos · ${s.hints} pistas</span>
+          <span>${escapeHtml(formatDuration(s.activeMs))}</span>
+        </div>
+      `;
+      btn.addEventListener('click', () => openSessionDetail(s.token));
+      grid.append(btn);
+    }
+  }
+
+  function renderWeakSpotsSection() {
+    const panel = $('weakPanel');
+    const grid = $('weakGrid');
+    if (!panel || !grid || !state) return;
+
+    const spots = Array.isArray(state.weakSpots) ? state.weakSpots : [];
+    if (!spots.length) {
+      panel.hidden = true;
+      return;
+    }
+
+    panel.hidden = false;
+    grid.replaceChildren();
+    for (const w of spots) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'weak-card';
+      const label = [w.mode, w.level].filter(Boolean).join(' · ') || 'Actividad general';
+      btn.innerHTML = `
+        <div class="weak-card-head">
+          <span class="weak-card-app">${escapeHtml(w.appTitle)}</span>
+          <span class="live-flag">${w.accuracy}%</span>
+        </div>
+        <div class="weak-card-title">${escapeHtml(label)}</div>
+        <div class="weak-card-meta">${w.correct} de ${w.attempts} aciertos · Pulsar para filtrar sesiones</div>
+      `;
+      btn.addEventListener('click', () => {
+        $('filterApp').value = w.app || '';
+        $('filterStudent').value = '';
+        renderSessionsTable();
+        $('sessionsBody').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      grid.append(btn);
+    }
   }
 
   function renderAll() {
@@ -158,6 +260,16 @@
     $('mAccuracy').textContent = state.metrics.accuracy === null ? '—' : `${state.metrics.accuracy}%`;
     $('mTime').textContent = formatDuration(state.metrics.totalActiveMs);
 
+    const truncNote = $('sessionsTruncatedNote');
+    if (truncNote) {
+      if (state.sessionsTruncated) {
+        truncNote.textContent = `Mostrando las 300 sesiones más recientes de ${state.totalSessionsCount}. Los totales y la matriz incluyen todo el periodo.`;
+        truncNote.hidden = false;
+      } else {
+        truncNote.hidden = true;
+      }
+    }
+
     // Populate filters
     const prevStudent = $('filterStudent').value;
     const prevApp = $('filterApp').value;
@@ -175,6 +287,8 @@
       state.apps.filter(a => a.builtIn).map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.title)}</option>`).join('');
     $('filterApp').value = prevApp;
 
+    renderLiveSection();
+    renderWeakSpotsSection();
     renderSessionsTable();
     renderStudentsSection();
     renderAppsSection();
@@ -615,7 +729,30 @@
     }
   });
 
+  function setLiveMode(enabled) {
+    liveMode = Boolean(enabled);
+    if (liveTimer) {
+      clearInterval(liveTimer);
+      liveTimer = null;
+    }
+    const btn = $('liveToggleBtn');
+    const lbl = $('liveToggleLabel');
+    if (btn) btn.setAttribute('aria-pressed', String(liveMode));
+    if (lbl) lbl.textContent = liveMode ? 'En directo · 15 s' : 'En directo';
+    if (liveMode) {
+      liveTimer = setInterval(() => {
+        if (!document.hidden && !$('detailDialog')?.open) loadDashboard();
+      }, 15000);
+    }
+  }
+
   // Filter & toolbar listeners
+  if ($('liveToggleBtn')) {
+    $('liveToggleBtn').addEventListener('click', () => {
+      setLiveMode(!liveMode);
+      if (liveMode) loadDashboard();
+    });
+  }
   if ($('filterRange')) $('filterRange').addEventListener('change', loadDashboard);
   if ($('matrixScale')) $('matrixScale').addEventListener('change', renderStudentAppMatrix);
   $('filterStudent').addEventListener('change', renderSessionsTable);

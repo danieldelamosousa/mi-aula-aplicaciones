@@ -7,6 +7,8 @@
 
   let allApps = [];
   let selectedArea = '';
+  let selectedCourse = '';
+  let selectedUnit = '';
   let onlyFavorites = false;
   let favorites = new Set(loadJson(FAV_KEY, []));
   let recents = loadJson(RECENT_KEY, []);
@@ -206,6 +208,46 @@
       });
       container.append(favPill);
     }
+
+    // Course pills
+    const courseContainer = $('courseFilters');
+    if (courseContainer) {
+      courseContainer.replaceChildren();
+      for (const [val, label] of [['', 'Todos'], ['3', '3.º Primaria'], ['4', '4.º Primaria']]) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'filter-pill';
+        btn.dataset.course = val;
+        btn.setAttribute('aria-pressed', String(selectedCourse === val));
+        btn.textContent = label;
+        btn.addEventListener('click', () => {
+          selectedCourse = val;
+          applyFilters();
+        });
+        courseContainer.append(btn);
+      }
+    }
+
+    // Unit select
+    const unitSelect = $('unitSelect');
+    if (unitSelect) {
+      const units = [...new Set(allApps.map(a => (a.unit || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+      unitSelect.innerHTML = '<option value="">Todas</option>' +
+        units.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
+      unitSelect.value = units.includes(selectedUnit) ? selectedUnit : '';
+      selectedUnit = unitSelect.value;
+    }
+  }
+
+  function matchesCourse(app, course) {
+    if (!course) return true;
+    const text = normalize([app.cycle, app.description, app.unit, app.title].join(' '));
+    if (text.includes('2.º ciclo') || text.includes('2.o ciclo') || text.includes('2º ciclo') || text.includes('3.º y 4.º') || text.includes('3º y 4º')) {
+      return true;
+    }
+    if (course === '3') return /\b3[.ºo]/.test(text) || !/\b4[.ºo]/.test(text);
+    if (course === '4') return /\b4[.ºo]/.test(text) || !/\b3[.ºo]/.test(text);
+    return true;
   }
 
   function renderCards(filtered) {
@@ -285,6 +327,8 @@
     const filtered = allApps.filter(app => {
       if (onlyFavorites && !favorites.has(app.id)) return false;
       if (!onlyFavorites && selectedArea && app.area !== selectedArea) return false;
+      if (selectedCourse && !matchesCourse(app, selectedCourse)) return false;
+      if (selectedUnit && (app.unit || '').trim() !== selectedUnit) return false;
       if (!terms.length) return true;
       const haystack = normalize([app.title, app.description, app.area, app.cycle, app.unit].join(' '));
       return terms.every(term => haystack.includes(term));
@@ -295,11 +339,19 @@
     document.querySelectorAll('#areaFilters .filter-pill[data-area]').forEach(btn => {
       btn.setAttribute('aria-pressed', String(!onlyFavorites && btn.dataset.area === selectedArea));
     });
+    document.querySelectorAll('#courseFilters .filter-pill[data-course]').forEach(btn => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.course === selectedCourse));
+    });
     const favPill = $('favFilterPill');
     if (favPill) favPill.setAttribute('aria-pressed', String(onlyFavorites));
 
     const n = filtered.length;
-    const suffix = onlyFavorites ? ' favoritas' : (selectedArea ? ` de ${selectedArea}` : '');
+    const parts = [];
+    if (onlyFavorites) parts.push('favoritas');
+    else if (selectedArea) parts.push(`de ${selectedArea}`);
+    if (selectedCourse) parts.push(`${selectedCourse}.º`);
+    if (selectedUnit) parts.push(selectedUnit);
+    const suffix = parts.length ? ' · ' + parts.join(' · ') : '';
     $('resultCount').textContent = `${n} ${n === 1 ? 'aplicación' : 'aplicaciones'}${suffix}`;
     $('emptyState').hidden = n !== 0;
   }
@@ -347,8 +399,14 @@
     }
   });
 
-  // Search controls
+  // Search & extra filter controls
   $('searchInput').addEventListener('input', applyFilters);
+  if ($('unitSelect')) {
+    $('unitSelect').addEventListener('change', e => {
+      selectedUnit = e.target.value;
+      applyFilters();
+    });
+  }
   $('clearSearchBtn').addEventListener('click', () => {
     $('searchInput').value = '';
     applyFilters();
@@ -356,8 +414,11 @@
   });
   $('clearFiltersBtn').addEventListener('click', () => {
     selectedArea = '';
+    selectedCourse = '';
+    selectedUnit = '';
     onlyFavorites = false;
     $('searchInput').value = '';
+    if ($('unitSelect')) $('unitSelect').value = '';
     renderFilters();
     applyFilters();
     $('searchInput').focus();

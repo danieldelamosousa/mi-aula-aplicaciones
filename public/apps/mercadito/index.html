@@ -38,25 +38,26 @@ dialog{width:min(420px,92vw);border:1px solid var(--line);border-radius:20px;pad
 .noteHeading{margin:14px 0 7px}.noteHeading .groupTitle{margin:0}.noteHeading select{font:inherit;font-size:13px;color:var(--ink);border:1px solid var(--line);background:#f6f8f4;border-radius:6px;padding:4px}
 .school{--paper:#d8e4d6;--print:#3b5944;display:grid;position:relative;align-content:center;text-align:left;padding-left:8%;aspect-ratio:2.12;background:var(--paper);color:var(--print);border-radius:8px;border:1px solid var(--print);overflow:hidden;container-type:inline-size}.school.s1000{--paper:#f8cbc1;--print:#95432f}.school.s2000{--paper:#c7e3f4;--print:#205579}.school.s5000{--paper:#f9d1a7;--print:#85461e}.school strong{font-size:clamp(12px,24cqw,34px);line-height:1.05;position:relative;z-index:1;letter-spacing:-.055em}.school small{font-size:clamp(4px,6cqw,8px);font-weight:800;letter-spacing:.08em}.school .ic{position:absolute;right:4%;top:29%;width:32%;height:43%;opacity:.52;stroke-width:1.4}.chosen{flex-direction:column;gap:2px;min-width:42px;padding:4px;background:transparent;border-color:transparent}.chosen .coin{width:calc(var(--size)*.75)}.chosen .school,#tender .school{padding-left:5px}.school.ghost{padding-left:8px}.chosen .school{height:auto}.tray:has(.chosen){justify-content:flex-start;align-items:flex-end}.chosen span:last-child{font-size:12px}.ticket .note,.chosen .note{flex-shrink:0}
 @media(max-width:660px){.modes{margin-top:12px}.modes button{padding:7px 12px}.intro{margin-top:12px}.cashdesk{--slip-pad:14px}}
-.difficulty{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 4px 10px}.difficulty label{font-weight:700;font-size:14px}.difficulty select{flex:1;min-width:145px;max-width:100%;padding:7px 8px;border:1px solid #97afa5;background:white;color:var(--ink);border-radius:8px;font:inherit;font-size:14px}.difficulty select:focus-visible{outline:3px solid #c45b16;outline-offset:2px}</style></head>
+.difficulty{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 4px 10px}.difficulty label{font-weight:700;font-size:14px}.difficulty select{flex:1;min-width:145px;max-width:100%;padding:7px 8px;border:1px solid #97afa5;background:white;color:var(--ink);border-radius:8px;font:inherit;font-size:14px}.difficulty select:focus-visible{outline:3px solid #c45b16;outline-offset:2px}
+.buyLevelBar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 16px;border-bottom:1px solid var(--line);background:#f8fbf7}.buyLevelBar label{font-size:12.5px;font-weight:750;color:var(--muted)}.buyLevelBar select{flex:1;min-width:140px;padding:5px 8px;border:1px solid #97afa5;background:#fff;color:var(--ink);border-radius:8px;font:inherit;font-size:13px}.checkoutTools{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.hintBtn{display:flex;align-items:center;gap:5px;color:var(--teal);background:#e7f4ee;border:1px solid #bcdbd0;border-radius:8px;font-size:13px;font-weight:700;padding:6px 11px}.hintBtn:hover:not(:disabled){background:#d6ece2}.hintBtn:disabled{opacity:.5}</style></head>
 <body><script src="/registro.js"></script>
 <header><div class="nav"><div class="brand"><span class="brandIcon" data-icon="store"></span>El mercadito</div><button class="help" id="help"><span data-icon="help"></span>Cómo jugar</button></div></header>
 <main>
-<div class="modes" role="group" aria-label="Modo de juego"><button id="buyMode" aria-pressed="true">Voy de compras</button><button id="cashMode" aria-pressed="false">Soy cajero</button></div><div class="intro"><div><h1 id="heading">¡Vamos de compras!</h1><p id="instruction">Mira el precio y paga con el dinero exacto.</p></div><div class="score"><span data-icon="basket"></span><span id="score">0 compras</span></div></div>
+<div class="modes" role="group" aria-label="Modo de juego"><button id="buyMode" aria-pressed="true">Voy de compras</button><button id="cashMode" aria-pressed="false">Soy cajero</button></div><div class="intro"><div><h1 id="heading" data-aula-read="1">¡Vamos de compras!</h1><p id="instruction" data-aula-read="2">Mira el precio y paga con el dinero exacto.</p></div><div class="score"><span data-icon="basket"></span><span id="score">0 compras</span></div></div>
 <div class="shelves">
-<section id="productCard" class="card product" aria-label="Producto de la compra"><div class="stage"><div class="awning"></div><img id="productPhoto" alt=""><strong class="price" id="price"></strong></div><div class="productInfo"><div><div class="category" id="category"></div><h2 id="productName"></h2><small id="unit"></small><br class="mobilePrice" hidden><strong class="price mobilePrice" hidden id="mobilePrice"></strong></div><button class="shuffle" id="shuffle" title="Cambiar de producto" aria-label="Cambiar de producto" data-icon="shuffle"></button></div></section>
+<section id="productCard" class="card product" aria-label="Producto de la compra"><div class="buyLevelBar"><label for="buyDifficulty">Nivel</label><select id="buyDifficulty"><option value="all">Todos los precios</option><option value="1">Nivel 1 · Euros enteros</option><option value="2">Nivel 2 · Euros y 50 ct</option><option value="3">Nivel 3 · Con céntimos (5 en 5)</option></select></div><div class="stage"><div class="awning"></div><img id="productPhoto" alt=""><strong class="price" id="price" data-aula-read="4"></strong></div><div class="productInfo"><div><div class="category" id="category"></div><h2 id="productName" data-aula-read="3"></h2><small id="unit"></small><br class="mobilePrice" hidden><strong class="price mobilePrice" hidden id="mobilePrice"></strong></div><button class="shuffle" id="shuffle" title="Cambiar de producto" aria-label="Cambiar de producto" data-icon="shuffle"></button></div></section>
 <section id="cashCard" class="cashdesk" hidden aria-label="Pago del cliente y ticket de compra">
 <div class="difficulty"><label for="difficulty">Dificultad</label><select id="difficulty"><option value="auto">Automática</option></select></div>
 <div class="deskHead"><div><p id="level"></p><small id="progress"></small></div><button class="shuffle" id="skipTicket" aria-label="Cambiar de ticket" title="Otro ticket" data-icon="shuffle"></button></div>
-<div class="paymentSlip"><div id="tender" aria-hidden="true"></div><div class="amountRow"><span>Te pagan con</span><strong id="paid"></strong></div></div>
+<div class="paymentSlip" data-aula-read="3"><div id="tender" aria-hidden="true"></div><div class="amountRow"><span>Te pagan con</span><strong id="paid"></strong></div></div>
 <div class="tillSlip"><div class="slipHead"><b>EL MERCADITO</b><h2>Ticket de compra</h2></div>
 <table class="slipTable" aria-label="Artículos del ticket"><thead><tr><th scope="col">Artículo</th><th scope="col">Importe</th></tr></thead><tbody id="lines"></tbody></table>
-<div class="amountRow billRow"><span>Total del ticket</span><strong><span class="minus" aria-label="menos">−</span><span id="bill"></span></strong></div>
+<div class="amountRow billRow" data-aula-read="4"><span>Total del ticket</span><strong><span class="minus" aria-label="menos">−</span><span id="bill"></span></strong></div>
 <div class="amountRow resultRow"><span>Cambio</span><strong id="changeAnswer"></strong></div>
 </div></section>
 <section class="card wallet"><div class="sectionHead"><span class="iconBox" data-icon="wallet"></span><h2 id="walletTitle">Mi monedero</h2></div><h3 class="groupTitle">Monedas</h3><div class="coins" id="coins"></div><div class="noteHeading"><h3 class="groupTitle">Billetes</h3><select id="noteStyle" aria-label="Diseño de los billetes"><option value="official" selected>Oficiales</option><option value="school">De aula</option></select></div><div class="notes" id="notes"></div></section>
 </div>
-<section class="card checkout"><div class="checkoutHead"><div class="sectionHead"><span class="iconBox" data-icon="basket"></span><h2 id="trayTitle">Mi pago</h2></div><button class="clear" id="clear"><span data-icon="undo"></span>Vaciar</button></div><div class="payrow"><div class="tray" id="tray" aria-label="Bandeja de pago"></div><div class="receipt"><div class="totalLine"><span id="totalLabel">Total aportado</span><strong id="total" aria-live="polite">0,00 €</strong></div><button class="mainBtn" id="check"><span data-icon="check"></span><span id="checkText">Comprobar pago</span></button></div></div><p id="feedback" class="feedback" role="status" hidden></p></section>
+<section class="card checkout"><div class="checkoutHead"><div class="sectionHead"><span class="iconBox" data-icon="basket"></span><h2 id="trayTitle">Mi pago</h2></div><div class="checkoutTools"><button class="hintBtn" id="hintBtn" type="button">💡 Pista</button><button class="clear" id="clear"><span data-icon="undo"></span>Vaciar</button></div></div><div class="payrow"><div class="tray" id="tray" aria-label="Bandeja de pago"></div><div class="receipt"><div class="totalLine"><span id="totalLabel">Total aportado</span><strong id="total" aria-live="polite">0,00 €</strong></div><button class="mainBtn" id="check"><span data-icon="check"></span><span id="checkText">Comprobar pago</span></button></div></div><p id="feedback" class="feedback" role="status" hidden></p></section>
 <p class="foot"><span data-icon="hand"></span>Toca una pieza para añadirla. Toca una pieza de tu bandeja para quitarla.</p>
 </main>
 <dialog id="guide"><h2>Cómo jugar</h2><p><b>Voy de compras.</b> Mira el precio y prepara el pago exacto.</p><p><b>Soy cajero.</b> Lee el total del ticket y cuánto te pagan. Devuelve la diferencia con monedas y billetes. Elige un nivel para practicarlo. En dificultad automática, avanzas un nivel cada tres tickets correctos hasta llegar al cuarto.</p><p>Arrastra o toca cada pieza para añadirla. Tócala en la bandeja para quitarla. Pulsa <b>Comprobar</b> cuando termines.</p><p><strong>Recuerda</strong> que 100 céntimos equivalen a 1 euro.</p><p style="color:var(--muted);font-size:13px">Imágenes oficiales de monedas y billetes del Banco Central Europeo. La marca «SPECIMEN» identifica los billetes de muestra.</p><form method="dialog"><button class="mainBtn">¡Entendido!</button></form></dialog>
@@ -137,8 +138,29 @@ function createTicket(level){
  }
  const bill=sum(lines.map(line=>line.amount));
  const mixedPayments=[[500,100],[500,200],[1000,100],[1000,200],[1000,500],[2000,100],[2000,200],[2000,500],[2000,1000],[2000,2000],[5000,100]];
- const tender=level===4?sample(mixedPayments.filter(payment=>sum(payment)>bill).slice(0,3)):[[200,500,1000,2000,5000].find(value=>value>bill)];
+ const validMixed=mixedPayments.filter(payment=>sum(payment)>bill);
+ const singleTender=[200,500,1000,2000,5000].find(value=>value>bill)||5000;
+ const tender=level===4&&validMixed.length?sample(validMixed.slice(0,3)):[singleTender];
  return {lines,tender,bill,level};
+}
+const buyDifficulty=$('buyDifficulty');
+const buyEasyPrices=[
+ [100,200],[100,200],[100,200],[100,200],[200,300,400],[400,500,600,800],[300,400,500,600],
+ [1500,2000,2500,3000],[800,1000,1200,1500],[700,1000,1200,1500],[800,1000,1200,1400],[300,400,500,600]
+];
+const buyHalfPrices=[
+ [50,100,150],[100,150,200],[100,150,200],[50,100,150],[150,250,350],[450,550,650,750],[350,450,550,650],
+ [1550,1850,2450,2950],[850,950,1250,1450],[650,850,1150,1250],[850,950,1250,1350],[350,450,550]
+];
+function pickBuyPrice(productIdx){
+ const lvl=buyDifficulty?buyDifficulty.value:'all';
+ if(lvl==='1')return sample(buyEasyPrices[productIdx]||[100,200,500]);
+ if(lvl==='2')return sample(buyHalfPrices[productIdx]||[150,250,350]);
+ if(lvl==='3'){
+  const fiveCents=products[productIdx].slice(3).filter(p=>p%5===0);
+  if(fiveCents.length)return sample(fiveCents);
+ }
+ return sample(products[productIdx].slice(3));
 }
 const modes={buy:{pieces:[],wins:0,solved:false},cash:{pieces:[],wins:0,solved:false}};
 let mode='buy',school=$('noteStyle').value==='school',bag=[],previous=-1,drag=null;
@@ -195,9 +217,12 @@ function chooseRound(){
    for(let i=bag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]]}
    if(bag.at(-1)===previous)[bag[0],bag[bag.length-1]]=[bag.at(-1),bag[0]];
   }
-  previous=bag.pop();g.product=previous;g.target=sample(products[previous].slice(3));
+  previous=bag.pop();g.product=previous;g.target=pickBuyPrice(previous);
  }
- g.pieces=[];g.solved=false;g.feedback='';window.Aula?.begin(mode,cashier()?'Cambio de '+euro(sum(g.ticket.tender))+' para ticket de '+euro(g.ticket.bill):products[g.product][0]+' · '+euro(g.target),cashier()?'Nivel '+g.ticket.level:'Pago exacto');render();
+ g.pieces=[];g.solved=false;g.feedback='';
+ const buyLvlLabel=buyDifficulty&&buyDifficulty.value!=='all'?buyDifficulty.selectedOptions[0].textContent:'Pago exacto';
+ window.Aula?.begin(mode,cashier()?'Cambio de '+euro(sum(g.ticket.tender))+' para ticket de '+euro(g.ticket.bill):products[g.product][0]+' · '+euro(g.target),cashier()?'Nivel '+g.ticket.level:buyLvlLabel);
+ render();
 }
 function renderTicket(){
  const g=game(),ticket=g.ticket;
@@ -246,11 +271,36 @@ function refreshTotal(){
  const g=game();
  if(!g.pieces.length)$('tray').innerHTML='<div class="empty">'+icon('tray')+'<span>'+(cashier()?'Arrastra aquí el cambio':'Arrastra aquí tu dinero')+'</span></div>';
  $('total').textContent=euro(sum(g.pieces));$('clear').disabled=g.solved||!g.pieces.length;
+ if($('hintBtn'))$('hintBtn').disabled=g.solved;
  $('feedback').textContent=g.feedback||'';$('feedback').hidden=!g.feedback;$('feedback').classList.toggle('good',g.solved);
 }
 function add(v){
  const g=game();if(g.solved)return;
  if(!g.pieces.length)$('tray').replaceChildren();g.pieces.push(v);appendPiece(v);g.feedback='';refreshTotal();
+}
+function showMarketHint(){
+ const g=game();
+ if(g.solved)return;
+ window.Aula?.hint(mode);
+ const current=sum(g.pieces);
+ const rem=g.target-current;
+ if(cashier()){
+  const bill=g.ticket.bill, paid=sum(g.ticket.tender);
+  const nextEuro=Math.ceil(bill/100)*100;
+  if(bill%100!==0&&nextEuro<paid){
+   g.feedback='Pista: cuenta hacia arriba. De '+euro(bill)+' a '+euro(nextEuro)+' van '+euro(nextEuro-bill)+'. Después suma lo que falta hasta '+euro(paid)+'.';
+  }else{
+   g.feedback='Pista: calcula cuánto falta desde '+euro(bill)+' hasta '+euro(paid)+'. Empieza por los euros enteros.';
+  }
+ }else if(rem>0){
+  const best=[...values].reverse().find(v=>v<=rem)||1;
+  g.feedback='Pista: te faltan '+euro(rem)+'. Puedes acercarte añadiendo '+spoken(best)+'.';
+ }else if(rem<0){
+  g.feedback='Pista: te has pasado por '+euro(Math.abs(rem))+'. Toca alguna pieza de tu bandeja para quitarla.';
+ }else{
+  g.feedback='¡Ya tienes la cantidad exacta! Pulsa «Comprobar pago».';
+ }
+ refreshTotal();
 }
 $('check').onclick=()=>{
  const g=game();
@@ -275,6 +325,8 @@ function switchMode(next){
 }
 $('buyMode').onclick=()=>switchMode('buy');$('cashMode').onclick=()=>switchMode('cash');
 $('clear').onclick=()=>{game().pieces=[];game().feedback='';render()};
+if($('hintBtn'))$('hintBtn').onclick=showMarketHint;
+if(buyDifficulty)buyDifficulty.onchange=chooseRound;
 $('shuffle').onclick=chooseRound;$('skipTicket').onclick=chooseRound;difficulty.onchange=chooseRound;
 $('noteStyle').onchange=()=>{
  school=$('noteStyle').value==='school';

@@ -91,8 +91,12 @@
 
       <div class="roster-toolbar">
         <div class="course-pills" id="coursePills" role="group" aria-label="Filtrar por curso"></div>
-        <label class="sr-only" for="rosterSearch">Filtrar alumnado</label>
-        <input id="rosterSearch" class="roster-search" type="search" placeholder="Buscar alumno…" autocomplete="off">
+        <div class="roster-right">
+          <button id="selectVisibleBtn" class="btn btn-ghost btn-sm" type="button">Marcar visibles</button>
+          <button id="clearSelectionBtn" class="btn btn-ghost btn-sm" type="button">Limpiar</button>
+          <label class="sr-only" for="rosterSearch">Filtrar alumnado</label>
+          <input id="rosterSearch" class="roster-search" type="search" placeholder="Buscar alumno…" autocomplete="off">
+        </div>
       </div>
 
       <div class="student-list" id="studentList"></div>
@@ -107,6 +111,13 @@
         <button class="btn btn-primary" id="startHereBtn" type="button">Empezar en este dispositivo →</button>
         <button class="btn" id="prepareShareBtn" type="button">Preparar código y QR para otro dispositivo</button>
       </div>
+
+      <div class="batch-bar" id="batchBar">
+        <span class="batch-label">Estaciones / lote de QR:</span>
+        <button class="btn btn-sm" id="batchIndividualBtn" type="button">1 QR por alumno</button>
+        <button class="btn btn-sm" id="batchPairsBtn" type="button">QR por parejas</button>
+      </div>
+
       <p class="panel-footnote" id="ttlFootnote">El código y el enlace permiten enviar resultados durante 8 horas. No permiten consultar informes docentes.</p>
     </section>
 
@@ -141,6 +152,19 @@
           <small>Escanea con tablet o móvil</small>
         </div>
       </div>
+    </section>
+
+    <section class="panel batch-panel" id="batchPanel" hidden>
+      <div class="panel-head">
+        <div>
+          <h2 id="batchTitle">Hoja de códigos QR</h2>
+          <p class="panel-sub" id="batchSummary">Escanea cada tarjeta con una tablet o imprímela para las mesas de estación.</p>
+        </div>
+        <div class="action-row no-print">
+          <button class="btn btn-primary btn-sm" id="printBatchBtn" type="button">Imprimir hoja de QR</button>
+        </div>
+      </div>
+      <div class="batch-grid" id="batchGrid"></div>
     </section>
 
     <div id="gateMessage" class="notice" role="status" hidden></div>

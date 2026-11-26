@@ -244,12 +244,34 @@
       parts.push(clean);
     };
 
-    // 2. Visible task instructions & clues inside the active app
+    // 2. Explicit data-aula-read markers (highest priority, ordered by optional numeric priority)
+    const explicit = [...document.querySelectorAll('[data-aula-read]')].filter(isVisibleElement);
+    if (explicit.length) {
+      explicit.sort((a, b) => {
+        const pa = Number(a.dataset.aulaRead) || 99;
+        const pb = Number(b.dataset.aulaRead) || 99;
+        return pa - pb;
+      });
+      for (const el of explicit) {
+        const custom = el.getAttribute('data-aula-read-text');
+        pushUnique(custom || el.innerText);
+      }
+      if (parts.length) return formatForSpeech(parts.slice(0, 4).join('. '));
+    }
+
+    // 3. Visible task instructions & clues inside the active app
     const selectors = [
       '#mark-title',
       '#mark-instruction',
       '#clue',
       '#word-context',
+      '#activity-title',
+      '#instructions',
+      '#heading',
+      '#instruction',
+      '#sums-equation',
+      '#sums-instruction',
+      '.sheet h1',
       '.task-heading h2',
       '.task-heading p',
       '.prompt',
@@ -265,12 +287,12 @@
       });
     }
 
-    // 3. Active task prompt reported via window.Aula.begin(...)
+    // 4. Active task prompt reported via window.Aula.begin(...)
     if (tasks[mode]?.prompt) {
       pushUnique(tasks[mode].prompt);
     }
 
-    // 4. Fallback to first visible heading / paragraph in main
+    // 5. Fallback to first visible heading / paragraph in main
     if (!parts.length) {
       const root = document.querySelector('main') || document.body;
       root.querySelectorAll('h1, h2, p').forEach(el => {
@@ -278,7 +300,7 @@
       });
     }
 
-    return formatForSpeech(parts.slice(0, 3).join('. '));
+    return formatForSpeech(parts.slice(0, 4).join('. '));
   }
 
   function pickSpanishVoice() {
@@ -574,15 +596,23 @@
       html.aula-dua-text main p,
       html.aula-dua-text main li,
       html.aula-dua-text .instruction,
+      html.aula-dua-text .instructions,
       html.aula-dua-text .clue,
       html.aula-dua-text .context-line,
       html.aula-dua-text .reading,
       html.aula-dua-text .feedback,
+      html.aula-dua-text .hint,
       html.aula-dua-text .prompt,
       html.aula-dua-text .question,
-      html.aula-dua-text .stimulus {
+      html.aula-dua-text .stimulus,
+      html.aula-dua-text .answer,
+      html.aula-dua-text .option,
+      html.aula-dua-text .match-item,
+      html.aula-dua-text .piece,
+      html.aula-dua-text .chip,
+      html.aula-dua-text .sums-task p {
         font-size: max(1.08em, 18px) !important;
-        line-height: 1.65 !important;
+        line-height: 1.6 !important;
       }
 
       /* End-of-session motivating summary overlay */
