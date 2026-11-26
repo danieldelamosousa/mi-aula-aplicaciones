@@ -1,98 +1,7 @@
 // Shared Cloudflare D1 database layer & helpers for Mi aula (Pages Functions)
+import { BUILT_IN_APPS, BUILT_IN_APP_MAP, DEFAULT_STUDENTS, resolveDateCutoff } from './core.mjs';
 
-export const BUILT_IN_APPS = [
-  {
-    id: 'mercadito',
-    title: 'El mercadito',
-    area: 'Matemáticas',
-    cycle: '2.º ciclo',
-    unit: 'Dinero y cálculo',
-    description: 'Compra, paga y devuelve el cambio con monedas y billetes. Elige el nivel y practica a tu ritmo.',
-    coverType: 'market',
-    position: 1
-  },
-  {
-    id: 'palabras',
-    title: 'Taller de palabras',
-    area: 'Lengua',
-    cycle: '2.º ciclo',
-    unit: 'U2',
-    description: 'Subraya prefijos y sufijos y forma palabras derivadas a partir de una raíz. Contenidos de 3.º y 4.º.',
-    coverType: 'words',
-    position: 2
-  },
-  {
-    id: 'ortografia',
-    title: 'Taller de ortografía',
-    area: 'Lengua',
-    cycle: '2.º ciclo',
-    unit: 'U2',
-    description: 'Practica las tildes y clasifica palabras. Corrige mayúsculas y coloca los tipos de punto en textos con párrafos.',
-    coverType: 'ortho',
-    position: 3
-  },
-  {
-    id: 'taller-lengua-u3',
-    title: 'Taller de Lengua U3',
-    area: 'Lengua',
-    cycle: '3.º y 4.º',
-    unit: 'U3',
-    description: 'En 3.º, practica palabras polisémicas, aumentativos, diminutivos, palabras compuestas y listas. En 4.º, repasa sinónimos, adjetivos, descripciones de animales, diptongos e hiatos.',
-    coverType: 'lengua-u3',
-    position: 4
-  },
-  {
-    id: 'calculadora',
-    title: 'Calculadora bloqueada',
-    area: 'Matemáticas',
-    cycle: '2.º ciclo',
-    unit: 'Cálculo mental',
-    description: 'Alcanza el número objetivo con sumas, restas y multiplicaciones sin usar las teclas bloqueadas. Retos aleatorios de 2 y 3 cifras.',
-    coverType: 'calc',
-    position: 5
-  },
-  {
-    id: 'numero-protagonista',
-    title: 'El número protagonista',
-    area: 'Matemáticas',
-    cycle: '2.º ciclo',
-    unit: 'Numeración',
-    description: 'Explora un número de 4 o 6 cifras. Practica el valor posicional, la descomposición, el redondeo y el Número sol.',
-    coverType: 'number',
-    position: 6
-  },
-  {
-    id: 'taller-multiplicacion',
-    title: 'Taller de multiplicación U3',
-    area: 'Matemáticas',
-    cycle: '3.º y 4.º',
-    unit: 'U3',
-    description: 'Elige tu curso y practica grupos iguales, tablas y problemas, con un teclado numérico para responder.',
-    coverType: 'multiply',
-    position: 7
-  },
-  {
-    id: 'penaltis-tablas',
-    title: 'Penaltis de las tablas',
-    area: 'Matemáticas',
-    cycle: '2.º ciclo',
-    unit: 'Tablas',
-    description: 'Practica las tablas del 1 al 10 chutando el resultado correcto o forma sumas repetidas con pelotas y aros.',
-    coverType: 'penalty',
-    position: 8
-  }
-];
-
-const DEFAULT_STUDENTS = [
-  { name: 'Lucía G.', course: '3.º' },
-  { name: 'Mateo R.', course: '3.º' },
-  { name: 'Sofía M.', course: '3.º' },
-  { name: 'Hugo P.', course: '3.º' },
-  { name: 'Valeria C.', course: '4.º' },
-  { name: 'Leo D.', course: '4.º' },
-  { name: 'Martina S.', course: '4.º' },
-  { name: 'Daniel V.', course: '4.º' }
-];
+export { BUILT_IN_APPS, DEFAULT_STUDENTS, resolveDateCutoff };
 
 const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
@@ -352,18 +261,22 @@ export async function getApps(db, onlyVisible = false) {
     ? 'SELECT * FROM apps WHERE visible = 1 ORDER BY position ASC, title ASC'
     : 'SELECT * FROM apps ORDER BY position ASC, title ASC';
   const { results } = await db.prepare(sql).all();
-  return (results || []).map(r => ({
-    id: r.id,
-    title: r.title,
-    area: r.area,
-    cycle: r.cycle,
-    unit: r.unit,
-    description: r.description,
-    coverType: r.cover_type,
-    externalUrl: r.external_url || undefined,
-    visible: Boolean(r.visible),
-    builtIn: Boolean(r.built_in)
-  }));
+  return (results || []).map(r => {
+    const builtInMeta = BUILT_IN_APP_MAP.get(r.id);
+    return {
+      id: r.id,
+      title: r.title,
+      area: r.area,
+      cycle: r.cycle,
+      courses: builtInMeta?.courses || undefined,
+      unit: r.unit,
+      description: r.description,
+      coverType: r.cover_type,
+      externalUrl: r.external_url || undefined,
+      visible: Boolean(r.visible),
+      builtIn: Boolean(r.built_in)
+    };
+  });
 }
 
 export async function getStudents(db) {
@@ -444,24 +357,6 @@ export function csvEscape(val) {
   const s = String(val ?? '');
   if (/[",\r\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
-}
-
-export function resolveDateCutoff(range) {
-  const now = new Date();
-  if (range === 'today') {
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return start.toISOString();
-  }
-  if (range === '7d') {
-    return new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString();
-  }
-  if (range === '30d') {
-    return new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString();
-  }
-  if (range === '90d') {
-    return new Date(now.getTime() - 90 * 24 * 3600 * 1000).toISOString();
-  }
-  return null;
 }
 
 export function summarizeSessionFromAgg(row, agg) {

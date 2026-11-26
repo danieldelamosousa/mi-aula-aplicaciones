@@ -1,0 +1,2757 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#143b34">
+<title>Taller de problemas paso a paso · Matemáticas</title>
+<style>
+:root {
+  font-family: Arial, "Liberation Sans", system-ui, sans-serif;
+  color: #162e29;
+  background: #f4f7f5;
+  --ink: #162e29;
+  --muted: #4c645e;
+  --line: #d4e0dc;
+  --navy: #143b34;
+  --accent: #1d5799;
+  --soft: #e6f0fc;
+  --glow: #a6cbf2;
+  --wash: #f2f7fe;
+  --white: #ffffff;
+  --good-bg: #e2f6ea;
+  --good: #14532d;
+  --warn-bg: #fff2e4;
+  --warn: #8a3a0e;
+  --hint-bg: #ebf3fc;
+  --hint: #1d4373;
+}
+body[data-level="inicial"] {
+  --navy: #1a3d6b;
+  --accent: #1d5799;
+  --soft: #e6f0fc;
+  --glow: #a6cbf2;
+  --wash: #f2f7fe;
+}
+body[data-level="3"] {
+  --navy: #14402c;
+  --accent: #176641;
+  --soft: #e4f6ec;
+  --glow: #a8dfc0;
+  --wash: #f1fbf5;
+}
+body[data-level="4"] {
+  --navy: #5c310d;
+  --accent: #8c4810;
+  --soft: #fff0d9;
+  --glow: #f2c583;
+  --wash: #fffaf0;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 280px; background: var(--wash); color: var(--ink); line-height: 1.5; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .55; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #1d64c2; outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.top {
+  background: var(--navy);
+  color: #fff;
+}
+.top-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #e6f68f;
+  color: #143b34;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 1.15rem;
+}
+.level-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.level-btn {
+  border: 1px solid rgba(255,255,255,.32);
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 13px;
+  min-height: 40px;
+  font-weight: 700;
+  font-size: .92rem;
+}
+.level-btn[data-pick="inicial"][aria-pressed="true"] {
+  background: #cfe5ff;
+  border-color: #cfe5ff;
+  color: #133968;
+}
+.level-btn[data-pick="3"][aria-pressed="true"] {
+  background: #c9f2d8;
+  border-color: #c9f2d8;
+  color: #12472b;
+}
+.level-btn[data-pick="4"][aria-pressed="true"] {
+  background: #ffe0ae;
+  border-color: #ffe0ae;
+  color: #5c310d;
+}
+
+.wrap {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 22px 22px 44px;
+}
+
+/* Welcome / Level Picker */
+.welcome-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: clamp(22px, 4vw, 38px);
+  box-shadow: 0 10px 28px rgba(20,59,52,.07);
+}
+.welcome-card h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.7rem, 4vw, 2.5rem);
+  letter-spacing: -.03em;
+}
+.welcome-lead {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 1.05rem;
+  max-width: 66ch;
+}
+.level-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.pick-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  padding: 18px;
+  border-radius: 16px;
+  border: 2px solid #9bc1ec;
+  background: #eef5ff;
+  color: #17457a;
+  min-height: 138px;
+}
+.pick-card[data-level="3"] { border-color: #9cdab5; background: #edf9f1; color: #145334; }
+.pick-card[data-level="4"] { border-color: #ecc07d; background: #fff6e6; color: #7a3d0d; }
+.pick-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(20,59,52,.1); }
+.pick-tag {
+  display: inline-block;
+  width: max-content;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.8);
+  font-size: .78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.pick-card strong { font-size: 1.2rem; }
+.pick-card span { font-size: .94rem; line-height: 1.4; }
+
+/* Workspace */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.mode-switch {
+  display: flex;
+  gap: 6px;
+  background: #e5eeeb;
+  padding: 4px;
+  border-radius: 12px;
+}
+.mode-btn {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  border-radius: 9px;
+  padding: 8px 14px;
+  min-height: 40px;
+  font-weight: 700;
+  font-size: .93rem;
+}
+.mode-btn[aria-pressed="true"] {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(20,59,52,.12);
+}
+.score-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  font-weight: 800;
+  font-size: .92rem;
+  color: var(--accent);
+}
+
+.sheet {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: clamp(18px, 3.5vw, 30px);
+  box-shadow: 0 8px 24px rgba(20,59,52,.06);
+}
+
+.problem-card {
+  background: var(--wash);
+  border: 2px solid var(--glow);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+.problem-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.problem-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--accent);
+  font-size: .84rem;
+  font-weight: 800;
+}
+.read-btn {
+  border: 1px solid var(--glow);
+  background: #fff;
+  color: var(--accent);
+  border-radius: 10px;
+  padding: 6px 12px;
+  min-height: 38px;
+  font-weight: 700;
+  font-size: .88rem;
+}
+.read-btn:hover { background: var(--soft); }
+.problem-text {
+  margin: 0;
+  font-size: clamp(1.12rem, 2.3vw, 1.3rem);
+  line-height: 1.65;
+  text-align: left;
+}
+.problem-text p { margin: 0 0 6px; }
+.problem-text p:last-child { margin-bottom: 0; }
+.problem-question {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--glow);
+  font-weight: 800;
+  color: var(--navy);
+  font-size: clamp(1.1rem, 2.2vw, 1.24rem);
+}
+
+/* Stepper */
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.step-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: #f8faf9;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: .88rem;
+  text-align: left;
+}
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #dce6e3;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  font-size: .82rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.step-tab.active {
+  border-color: var(--accent);
+  background: var(--soft);
+  color: var(--accent);
+}
+.step-tab.active .step-num {
+  background: var(--accent);
+  color: #fff;
+}
+.step-tab.done {
+  border-color: #7cc99d;
+  background: var(--good-bg);
+  color: var(--good);
+}
+.step-tab.done .step-num {
+  background: #1b7242;
+  color: #fff;
+}
+
+.step-box {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px 20px;
+  background: #fff;
+}
+.step-title {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--navy);
+}
+.step-sub {
+  margin: 0 0 14px;
+  font-size: .95rem;
+  color: var(--muted);
+}
+
+/* Step 1: Data chips */
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.data-chip {
+  min-height: 48px;
+  padding: 10px 15px;
+  border-radius: 12px;
+  border: 2px solid #c3d5cf;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: left;
+}
+.data-chip:hover:not(:disabled) { background: var(--wash); border-color: var(--accent); }
+.data-chip[aria-pressed="true"] {
+  background: var(--soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.data-chip.is-right { background: var(--good-bg); border-color: #217346; color: var(--good); }
+.data-chip.is-wrong { background: var(--warn-bg); border-color: #c2571a; color: var(--warn); }
+
+/* Step 2: Bar model visual diagram */
+.scheme-box {
+  margin: 0 0 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #f8fbfa;
+  border: 1.5px solid var(--line);
+}
+.scheme-caption {
+  font-size: .85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.bar-model {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+}
+.bar-total {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 2px solid #143b34;
+  background: #e6f2ef;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #143b34;
+}
+.bar-parts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.bar-part {
+  flex: 1 1 80px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 2px solid #2c7a68;
+  background: #fff;
+  text-align: center;
+  font-weight: 800;
+  font-size: .96rem;
+}
+.bar-part.unknown {
+  border-style: dashed;
+  border-color: #b45309;
+  background: #fff7e6;
+  color: #92400e;
+}
+.bar-total.unknown {
+  border-style: dashed;
+  border-color: #b45309;
+  background: #fff7e6;
+  color: #92400e;
+}
+.bar-part.removed {
+  border-color: #c2571a;
+  background: #fff1e8;
+  color: #8a3a0e;
+}
+
+.op-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.op-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  border: 2px solid #c3d5cf;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 1rem;
+}
+.op-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--wash); }
+.op-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--soft); color: var(--accent); }
+.op-btn.is-right { background: var(--good-bg); border-color: #217346; color: var(--good); }
+.op-btn.is-wrong { background: var(--warn-bg); border-color: #c2571a; color: var(--warn); }
+.op-symbol { font-size: 1.35rem; line-height: 1.1; }
+.op-desc { font-size: .82rem; font-weight: 700; color: var(--muted); }
+
+/* Step 3: Calculation + keypad */
+.calc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  gap: 18px;
+  align-items: start;
+}
+.calc-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.eq-card {
+  padding: 14px 16px;
+  border-radius: 13px;
+  border: 1.5px solid var(--line);
+  background: #f9fbfa;
+}
+.eq-label {
+  font-size: .85rem;
+  font-weight: 800;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.eq-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+.num-input {
+  width: 140px;
+  min-height: 50px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 2px solid #9eb8b1;
+  background: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.num-input.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,102,85,.15); }
+.num-input.is-right { background: var(--good-bg); border-color: #217346; }
+.num-input.is-wrong { background: var(--warn-bg); border-color: #c2571a; }
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #eaf1ee;
+}
+.kp-btn {
+  min-height: 46px;
+  border-radius: 9px;
+  border: 1px solid #b5cbc4;
+  background: #fff;
+  color: var(--ink);
+  font-size: 1.18rem;
+  font-weight: 800;
+  touch-action: manipulation;
+}
+.kp-btn:hover { background: var(--soft); border-color: var(--accent); }
+.kp-btn.util { background: #d8e5e0; font-size: .95rem; }
+
+/* Step 4: Sentence starter */
+.starter-box {
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--wash);
+  border: 2px solid var(--glow);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+.unit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+/* Actions, feedback, hints */
+.actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.btn {
+  min-height: 46px;
+  padding: 10px 16px;
+  border-radius: 11px;
+  border: 1.5px solid #bfd2cc;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: .96rem;
+}
+.btn:hover:not(:disabled) { background: #eef5f2; }
+.btn-primary {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) { background: #1e5248; }
+
+.feedback:not(:empty),
+.hint:not(:empty) {
+  margin-top: 13px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  font-size: .98rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.feedback.good { background: var(--good-bg); color: var(--good); }
+.feedback.try { background: var(--warn-bg); color: var(--warn); }
+.hint { background: var(--hint-bg); color: var(--hint); }
+
+.checklist {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f4faf6;
+  border: 1px solid #bfe2cd;
+  font-size: .92rem;
+  color: #164e31;
+}
+.checklist strong { display: block; margin-bottom: 4px; }
+
+@media (max-width: 780px) {
+  .level-cards { grid-template-columns: 1fr; }
+  .stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .calc-layout { grid-template-columns: 1fr; }
+  .keypad { max-width: 260px; }
+}
+</style>
+</head>
+<body data-level="3">
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">?</span>
+        <span>Taller de problemas paso a paso</span>
+      </div>
+      <div class="level-pills" role="group" aria-label="Elegir nivel">
+        <button class="level-btn" type="button" data-pick="inicial" aria-pressed="false">Nivel inicial</button>
+        <button class="level-btn" type="button" data-pick="3" aria-pressed="false">3.º Primaria</button>
+        <button class="level-btn" type="button" data-pick="4" aria-pressed="false">4.º Primaria</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="welcomeView" class="welcome-card">
+      <h1>Resuelve problemas paso a paso</h1>
+      <p class="welcome-lead">Lee despacio, selecciona los datos importantes, observa el esquema visual y calcula la solución sin prisas.</p>
+      <div class="level-cards">
+        <button class="pick-card" type="button" data-level="inicial">
+          <span class="pick-tag">1 operación · lectura fácil</span>
+          <strong>Nivel inicial</strong>
+          <span>Frases cortas (una idea por línea), sumas y restas directas con esquema visual guiado.</span>
+        </button>
+        <button class="pick-card" type="button" data-level="3">
+          <span class="pick-tag">3.º de Primaria</span>
+          <strong>3.º Primaria</strong>
+          <span>Sumas y restas con llevadas, grupos iguales, dinero en euros y detección de datos clave.</span>
+        </button>
+        <button class="pick-card" type="button" data-level="4">
+          <span class="pick-tag">4.º de Primaria</span>
+          <strong>4.º Primaria</strong>
+          <span>Multiplicaciones, repartos exactos, doble/mitad y problemas de 2 pasos encadenados.</span>
+        </button>
+      </div>
+    </section>
+
+    <section id="workView" hidden>
+      <div class="toolbar">
+        <div class="mode-switch" role="group" aria-label="Modo de resolución">
+          <button class="mode-btn" id="modeGuidedBtn" type="button" aria-pressed="true">Paso a paso (4 pasos)</button>
+          <button class="mode-btn" id="modeDirectBtn" type="button" aria-pressed="false">Modo directo</button>
+        </div>
+        <div class="score-pill">
+          <span id="progressText">Problema #1</span>
+          <span>·</span>
+          <span id="solvedText">0 resueltos</span>
+        </div>
+      </div>
+
+      <article class="sheet">
+        <div class="problem-card" data-aula-read>
+          <div class="problem-head">
+            <span class="problem-badge" id="problemTag">3.º Primaria</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="read-btn" id="speakProblemBtn" type="button">🔊 Escuchar problema</button>
+              <button class="read-btn" id="newProblemBtn" type="button" title="Generar otro problema con números nuevos">🎲 Otro problema</button>
+            </div>
+          </div>
+          <div class="problem-text" id="problemLines"></div>
+          <div class="problem-question" id="problemQuestion"></div>
+        </div>
+
+        <nav class="stepper" id="stepper" aria-label="Pasos del problema">
+          <div class="step-tab" data-step="1"><span class="step-num">1</span><span>Datos clave</span></div>
+          <div class="step-tab" data-step="2"><span class="step-num">2</span><span>Esquema y operación</span></div>
+          <div class="step-tab" data-step="3"><span class="step-num">3</span><span>Calcula</span></div>
+          <div class="step-tab" data-step="4"><span class="step-num">4</span><span>Solución</span></div>
+        </nav>
+
+        <div id="stepArea" class="step-box"></div>
+        <div id="feedbackBox" class="feedback" role="status" aria-live="polite"></div>
+        <div id="hintBox" class="hint" aria-live="polite"></div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/registro.js"></script>
+  <script>
+  (() => {
+    'use strict';
+
+    const NAMES = ['Vera', 'Hugo', 'Nora', 'Lucía', 'Mateo', 'Sofía', 'Valeria', 'Leo', 'Martina', 'Daniel'];
+    const PLACES = ['Alhama', 'Calatayud', 'Zaragoza', 'Huesca', 'Teruel'];
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function pickOne(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function pickTwoNames() {
+      const a = pickOne(NAMES);
+      let b = pickOne(NAMES);
+      while (b === a) b = pickOne(NAMES);
+      return [a, b];
+    }
+
+    // Nivel inicial: 2-digit addition with NO carry (u1+u2 <= 9, d1+d2 <= 9)
+    function pickNoCarryAdd() {
+      const d1 = randInt(1, 5);
+      const d2 = randInt(1, 8 - d1);
+      const u1 = randInt(1, 7);
+      const u2 = randInt(1, 9 - u1);
+      return [d1 * 10 + u1, d2 * 10 + u2];
+    }
+
+    // Nivel inicial: 2-digit subtraction with NO borrowing (u1 >= u2, d1 > d2)
+    function pickNoBorrowSub() {
+      const d1 = randInt(2, 7);
+      const d2 = randInt(1, d1 - 1);
+      const u1 = randInt(2, 9);
+      const u2 = randInt(1, u1 - 1);
+      return [d1 * 10 + u1, d2 * 10 + u2];
+    }
+
+    // 3.º: 3-digit addition guaranteed to have at least one carry
+    function pickCarryAdd(minA = 125, maxA = 485, minB = 115, maxB = 385) {
+      for (let i = 0; i < 60; i++) {
+        const a = randInt(minA, maxA);
+        const b = randInt(minB, maxB);
+        if ((a % 10) + (b % 10) >= 10 || (Math.floor(a / 10) % 10) + (Math.floor(b / 10) % 10) >= 10) {
+          return [a, b];
+        }
+      }
+      return [268, 147];
+    }
+
+    // 3.º: 3-digit subtraction guaranteed to have at least one borrow and positive gap
+    function pickBorrowSub(minA = 230, maxA = 640, minB = 115, maxB = 395) {
+      for (let i = 0; i < 60; i++) {
+        const a = randInt(minA, maxA);
+        const b = randInt(minB, Math.min(maxB, a - 35));
+        if ((a % 10) < (b % 10) || (Math.floor(a / 10) % 10) < (Math.floor(b / 10) % 10)) {
+          return [a, b];
+        }
+      }
+      return [324, 158];
+    }
+
+    // 4.º: Exact integer division D = d * q
+    function pickExactDiv(minD, maxD, minQ, maxQ) {
+      const d = randInt(minD, maxD);
+      const q = randInt(minQ, maxQ);
+      return [d * q, d, q];
+    }
+
+    // Realistic euro bill strictly larger than cost
+    function pickBillFor(cost) {
+      const bills = [20, 50, 100, 200];
+      return bills.find(b => b > cost) || (Math.ceil((cost + 10) / 50) * 50);
+    }
+
+    const PROBLEM_GENERATORS = {
+      inicial: [
+        () => {
+          const [a, b] = pickNoCarryAdd();
+          const ans = a + b;
+          const who = pickOne(NAMES);
+          return {
+            id: 'ini-cuentos',
+            topic: 'Suma (juntar)',
+            lines: [`En la biblioteca del cole hay <strong>${a} cuentos</strong>.`, `${who} coloca <strong>${b} cuentos</strong> más en la estantería.`],
+            question: '¿Cuántos cuentos hay ahora en total?',
+            chips: [
+              { text: `${a} cuentos`, useful: true },
+              { text: `${b} cuentos más`, useful: true },
+              { text: 'En la biblioteca', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} cuentos`, `${b} cuentos`], total: '¿Total?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar (juntar)' }, { val: '−', sym: '−', desc: 'Restar (quitar)' }],
+            steps: [{ label: 'Juntamos los dos grupos', expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Ahora hay ___',
+            unitCorrect: `${ans} cuentos`,
+            unitOptions: [`${ans} cuentos`, `${ans} euros`, `${ans} minutos`],
+            hint1: 'Si colocamos más cuentos en la estantería, habrá más que al principio. Hay que sumar.',
+            hint2: `Suma ${a} + ${b}: unidades ${a % 10} + ${b % 10} = ${(a % 10) + (b % 10)} y decenas ${Math.floor(a / 10)} + ${Math.floor(b / 10)} = ${Math.floor(a / 10) + Math.floor(b / 10)}.`
+          };
+        },
+        () => {
+          const [a, b] = pickNoBorrowSub();
+          const ans = a - b;
+          const [n1, n2] = pickTwoNames();
+          return {
+            id: 'ini-cromos',
+            topic: 'Resta (quitar)',
+            lines: [`${n1} lleva <strong>${a} cromos</strong> al patio.`, `Regala <strong>${b} cromos</strong> a ${n2}.`],
+            question: `¿Cuántos cromos le quedan a ${n1}?`,
+            chips: [
+              { text: `${a} cromos`, useful: true },
+              { text: `Regala ${b} cromos`, useful: true },
+              { text: 'En el patio', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} cromos`, taken: `${b} regalados`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar (juntar)' }, { val: '−', sym: '−', desc: 'Restar (quitar)' }],
+            steps: [{ label: 'Quitamos los cromos regalados', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: `SOLUCIÓN: A ${n1} le quedan ___`,
+            unitCorrect: `${ans} cromos`,
+            unitOptions: [`${ans} cromos`, `${ans} libros`, `${ans} cajas`],
+            hint1: `Si ${n1} regala cromos, al final tiene menos. Hay que restar.`,
+            hint2: `Resta ${a} − ${b}: unidades ${a % 10} − ${b % 10} = ${(a % 10) - (b % 10)} y decenas ${Math.floor(a / 10)} − ${Math.floor(b / 10)} = ${Math.floor(a / 10) - Math.floor(b / 10)}.`
+          };
+        },
+        () => {
+          const [a, b] = pickNoCarryAdd();
+          const ans = a + b;
+          const [f1, f2] = pickOne([['manzanas', 'peras'], ['naranjas', 'plátanos'], ['melocotones', 'cerezas']]);
+          return {
+            id: 'ini-fruta',
+            topic: 'Suma (juntar)',
+            lines: [`En una cesta hay <strong>${a} ${f1}</strong>.`, `El abuelo pone <strong>${b} ${f2}</strong> en la misma cesta.`],
+            question: '¿Cuántas piezas de fruta hay en la cesta?',
+            chips: [
+              { text: `${a} ${f1}`, useful: true },
+              { text: `${b} ${f2}`, useful: true },
+              { text: 'Una cesta', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} ${f1}`, `${b} ${f2}`], total: '¿Fruta total?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar (juntar)' }, { val: '−', sym: '−', desc: 'Restar (quitar)' }],
+            steps: [{ label: `Juntamos ${f1} y ${f2}`, expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En la cesta hay ___',
+            unitCorrect: `${ans} piezas de fruta`,
+            unitOptions: [`${ans} piezas de fruta`, `${ans} árboles`, `${ans} euros`],
+            hint1: `Queremos saber cuánta fruta hay juntando ${f1} y ${f2}. Hay que sumar.`,
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickNoBorrowSub();
+          const ans = a - b;
+          const who = pickOne(NAMES);
+          const item = pickOne(['un juego', 'un balón', 'un puzle', 'un cuento']);
+          return {
+            id: 'ini-hucha',
+            topic: 'Resta (dinero)',
+            lines: [`${who} tiene <strong>${a} euros</strong> en su hucha.`, `Compra ${item} que cuesta <strong>${b} euros</strong>.`],
+            question: '¿Cuántos euros le quedan en la hucha?',
+            chips: [
+              { text: `${a} euros`, useful: true },
+              { text: `Cuesta ${b} euros`, useful: true },
+              { text: 'Su hucha', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} €`, taken: `${b} € gastados`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: 'Restamos el precio al dinero que tenía', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En la hucha le quedan ___',
+            unitCorrect: `${ans} euros`,
+            unitOptions: [`${ans} euros`, `${ans} cromos`, `${ans} juegos`],
+            hint1: 'Al comprar gasta dinero, así que le queda menos. Hay que restar.',
+            hint2: `Resta ${a} − ${b}: ${a % 10} − ${b % 10} = ${(a % 10) - (b % 10)} y ${Math.floor(a / 10)} − ${Math.floor(b / 10)} = ${Math.floor(a / 10) - Math.floor(b / 10)}.`
+          };
+        },
+        () => {
+          const [a, b] = pickNoCarryAdd();
+          const ans = a + b;
+          const dest = pickOne(PLACES);
+          return {
+            id: 'ini-bus',
+            topic: 'Suma (subir pasajeros)',
+            lines: [`En el autobús a ${dest} van <strong>${a} personas</strong>.`, `En la siguiente parada suben <strong>${b} personas</strong> más.`],
+            question: '¿Cuántas personas viajan ahora en el autobús?',
+            chips: [
+              { text: `${a} personas`, useful: true },
+              { text: `Suben ${b} personas`, useful: true },
+              { text: `Autobús a ${dest}`, useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} personas`, `${b} suben`], total: '¿Total?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: 'Sumamos las personas que suben', expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Ahora viajan ___',
+            unitCorrect: `${ans} personas`,
+            unitOptions: [`${ans} personas`, `${ans} paradas`, `${ans} autobuses`],
+            hint1: 'Si suben más personas, hay más gente dentro del autobús. Hay que sumar.',
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const a = randInt(15, 29);
+          const b = randInt(3, Math.min(8, a % 10 === 0 ? 5 : a % 10));
+          const safeA = (a % 10) < b ? Math.floor(a / 10) * 10 + Math.max(b, 8) : a;
+          const ans = safeA - b;
+          const color = pickOne(['rojas', 'azules', 'verdes', 'amarillas']);
+          return {
+            id: 'ini-pinturas',
+            topic: 'Resta (quedan)',
+            lines: [`En clase hay <strong>${safeA} pinturas</strong> ${color}.`, `Se han roto <strong>${b} pinturas</strong>.`],
+            question: '¿Cuántas pinturas quedan sin romper?',
+            chips: [
+              { text: `${safeA} pinturas`, useful: true },
+              { text: `${b} rotas`, useful: true },
+              { text: `De color ${color.slice(0, -1)}`, useful: false }
+            ],
+            scheme: { type: 'sub', total: `${safeA} pinturas`, taken: `${b} rotas`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: 'Quitamos las pinturas rotas', expr: `${safeA} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Quedan sin romper ___',
+            unitCorrect: `${ans} pinturas`,
+            unitOptions: [`${ans} pinturas`, `${ans} mesas`, `${ans} folios`],
+            hint1: 'Quitamos las pinturas rotas del total que había. Hay que restar.',
+            hint2: `Resta ${safeA} − ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickNoCarryAdd();
+          const ans = a + b;
+          const obj = pickOne(['lápices', 'gomas', 'rotuladores', 'canicas']);
+          return {
+            id: 'ini-botes',
+            topic: 'Suma (dos botes)',
+            lines: [`En un bote hay <strong>${a} ${obj}</strong>.`, `En otro bote hay <strong>${b} ${obj}</strong>.`],
+            question: `¿Cuántos ${obj} hay entre los dos botes?`,
+            chips: [
+              { text: `${a} ${obj}`, useful: true },
+              { text: `${b} ${obj}`, useful: true },
+              { text: 'Dos botes', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} ${obj}`, `${b} ${obj}`], total: '¿Total?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Juntamos los ${obj} de ambos botes`, expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Entre los dos botes hay ___',
+            unitCorrect: `${ans} ${obj}`,
+            unitOptions: [`${ans} ${obj}`, `${ans} botes`, `${ans} hojas`],
+            hint1: 'Queremos juntar lo que hay en un bote y en el otro. Hay que sumar.',
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickNoBorrowSub();
+          const ans = a - b;
+          const who = pickOne(NAMES);
+          return {
+            id: 'ini-paginas',
+            topic: 'Resta (páginas)',
+            lines: [`Un cuento tiene <strong>${a} páginas</strong>.`, `${who} ya ha leído <strong>${b} páginas</strong>.`],
+            question: '¿Cuántas páginas le faltan por leer?',
+            chips: [
+              { text: `${a} páginas en total`, useful: true },
+              { text: `${b} páginas leídas`, useful: true },
+              { text: 'Un cuento', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} páginas`, taken: `${b} leídas`, left: '¿Faltan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: 'Quitamos las páginas ya leídas', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Le faltan por leer ___',
+            unitCorrect: `${ans} páginas`,
+            unitOptions: [`${ans} páginas`, `${ans} cuentos`, `${ans} días`],
+            hint1: 'Para saber cuántas faltan, quitamos las leídas al total del libro. Hay que restar.',
+            hint2: `Resta ${a} − ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const g = randInt(2, 5);
+          const each = randInt(2, 6);
+          const ans = g * each;
+          return {
+            id: 'ini-aros',
+            topic: 'Grupos iguales (intro)',
+            lines: [`En el patio hay <strong>${g} aros</strong>.`, `En cada aro ponemos <strong>${each} pelotas</strong>.`],
+            question: '¿Cuántas pelotas hay en total?',
+            chips: [
+              { text: `${g} aros`, useful: true },
+              { text: `${each} pelotas en cada aro`, useful: true },
+              { text: 'En el patio', useful: false }
+            ],
+            scheme: { type: 'mul', groups: g, each: `${each} pelotas`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '×', sym: '×', desc: 'Multiplicar (grupos iguales)' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `${g} grupos de ${each} pelotas`, expr: `${g} × ${each} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total hay ___',
+            unitCorrect: `${ans} pelotas`,
+            unitOptions: [`${ans} pelotas`, `${ans} aros`, `${ans} patios`],
+            hint1: `Hay ${g} aros con el mismo número de pelotas (${each}) en cada uno. Multiplicamos ${g} × ${each}.`,
+            hint2: `Suma ${each} repetido ${g} veces: ${Array(g).fill(each).join(' + ')} = ${ans}.`
+          };
+        },
+        () => {
+          const a = randInt(2, 6) * 10;
+          const b = randInt(11, 29);
+          const ans = a + b;
+          const plant = pickOne(['lechugas', 'tomateras', 'fresas', 'zanahorias']);
+          return {
+            id: 'ini-huerto',
+            topic: 'Suma (huerto)',
+            lines: [`En el huerto escolar plantamos <strong>${a} ${plant}</strong>.`, `Al día siguiente plantamos <strong>${b} ${plant}</strong> más.`],
+            question: `¿Cuántas ${plant} hay ahora en el huerto?`,
+            chips: [
+              { text: `${a} ${plant}`, useful: true },
+              { text: `${b} ${plant} más`, useful: true },
+              { text: 'Huerto escolar', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} ${plant}`, `${b} más`], total: '¿Total?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Sumamos las ${plant} plantadas`, expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Ahora hay ___',
+            unitCorrect: `${ans} ${plant}`,
+            unitOptions: [`${ans} ${plant}`, `${ans} regaderas`, `${ans} días`],
+            hint1: 'Si plantamos más, juntamos las dos cantidades. Hay que sumar.',
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickNoBorrowSub();
+          const ans = a - b;
+          const snack = pickOne(['galletas', 'magdalenas', 'rosquillas']);
+          return {
+            id: 'ini-galletas',
+            topic: 'Resta (almuerzo)',
+            lines: [`Una caja trae <strong>${a} ${snack}</strong>.`, `En el almuerzo comemos <strong>${b} ${snack}</strong>.`],
+            question: `¿Cuántas ${snack} quedan en la caja?`,
+            chips: [
+              { text: `${a} ${snack}`, useful: true },
+              { text: `${b} comidas`, useful: true },
+              { text: 'En el almuerzo', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} ${snack}`, taken: `${b} comidas`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Quitamos las ${snack} comidas`, expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En la caja quedan ___',
+            unitCorrect: `${ans} ${snack}`,
+            unitOptions: [`${ans} ${snack}`, `${ans} cajas`, `${ans} recreos`],
+            hint1: `Si comemos ${b}, quedan menos en la caja. Hay que restar.`,
+            hint2: `Resta ${a} − ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const g = randInt(3, 5);
+          const each = randInt(3, 6);
+          const ans = g * each;
+          const fruit = pickOne(['naranjas', 'mandarinas', 'manzanas']);
+          return {
+            id: 'ini-bolsas',
+            topic: 'Grupos iguales (intro)',
+            lines: [`El abuelo compra <strong>${g} bolsas</strong> de ${fruit}.`, `Cada bolsa tiene <strong>${each} ${fruit}</strong>.`],
+            question: `¿Cuántas ${fruit} ha comprado en total?`,
+            chips: [
+              { text: `${g} bolsas`, useful: true },
+              { text: `${each} ${fruit} en cada bolsa`, useful: true },
+              { text: 'El abuelo', useful: false }
+            ],
+            scheme: { type: 'mul', groups: g, each: `${each} ${fruit}`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '×', sym: '×', desc: 'Multiplicar (grupos iguales)' }, { val: '+', sym: '+', desc: `Sumar solo ${g} + ${each}` }],
+            steps: [{ label: `${g} bolsas de ${each} ${fruit}`, expr: `${g} × ${each} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Ha comprado ___',
+            unitCorrect: `${ans} ${fruit}`,
+            unitOptions: [`${ans} ${fruit}`, `${ans} bolsas`, `${ans} euros`],
+            hint1: `El número ${each} se repite ${g} veces (una por cada bolsa). Multiplicamos ${g} × ${each}.`,
+            hint2: `${Array(g).fill(each).join(' + ')} = ${ans}.`
+          };
+        }
+      ],
+
+      '3': [
+        () => {
+          const [a, b] = pickCarryAdd(145, 485, 115, 365);
+          const ans = a + b;
+          const extra = randInt(3, 8);
+          return {
+            id: 'g3-biblioteca',
+            topic: 'Suma con llevadas',
+            lines: [`La biblioteca de Alhama tenía <strong>${a} libros</strong> de aventuras y <strong>${b} libros</strong> de animales.`, `Además, la sala tiene ${extra} ventanas grandes.`],
+            question: '¿Cuántos libros hay en total entre las dos secciones?',
+            chips: [
+              { text: `${a} libros de aventuras`, useful: true },
+              { text: `${b} libros de animales`, useful: true },
+              { text: `${extra} ventanas grandes`, useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} aventuras`, `${b} animales`], total: '¿Total libros?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Sumamos los dos grupos de libros', expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total hay ___',
+            unitCorrect: `${ans} libros`,
+            unitOptions: [`${ans} libros`, `${ans} ventanas`, `${ans} euros`],
+            hint1: `Las ${extra} ventanas son un dato que sobra. Solo juntamos ${a} y ${b} libros.`,
+            hint2: `Suma ${a} + ${b} empezando por las unidades y anotando las llevadas → ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickBorrowSub(240, 580, 115, 340);
+          const ans = a - b;
+          const city = pickOne(['Zaragoza', 'Huesca', 'Teruel']);
+          return {
+            id: 'g3-excursion',
+            topic: 'Resta con llevadas',
+            lines: [`Para la excursión a ${city} se han apuntado <strong>${a} escolares</strong> en total.`, `Por la mañana ya han subido al tren <strong>${b} escolares</strong>.`],
+            question: '¿Cuántos escolares faltan todavía por subir?',
+            chips: [
+              { text: `${a} escolares en total`, useful: true },
+              { text: `${b} ya han subido`, useful: true },
+              { text: `Excursión a ${city}`, useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} escolares`, taken: `${b} subieron`, left: '¿Faltan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Restamos los que ya han subido', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Faltan por subir ___',
+            unitCorrect: `${ans} escolares`,
+            unitOptions: [`${ans} escolares`, `${ans} trenes`, `${ans} minutos`],
+            hint1: `Sabemos el total (${a}) y una parte (${b}). Para hallar la otra parte, restamos.`,
+            hint2: `Resta ${a} − ${b} desagrupando cuando haga falta. Prueba de la resta: ${ans} + ${b} = ${a}.`
+          };
+        },
+        () => {
+          const g = randInt(4, 9);
+          const each = randInt(4, 9);
+          const ans = g * each;
+          const item = pickOne(['rotuladores', 'ceras', 'pinceles', 'pegatinas']);
+          return {
+            id: 'g3-cajas',
+            topic: 'Multiplicación (grupos iguales)',
+            lines: [`En el taller de plástica hemos preparado <strong>${g} cajas</strong>.`, `En cada caja guardamos <strong>${each} ${item}</strong>.`],
+            question: `¿Cuántos ${item} hay en total?`,
+            chips: [
+              { text: `${g} cajas`, useful: true },
+              { text: `${each} ${item} por caja`, useful: true },
+              { text: 'Taller de plástica', useful: false }
+            ],
+            scheme: { type: 'mul', groups: g, each: `${each} ${item}`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `${g} cajas con ${each} ${item} cada una`, expr: `${g} × ${each} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total hay ___',
+            unitCorrect: `${ans} ${item}`,
+            unitOptions: [`${ans} ${item}`, `${ans} cajas`, `${ans} folios`],
+            hint1: `Todas las cajas tienen la misma cantidad (${each}). Multiplicamos ${g} × ${each}.`,
+            hint2: `Repasa la tabla del ${g} o del ${each}: ${g} × ${each} = ${ans}.`
+          };
+        },
+        () => {
+          const price = pickOne([randInt(11, 18), randInt(23, 46), randInt(54, 88)]);
+          const bill = pickBillFor(price);
+          const ans = bill - price;
+          const who = pickOne(NAMES);
+          const item = pickOne(['una mochila de montaña', 'unas zapatillas', 'un juego de mesa', 'un casco de bici']);
+          return {
+            id: 'g3-cambio',
+            topic: 'Dinero (cambio)',
+            lines: [`${who} compra ${item} que cuesta <strong>${price} euros</strong>.`, `Paga en la tienda con un billete de <strong>${bill} euros</strong>.`],
+            question: '¿Cuántos euros le tienen que devolver?',
+            chips: [
+              { text: `Cuesta ${price} euros`, useful: true },
+              { text: `Paga con ${bill} euros`, useful: true },
+              { text: item[0].toUpperCase() + item.slice(1), useful: false }
+            ],
+            scheme: { type: 'sub', total: `${bill} € entregados`, taken: `${price} € precio`, left: '¿Cambio?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Calculamos la diferencia para el cambio', expr: `${bill} − ${price} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Le tienen que devolver ___',
+            unitCorrect: `${ans} euros`,
+            unitOptions: [`${ans} euros`, `${ans} billetes`, `${ans} tiendas`],
+            hint1: 'Para calcular el cambio restamos lo que cuesta al billete con el que paga.',
+            hint2: `Resta ${bill} − ${price} = ${ans}. Comprueba: ${price} + ${ans} = ${bill}.`
+          };
+        },
+        () => {
+          const rows = randInt(4, 9);
+          const each = randInt(5, 9);
+          const ans = rows * each;
+          const rain = randInt(2, 5);
+          const who = pickOne(NAMES);
+          return {
+            id: 'g3-huerto',
+            topic: 'Multiplicación (tablas)',
+            lines: [`En el huerto de ${who} hay <strong>${rows} filas</strong> de fresas.`, `En cada fila crecen <strong>${each} plantas</strong>. El lunes llovió ${rain} horas.`],
+            question: '¿Cuántas plantas de fresa hay en el huerto?',
+            chips: [
+              { text: `${rows} filas`, useful: true },
+              { text: `${each} plantas por fila`, useful: true },
+              { text: `Llovió ${rain} horas`, useful: false }
+            ],
+            scheme: { type: 'mul', groups: rows, each: `${each} plantas`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `${rows} filas iguales de ${each} plantas`, expr: `${rows} × ${each} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En el huerto hay ___',
+            unitCorrect: `${ans} plantas de fresa`,
+            unitOptions: [`${ans} plantas de fresa`, `${ans} horas`, `${ans} filas`],
+            hint1: `Las ${rain} horas de lluvia sobran. Hay ${rows} filas con ${each} plantas en cada una.`,
+            hint2: `Multiplica ${rows} × ${each} = ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickCarryAdd(125, 295, 38, 125);
+          const ans = a + b;
+          const who = pickOne(NAMES);
+          return {
+            id: 'g3-bici',
+            topic: 'Comparación (más que)',
+            lines: [`${who} ha recorrido <strong>${a} metros</strong> en bicicleta.`, `Su abuelo ha recorrido <strong>${b} metros más</strong> que ${who}.`],
+            question: '¿Cuántos metros ha recorrido el abuelo?',
+            chips: [
+              { text: `${a} metros (${who})`, useful: true },
+              { text: `${b} metros más`, useful: true },
+              { text: 'En bicicleta', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} m (${who})`, `${b} m más`], total: '¿Abuelo?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `Sumamos los ${b} metros de más`, expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: El abuelo ha recorrido ___',
+            unitCorrect: `${ans} metros`,
+            unitOptions: [`${ans} metros`, `${ans} bicicletas`, `${ans} euros`],
+            hint1: `El abuelo recorrió más metros que ${who}: a ${a} le sumamos ${b}.`,
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickBorrowSub(190, 380, 95, 220);
+          const ans = a - b;
+          const who = pickOne(NAMES);
+          const col = pickOne(['minerales', 'cromos', 'sellos']);
+          return {
+            id: 'g3-album',
+            topic: 'Resta (cuántos faltan)',
+            lines: [`El álbum de ${col} de ${who} tiene <strong>${a} huecos</strong>.`, `Ya tiene colocados <strong>${b} ${col}</strong>.`],
+            question: `¿Cuántos ${col} le faltan para completar el álbum?`,
+            chips: [
+              { text: `${a} huecos en total`, useful: true },
+              { text: `${b} ya colocados`, useful: true },
+              { text: `Álbum de ${col}`, useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} huecos`, taken: `${b} colocados`, left: '¿Faltan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `Calculamos lo que falta hasta ${a}`, expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Le faltan ___',
+            unitCorrect: `${ans} ${col}`,
+            unitOptions: [`${ans} ${col}`, `${ans} álbumes`, `${ans} euros`],
+            hint1: `Queremos saber cuánto falta desde ${b} hasta ${a}. Restamos ${a} − ${b}.`,
+            hint2: `Resta ${a} − ${b} = ${ans}. Comprueba: ${ans} + ${b} = ${a}.`
+          };
+        },
+        () => {
+          const per = randInt(12, 28);
+          const g = randInt(3, 5);
+          const ans = per * g;
+          return {
+            id: 'g3-comedor',
+            topic: 'Multiplicación (2 cifras × 1)',
+            lines: [`En cada mesa del comedor se sientan <strong>${per} alumnos</strong>.`, `Hoy se han ocupado <strong>${g} mesas</strong> completas.`],
+            question: '¿Cuántos alumnos comen hoy en el comedor?',
+            chips: [
+              { text: `${per} alumnos por mesa`, useful: true },
+              { text: `${g} mesas completas`, useful: true },
+              { text: 'Hoy en el comedor', useful: false }
+            ],
+            scheme: { type: 'mul', groups: g, each: `${per} alumnos`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `${g} mesas con ${per} alumnos cada una`, expr: `${per} × ${g} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Hoy comen en el comedor ___',
+            unitCorrect: `${ans} alumnos`,
+            unitOptions: [`${ans} alumnos`, `${ans} mesas`, `${ans} platos`],
+            hint1: `Cada una de las ${g} mesas tiene ${per} alumnos. Hay que multiplicar ${per} × ${g}.`,
+            hint2: `Descompón ${per} = ${Math.floor(per / 10) * 10} + ${per % 10}: ${Math.floor(per / 10) * 10} × ${g} = ${Math.floor(per / 10) * 10 * g} y ${per % 10} × ${g} = ${(per % 10) * g} → ${ans}.`
+          };
+        },
+        () => {
+          const a = randInt(24, 68);
+          const b = randInt(22, 64);
+          const c = randInt(18, 56);
+          const ans = a + b + c;
+          return {
+            id: 'g3-carrera',
+            topic: 'Suma (3 sumandos)',
+            lines: [`En la carrera solidaria corrieron <strong>${a} niños</strong> de 1.er ciclo, <strong>${b} niños</strong> de 2.º ciclo y <strong>${c} niños</strong> de 3.er ciclo.`],
+            question: '¿Cuántos niños participaron en total?',
+            chips: [
+              { text: `${a} de 1.er ciclo`, useful: true },
+              { text: `${b} de 2.º ciclo`, useful: true },
+              { text: `${c} de 3.er ciclo`, useful: true }
+            ],
+            scheme: { type: 'add', parts: [`${a}`, `${b}`, `${c}`], total: '¿Total niños?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar los 3 grupos' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Juntamos los tres ciclos', expr: `${a} + ${b} + ${c} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total participaron ___',
+            unitCorrect: `${ans} niños`,
+            unitOptions: [`${ans} niños`, `${ans} ciclos`, `${ans} metros`],
+            hint1: `Queremos saber el total reuniendo los tres ciclos. Sumamos ${a} + ${b} + ${c}.`,
+            hint2: `Agrupa primero dos números (${a} + ${b} = ${a + b}) y luego suma ${c} → ${ans}.`
+          };
+        },
+        () => {
+          const price = randInt(4, 9);
+          const people = randInt(3, 8);
+          const ans = price * people;
+          const city = pickOne(['Teruel', 'Zaragoza', 'Huesca']);
+          const who = pickOne(NAMES);
+          return {
+            id: 'g3-museo',
+            topic: 'Multiplicación (dinero)',
+            lines: [`Cada entrada al museo de ${city} cuesta <strong>${price} euros</strong>.`, `Van <strong>${people} personas</strong> de la familia de ${who}.`],
+            question: '¿Cuánto pagan en total por las entradas?',
+            chips: [
+              { text: `${price} euros por entrada`, useful: true },
+              { text: `${people} personas`, useful: true },
+              { text: `Museo de ${city}`, useful: false }
+            ],
+            scheme: { type: 'mul', groups: people, each: `${price} €`, total: '¿Precio total?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `${people} entradas a ${price} euros cada una`, expr: `${people} × ${price} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total pagan ___',
+            unitCorrect: `${ans} euros`,
+            unitOptions: [`${ans} euros`, `${ans} entradas`, `${ans} museos`],
+            hint1: `Cada persona paga ${price} euros, y son ${people} personas. Multiplicamos ${people} × ${price}.`,
+            hint2: `Multiplica ${people} × ${price} = ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickBorrowSub(310, 620, 145, 365);
+          const ans = a - b;
+          const item = pickOne(['magdalenas', 'rosquillas', 'croissants']);
+          return {
+            id: 'g3-panaderia',
+            topic: 'Resta con llevadas',
+            lines: [`Una panadería horneó <strong>${a} ${item}</strong> por la mañana.`, `Antes de mediodía vendió <strong>${b} ${item}</strong>.`],
+            question: `¿Cuántas ${item} quedan todavía sin vender?`,
+            chips: [
+              { text: `${a} ${item} horneadas`, useful: true },
+              { text: `${b} vendidas`, useful: true },
+              { text: 'Antes de mediodía', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} ${item}`, taken: `${b} vendidas`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Restamos las vendidas al total', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Quedan sin vender ___',
+            unitCorrect: `${ans} ${item}`,
+            unitOptions: [`${ans} ${item}`, `${ans} euros`, `${ans} panaderías`],
+            hint1: `Si se venden ${b}, las quitamos de las ${a} iniciales. Hay que restar.`,
+            hint2: `${a} − ${b} = ${ans}. Prueba: ${ans} + ${b} = ${a}.`
+          };
+        },
+        () => {
+          const per = randInt(14, 32);
+          const packs = randInt(2, 5);
+          const ans = per * packs;
+          return {
+            id: 'g3-folios',
+            topic: 'Multiplicación (2 cifras × 1)',
+            lines: [`En cada paquete vienen <strong>${per} folios</strong> de colores.`, `La clase ha comprado <strong>${packs} paquetes</strong>.`],
+            question: '¿Cuántos folios de colores tienen en total?',
+            chips: [
+              { text: `${per} folios por paquete`, useful: true },
+              { text: `${packs} paquetes`, useful: true },
+              { text: 'De colores', useful: false }
+            ],
+            scheme: { type: 'mul', groups: packs, each: `${per} folios`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `${packs} paquetes de ${per} folios`, expr: `${per} × ${packs} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Tienen en total ___',
+            unitCorrect: `${ans} folios`,
+            unitOptions: [`${ans} folios`, `${ans} paquetes`, `${ans} colores`],
+            hint1: `Son ${packs} paquetes iguales de ${per} folios. Multiplicamos ${per} × ${packs}.`,
+            hint2: `${Math.floor(per / 10) * 10} × ${packs} = ${Math.floor(per / 10) * 10 * packs} y ${per % 10} × ${packs} = ${(per % 10) * packs} → ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickBorrowSub(180, 420, 65, 175);
+          const ans = a - b;
+          const [n1, n2] = pickTwoNames();
+          return {
+            id: 'g3-diferencia',
+            topic: 'Comparación (cuántos más)',
+            lines: [`${n1} ha conseguido <strong>${a} puntos</strong> en un juego de cálculo.`, `${n2} ha conseguido <strong>${b} puntos</strong>.`],
+            question: `¿Cuántos puntos más ha conseguido ${n1} que ${n2}?`,
+            chips: [
+              { text: `${a} puntos (${n1})`, useful: true },
+              { text: `${b} puntos (${n2})`, useful: true },
+              { text: 'Juego de cálculo', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} pts (${n1})`, taken: `${b} pts (${n2})`, left: '¿Diferencia?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar (diferencia)' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Calculamos la diferencia entre los dos', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: `SOLUCIÓN: ${n1} ha conseguido ___ más`,
+            unitCorrect: `${ans} puntos`,
+            unitOptions: [`${ans} puntos`, `${ans} juegos`, `${ans} euros`],
+            hint1: 'Cuando preguntan «cuántos más» comparando dos cantidades, calculamos la diferencia restando.',
+            hint2: `Resta ${a} − ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const a = randInt(125, 345);
+          const b = randInt(115, 295);
+          const ans = a + b;
+          const [p1, p2] = ['sábado', 'domingo'];
+          return {
+            id: 'g3-visitantes',
+            topic: 'Suma (fin de semana)',
+            lines: [`Al balneario de Alhama fueron <strong>${a} visitantes</strong> el ${p1}.`, `El ${p2} acudieron <strong>${b} visitantes</strong>.`],
+            question: '¿Cuántos visitantes fueron en todo el fin de semana?',
+            chips: [
+              { text: `${a} el ${p1}`, useful: true },
+              { text: `${b} el ${p2}`, useful: true },
+              { text: 'Balneario de Alhama', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} (${p1})`, `${b} (${p2})`], total: '¿Fin de semana?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Juntamos sábado y domingo', expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Fueron en total ___',
+            unitCorrect: `${ans} visitantes`,
+            unitOptions: [`${ans} visitantes`, `${ans} días`, `${ans} balnearios`],
+            hint1: 'Reunimos los visitantes del sábado y del domingo. Hay que sumar.',
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickCarryAdd(118, 285, 112, 265);
+          const ans = a + b;
+          const buses = randInt(3, 6);
+          const mins = pickOne([35, 45, 50, 55]);
+          const euros = randInt(5, 9);
+          return {
+            id: 'g3-reto-excursion-sobrantes',
+            hard: true,
+            topic: 'Reto · Datos sobrantes (suma)',
+            lines: [
+              `El colegio organiza una excursión en ${buses} autobuses. El viaje dura ${mins} minutos y cuesta ${euros} euros.`,
+              `Se apuntan <strong>${a} alumnos</strong> de Infantil y <strong>${b} alumnos</strong> de Primaria.`
+            ],
+            question: '¿Cuántos alumnos se han apuntado en total?',
+            chips: [
+              { text: `${a} alumnos de Infantil`, useful: true },
+              { text: `${b} alumnos de Primaria`, useful: true },
+              { text: `${buses} autobuses`, useful: false },
+              { text: `${mins} minutos de viaje`, useful: false },
+              { text: `${euros} euros`, useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} Infantil`, `${b} Primaria`], total: '¿Total alumnos?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Juntamos Infantil y Primaria (el resto sobra)', expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Se han apuntado en total ___',
+            unitCorrect: `${ans} alumnos`,
+            unitOptions: [`${ans} alumnos`, `${ans} minutos`, `${ans} euros`],
+            hint1: `Los ${buses} autobuses, los ${mins} minutos y los ${euros} euros NO hacen falta: solo pregunta por los alumnos.`,
+            hint2: `Suma solo ${a} + ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickBorrowSub(220, 460, 75, 195);
+          const ans = a - b;
+          const shirts = randInt(90, 160);
+          const rackets = randInt(12, 28);
+          const hour = randInt(9, 10);
+          return {
+            id: 'g3-reto-tienda-sobrantes',
+            hard: true,
+            topic: 'Reto · Datos sobrantes (resta)',
+            lines: [
+              `Una tienda de deportes abre a las ${hour} y tiene ${shirts} camisetas y <strong>${a} balones</strong>.`,
+              `Durante el lunes vende <strong>${b} balones</strong> y ${rackets} raquetas.`
+            ],
+            question: '¿Cuántos balones quedan todavía en la tienda?',
+            chips: [
+              { text: `${a} balones al principio`, useful: true },
+              { text: `Vende ${b} balones`, useful: true },
+              { text: `${shirts} camisetas`, useful: false },
+              { text: `${rackets} raquetas vendidas`, useful: false },
+              { text: `Abre a las ${hour}`, useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} balones`, taken: `${b} vendidos`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Restamos solo los balones vendidos', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En la tienda quedan ___',
+            unitCorrect: `${ans} balones`,
+            unitOptions: [`${ans} balones`, `${ans} camisetas`, `${ans} raquetas`],
+            hint1: `Solo pregunta por los balones: las ${shirts} camisetas, las ${rackets} raquetas y la hora sobran.`,
+            hint2: `Resta ${a} − ${b} = ${ans}. Prueba: ${ans} + ${b} = ${a}.`
+          };
+        }
+      ],
+
+      '4': [
+        () => {
+          const [total, d, q] = pickExactDiv(4, 9, 8, 22);
+          const extra = randInt(2, 4);
+          return {
+            id: 'g4-reparto-libros',
+            topic: 'División (reparto exacto)',
+            lines: [`La bibliotecaria reparte <strong>${total} libros nuevos</strong> en partes iguales entre <strong>${d} estanterías</strong>.`, `Cada estantería mide ${extra} metros.`],
+            question: '¿Cuántos libros coloca en cada estantería?',
+            chips: [
+              { text: `${total} libros nuevos`, useful: true },
+              { text: `${d} estanterías iguales`, useful: true },
+              { text: `Mide ${extra} metros`, useful: false }
+            ],
+            scheme: { type: 'div', total: `${total} libros`, groups: d, each: '¿Cada estantería?' },
+            op: '÷',
+            opOptions: [{ val: '×', sym: '×', desc: 'Multiplicar' }, { val: '÷', sym: '÷', desc: 'Dividir (repartir)' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Repartimos ${total} entre ${d} estanterías`, expr: `${total} ÷ ${d} =`, ans: q }],
+            answer: q,
+            starter: 'SOLUCIÓN: Coloca en cada estantería ___',
+            unitCorrect: `${q} libros`,
+            unitOptions: [`${q} libros`, `${q} metros`, `${q} estanterías`],
+            hint1: `Repartir en partes iguales es dividir. Los ${extra} metros son un dato que sobra.`,
+            hint2: `Busca qué número multiplicado por ${d} da ${total}: ${d} × ${q} = ${total}.`
+          };
+        },
+        () => {
+          const n = randInt(3, 7);
+          const price = randInt(3, 9);
+          const cost = n * price;
+          const bill = pickBillFor(cost);
+          const change = bill - cost;
+          const who = pickOne(NAMES);
+          const item = pickOne(['cuadernos', 'carpetas', 'estuches', 'botellas']);
+          return {
+            id: 'g4-2pasos-cambio',
+            topic: 'Problema de 2 pasos (compra y cambio)',
+            lines: [`${who} compra <strong>${n} ${item}</strong> a <strong>${price} euros</strong> cada uno.`, `Paga en caja con un billete de <strong>${bill} euros</strong>.`],
+            question: '¿Cuántos euros le devuelven de cambio?',
+            chips: [
+              { text: `${n} ${item}`, useful: true },
+              { text: `${price} euros cada uno`, useful: true },
+              { text: `Billete de ${bill} euros`, useful: true }
+            ],
+            scheme: { type: 'two', stepA: `1.º Coste: ${n} × ${price} €`, stepB: `2.º Cambio: ${bill} € − coste` },
+            op: '× y −',
+            opOptions: [
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '+ y −', sym: '+ y −', desc: 'Sumar y luego restar' },
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' }
+            ],
+            steps: [
+              { label: `Paso 1: ¿Cuánto cuestan los ${n} ${item}?`, expr: `${n} × ${price} =`, ans: cost },
+              { label: `Paso 2: ¿Cuánto le devuelven de ${bill} €?`, expr: `${bill} − ${cost} =`, ans: change }
+            ],
+            answer: change,
+            starter: 'SOLUCIÓN: Le devuelven de cambio ___',
+            unitCorrect: `${change} euros`,
+            unitOptions: [`${change} euros`, `${change} ${item}`, `${change} billetes`],
+            hint1: `Primero averigua el precio de los ${n} ${item} (${n} × ${price}) y después réstalo a ${bill}.`,
+            hint2: `Paso 1: ${n} × ${price} = ${cost} €. Paso 2: ${bill} − ${cost} = ${change} €.`
+          };
+        },
+        () => {
+          const km = randInt(115, 245);
+          const days = randInt(3, 6);
+          const ans = km * days;
+          return {
+            id: 'g4-autobus-km',
+            topic: 'Multiplicación (3 cifras × 1)',
+            lines: [`Un autobús de ruta entre Zaragoza y Huesca recorre <strong>${km} kilómetros</strong> cada día.`, `Hace exactamente el mismo recorrido durante <strong>${days} días</strong>.`],
+            question: `¿Cuántos kilómetros recorre en total en esos ${days} días?`,
+            chips: [
+              { text: `${km} km al día`, useful: true },
+              { text: `${days} días`, useful: true },
+              { text: 'Zaragoza y Huesca', useful: false }
+            ],
+            scheme: { type: 'mul', groups: days, each: `${km} km`, total: '¿Total km?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '×', sym: '×', desc: 'Multiplicar' }, { val: '÷', sym: '÷', desc: 'Dividir' }],
+            steps: [{ label: `Repetimos ${km} km durante ${days} días`, expr: `${km} × ${days} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total recorre ___',
+            unitCorrect: `${ans} kilómetros`,
+            unitOptions: [`${ans} kilómetros`, `${ans} días`, `${ans} autobuses`],
+            hint1: `Cada día hace los mismos ${km} km, ${days} veces. Hay que multiplicar ${km} × ${days}.`,
+            hint2: `Descompón ${km} en centenas, decenas y unidades y multiplica por ${days} → ${ans}.`
+          };
+        },
+        () => {
+          const teamSize = randInt(4, 7);
+          const teams = randInt(5, 11);
+          const total = teamSize * teams;
+          const g3 = randInt(Math.floor(total * 0.35), Math.floor(total * 0.6));
+          const g4 = total - g3;
+          return {
+            id: 'g4-2pasos-grupos',
+            topic: 'Problema de 2 pasos (juntar y repartir)',
+            lines: [`En 3.º hay <strong>${g3} alumnos</strong> y en 4.º hay <strong>${g4} alumnos</strong>.`, `Para las estaciones de Matemáticas formamos grupos iguales de <strong>${teamSize} alumnos</strong>.`],
+            question: `¿Cuántos grupos de ${teamSize} alumnos podemos formar?`,
+            chips: [
+              { text: `${g3} alumnos de 3.º`, useful: true },
+              { text: `${g4} alumnos de 4.º`, useful: true },
+              { text: `Grupos de ${teamSize} alumnos`, useful: true }
+            ],
+            scheme: { type: 'two', stepA: `1.º Total alumnos: ${g3} + ${g4}`, stepB: `2.º Reparto: total ÷ ${teamSize}` },
+            op: '+ y ÷',
+            opOptions: [
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' },
+              { val: '+ y ×', sym: '+ y ×', desc: 'Sumar y luego multiplicar' },
+              { val: '− y ÷', sym: '− y ÷', desc: 'Restar y luego dividir' }
+            ],
+            steps: [
+              { label: 'Paso 1: ¿Cuántos alumnos hay en total?', expr: `${g3} + ${g4} =`, ans: total },
+              { label: `Paso 2: ¿Cuántos grupos de ${teamSize} salen?`, expr: `${total} ÷ ${teamSize} =`, ans: teams }
+            ],
+            answer: teams,
+            starter: 'SOLUCIÓN: Podemos formar ___',
+            unitCorrect: `${teams} grupos`,
+            unitOptions: [`${teams} grupos`, `${teams} alumnos`, `${teams} estaciones`],
+            hint1: `Primero junta los alumnos de 3.º y 4.º; luego divide ese total en grupos de ${teamSize}.`,
+            hint2: `Paso 1: ${g3} + ${g4} = ${total}. Paso 2: ${total} ÷ ${teamSize} = ${teams} grupos.`
+          };
+        },
+        () => {
+          const base = randInt(18, 65);
+          const factor = pickOne([2, 3]);
+          const word = factor === 2 ? 'el doble' : 'el triple';
+          const ans = base * factor;
+          const [n1, n2] = pickTwoNames();
+          return {
+            id: 'g4-doble-triple',
+            topic: factor === 2 ? 'El doble' : 'El triple',
+            lines: [`${n1} ha leído <strong>${base} páginas</strong> esta semana.`, `${n2} ha leído <strong>${word}</strong> de páginas que ${n1}.`],
+            question: `¿Cuántas páginas ha leído ${n2}?`,
+            chips: [
+              { text: `${base} páginas (${n1})`, useful: true },
+              { text: `${word[0].toUpperCase() + word.slice(1)} (× ${factor})`, useful: true },
+              { text: 'Esta semana', useful: false }
+            ],
+            scheme: { type: 'mul', groups: factor, each: `${base} págs.`, total: `¿${n2}?` },
+            op: '×',
+            opOptions: [
+              { val: '×', sym: '×', desc: `Multiplicar por ${factor}` },
+              { val: '÷', sym: '÷', desc: `Dividir entre ${factor}` },
+              { val: '+', sym: '+', desc: `Sumar ${factor}` }
+            ],
+            steps: [{ label: `${word[0].toUpperCase() + word.slice(1)} es multiplicar por ${factor}`, expr: `${base} × ${factor} =`, ans }],
+            answer: ans,
+            starter: `SOLUCIÓN: ${n2} ha leído ___`,
+            unitCorrect: `${ans} páginas`,
+            unitOptions: [`${ans} páginas`, `${ans} semanas`, `${ans} libros`],
+            hint1: `«${word[0].toUpperCase() + word.slice(1)}» significa ${factor} veces la misma cantidad: multiplicamos por ${factor}.`,
+            hint2: `${Math.floor(base / 10) * 10} × ${factor} = ${Math.floor(base / 10) * 10 * factor} y ${base % 10} × ${factor} = ${(base % 10) * factor} → ${ans}.`
+          };
+        },
+        () => {
+          const half = randInt(24, 92);
+          const total = half * 2;
+          return {
+            id: 'g4-mitad',
+            topic: 'La mitad (división entre 2)',
+            lines: [`En la plaza del Pilar había <strong>${total} sillas</strong> preparadas para el concierto.`, `Al terminar, ya se han recogido <strong>la mitad</strong> de las sillas.`],
+            question: '¿Cuántas sillas se han recogido?',
+            chips: [
+              { text: `${total} sillas en total`, useful: true },
+              { text: 'La mitad (÷ 2)', useful: true },
+              { text: 'Plaza del Pilar', useful: false }
+            ],
+            scheme: { type: 'div', total: `${total} sillas`, groups: 2, each: '¿Mitad?' },
+            op: '÷',
+            opOptions: [
+              { val: '÷', sym: '÷', desc: 'Dividir entre 2' },
+              { val: '×', sym: '×', desc: 'Multiplicar por 2' },
+              { val: '−', sym: '−', desc: 'Restar 2' }
+            ],
+            steps: [{ label: 'La mitad se calcula dividiendo entre 2', expr: `${total} ÷ 2 =`, ans: half }],
+            answer: half,
+            starter: 'SOLUCIÓN: Se han recogido ___',
+            unitCorrect: `${half} sillas`,
+            unitOptions: [`${half} sillas`, `${half} conciertos`, `${half} plazas`],
+            hint1: 'Calcular la mitad es repartir en 2 partes iguales: dividimos entre 2.',
+            hint2: `Divide ${total} ÷ 2 = ${half}. Comprueba: ${half} × 2 = ${total}.`
+          };
+        },
+        () => {
+          const boxes = randInt(4, 8);
+          const kgPer = randInt(12, 22);
+          const total = boxes * kgPer;
+          const sold = randInt(Math.floor(total * 0.25), Math.floor(total * 0.65));
+          const left = total - sold;
+          const fruit = pickOne(['cerezas', 'manzanas', 'melocotones', 'peras']);
+          return {
+            id: 'g4-2pasos-frutero',
+            topic: 'Problema de 2 pasos (cajas y venta)',
+            lines: [`Un frutero recibe <strong>${boxes} cajas</strong> con <strong>${kgPer} kilos</strong> de ${fruit} en cada caja.`, `Durante la mañana vende <strong>${sold} kilos</strong>.`],
+            question: `¿Cuántos kilos de ${fruit} le quedan para la tarde?`,
+            chips: [
+              { text: `${boxes} cajas`, useful: true },
+              { text: `${kgPer} kilos por caja`, useful: true },
+              { text: `Vende ${sold} kilos`, useful: true }
+            ],
+            scheme: { type: 'two', stepA: `1.º Total ${fruit}: ${boxes} × ${kgPer}`, stepB: `2.º Quedan: total − ${sold}` },
+            op: '× y −',
+            opOptions: [
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+              { val: '÷ y −', sym: '÷ y −', desc: 'Dividir y luego restar' }
+            ],
+            steps: [
+              { label: 'Paso 1: ¿Cuántos kilos recibe en total?', expr: `${boxes} × ${kgPer} =`, ans: total },
+              { label: 'Paso 2: ¿Cuántos kilos le quedan?', expr: `${total} − ${sold} =`, ans: left }
+            ],
+            answer: left,
+            starter: 'SOLUCIÓN: Para la tarde le quedan ___',
+            unitCorrect: `${left} kilos de ${fruit}`,
+            unitOptions: [`${left} kilos de ${fruit}`, `${left} cajas`, `${left} euros`],
+            hint1: `Primero calcula todos los kilos recibidos (${boxes} × ${kgPer}) y luego resta los ${sold} vendidos.`,
+            hint2: `Paso 1: ${boxes} × ${kgPer} = ${total} kg. Paso 2: ${total} − ${sold} = ${left} kg.`
+          };
+        },
+        () => {
+          const [total, d, q] = pickExactDiv(4, 9, 9, 24);
+          return {
+            id: 'g4-sobres-cromos',
+            topic: 'División (agrupamiento)',
+            lines: [`Tenemos <strong>${total} cromos</strong> de fauna aragonesa para guardar en sobres.`, `En cada sobre caben exactamente <strong>${d} cromos</strong>.`],
+            question: '¿Cuántos sobres completos podemos llenar?',
+            chips: [
+              { text: `${total} cromos`, useful: true },
+              { text: `${d} cromos por sobre`, useful: true },
+              { text: 'Fauna aragonesa', useful: false }
+            ],
+            scheme: { type: 'div', total: `${total} cromos`, groups: d, each: '¿Sobres?' },
+            op: '÷',
+            opOptions: [{ val: '÷', sym: '÷', desc: 'Dividir' }, { val: '×', sym: '×', desc: 'Multiplicar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Agrupamos ${total} cromos de ${d} en ${d}`, expr: `${total} ÷ ${d} =`, ans: q }],
+            answer: q,
+            starter: 'SOLUCIÓN: Podemos llenar ___',
+            unitCorrect: `${q} sobres`,
+            unitOptions: [`${q} sobres`, `${q} cromos`, `${q} animales`],
+            hint1: `Queremos saber cuántos grupos de ${d} caben en ${total}. Dividimos ${total} ÷ ${d}.`,
+            hint2: `${d} × ${q} = ${total}, así que salen ${q} sobres exactos.`
+          };
+        },
+        () => {
+          const a = randInt(16, 45);
+          const dob = a * 2;
+          const total = a + dob;
+          const who = pickOne(NAMES);
+          const item = pickOne(['bellotas', 'castañas', 'piñas', 'hojas']);
+          return {
+            id: 'g4-2pasos-doble-suma',
+            topic: 'Problema de 2 pasos (doble y suma)',
+            lines: [`${who} recoge <strong>${a} ${item}</strong> en el paseo por el monte.`, `Su hermana recoge <strong>el doble</strong> que ${who}.`],
+            question: `¿Cuántas ${item} han recogido entre los dos?`,
+            chips: [
+              { text: `${a} ${item} (${who})`, useful: true },
+              { text: 'Su hermana: el doble (× 2)', useful: true },
+              { text: 'Paseo por el monte', useful: false }
+            ],
+            scheme: { type: 'two', stepA: `1.º Hermana: ${a} × 2`, stepB: `2.º Entre los dos: ${a} + hermana` },
+            op: '× y +',
+            opOptions: [
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' }
+            ],
+            steps: [
+              { label: `Paso 1: ¿Cuántas ${item} recoge su hermana?`, expr: `${a} × 2 =`, ans: dob },
+              { label: 'Paso 2: ¿Cuántas tienen entre los dos?', expr: `${a} + ${dob} =`, ans: total }
+            ],
+            answer: total,
+            starter: 'SOLUCIÓN: Entre los dos han recogido ___',
+            unitCorrect: `${total} ${item}`,
+            unitOptions: [`${total} ${item}`, `${total} árboles`, `${total} pasos`],
+            hint1: `¡Ojo! Pregunta por las de los dos juntos: primero halla las de la hermana (${a} × 2) y luego súmalas a las de ${who}.`,
+            hint2: `Paso 1: ${a} × 2 = ${dob}. Paso 2: ${a} + ${dob} = ${total}.`
+          };
+        },
+        () => {
+          const [total, d, q] = pickExactDiv(3, 8, 12, 34);
+          return {
+            id: 'g4-balones',
+            topic: 'División exacta',
+            lines: [`Un colegio compra <strong>${total} balones</strong> nuevos para repartir en partes iguales entre <strong>${d} pistas</strong> deportivas.`],
+            question: '¿Cuántos balones corresponden a cada pista?',
+            chips: [
+              { text: `${total} balones`, useful: true },
+              { text: `${d} pistas iguales`, useful: true },
+              { text: 'Balones nuevos', useful: false }
+            ],
+            scheme: { type: 'div', total: `${total} balones`, groups: d, each: '¿Cada pista?' },
+            op: '÷',
+            opOptions: [{ val: '÷', sym: '÷', desc: 'Dividir' }, { val: '×', sym: '×', desc: 'Multiplicar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Repartimos ${total} balones entre ${d} pistas`, expr: `${total} ÷ ${d} =`, ans: q }],
+            answer: q,
+            starter: 'SOLUCIÓN: A cada pista le corresponden ___',
+            unitCorrect: `${q} balones`,
+            unitOptions: [`${q} balones`, `${q} pistas`, `${q} colegios`],
+            hint1: `Repartimos ${total} en ${d} partes iguales: dividimos ${total} ÷ ${d}.`,
+            hint2: `${total} ÷ ${d} = ${q}. Comprueba: ${d} × ${q} = ${total}.`
+          };
+        },
+        () => {
+          const n = randInt(3, 7);
+          const price = randInt(4, 9);
+          const sub = n * price;
+          const extra = randInt(11, 28);
+          const total = sub + extra;
+          return {
+            id: 'g4-2pasos-papeleria',
+            topic: 'Problema de 2 pasos (compras)',
+            lines: [`En la papelería compramos <strong>${n} cajas de ceras</strong> a <strong>${price} euros</strong> cada una y un diccionario de <strong>${extra} euros</strong>.`],
+            question: '¿Cuánto pagamos en total por toda la compra?',
+            chips: [
+              { text: `${n} cajas de ceras`, useful: true },
+              { text: `${price} euros cada caja`, useful: true },
+              { text: `Diccionario de ${extra} euros`, useful: true }
+            ],
+            scheme: { type: 'two', stepA: `1.º Ceras: ${n} × ${price} €`, stepB: `2.º Total: ceras + ${extra} €` },
+            op: '× y +',
+            opOptions: [
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' }
+            ],
+            steps: [
+              { label: `Paso 1: ¿Cuánto cuestan las ${n} cajas de ceras?`, expr: `${n} × ${price} =`, ans: sub },
+              { label: 'Paso 2: Añadimos el precio del diccionario', expr: `${sub} + ${extra} =`, ans: total }
+            ],
+            answer: total,
+            starter: 'SOLUCIÓN: Por toda la compra pagamos ___',
+            unitCorrect: `${total} euros`,
+            unitOptions: [`${total} euros`, `${total} cajas`, `${total} diccionarios`],
+            hint1: `Primero calcula lo que valen las ${n} cajas (${n} × ${price}) y luego suma los ${extra} euros del diccionario.`,
+            hint2: `Paso 1: ${n} × ${price} = ${sub} €. Paso 2: ${sub} + ${extra} = ${total} €.`
+          };
+        },
+        () => {
+          const rows = randInt(12, 38);
+          const factor = pickOne([10, 20]);
+          const ans = rows * factor;
+          const city = pickOne(['Calatayud', 'Zaragoza', 'Huesca', 'Teruel']);
+          return {
+            id: 'g4-cine-decenas',
+            topic: 'Multiplicación por decenas',
+            lines: [`En la sala de cine de ${city} hay <strong>${rows} filas</strong> con <strong>${factor} butacas</strong> en cada fila.`],
+            question: '¿Cuántas butacas tiene la sala de cine?',
+            chips: [
+              { text: `${rows} filas`, useful: true },
+              { text: `${factor} butacas por fila`, useful: true },
+              { text: `Cine de ${city}`, useful: false }
+            ],
+            scheme: { type: 'mul', groups: rows, each: `${factor} butacas`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '×', sym: '×', desc: 'Multiplicar' }, { val: '+', sym: '+', desc: 'Sumar' }, { val: '÷', sym: '÷', desc: 'Dividir' }],
+            steps: [{ label: 'Multiplicamos filas por butacas', expr: `${rows} × ${factor} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: La sala de cine tiene ___',
+            unitCorrect: `${ans} butacas`,
+            unitOptions: [`${ans} butacas`, `${ans} filas`, `${ans} entradas`],
+            hint1: `Cada una de las ${rows} filas tiene ${factor} butacas: multiplicamos ${rows} × ${factor}.`,
+            hint2: factor === 10
+              ? `Para multiplicar por 10, añadimos un cero al final: ${rows} × 10 = ${ans}.`
+              : `Multiplica primero ${rows} × 2 = ${rows * 2} y añade un cero al final → ${ans}.`
+          };
+        },
+        () => {
+          const boxes = randInt(3, 6);
+          const perBox = randInt(8, 18);
+          const good = boxes * perBox;
+          const broken = randInt(7, 19);
+          const total = good + broken;
+          return {
+            id: 'g4-2pasos-restar-repartir',
+            topic: 'Problema de 2 pasos (quitar y repartir)',
+            lines: [`En la huerta recogemos <strong>${total} tomates</strong>, pero <strong>${broken} tomates</strong> están estropeados.`, `El resto lo repartimos en partes iguales en <strong>${boxes} cajas</strong>.`],
+            question: '¿Cuántos tomates buenos ponemos en cada caja?',
+            chips: [
+              { text: `${total} tomates recogidos`, useful: true },
+              { text: `${broken} estropeados`, useful: true },
+              { text: `${boxes} cajas iguales`, useful: true }
+            ],
+            scheme: { type: 'two', stepA: `1.º Tomates buenos: ${total} − ${broken}`, stepB: `2.º Reparto: buenos ÷ ${boxes}` },
+            op: '− y ÷',
+            opOptions: [
+              { val: '− y ÷', sym: '− y ÷', desc: 'Restar y luego dividir' },
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' },
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' }
+            ],
+            steps: [
+              { label: 'Paso 1: ¿Cuántos tomates buenos quedan?', expr: `${total} − ${broken} =`, ans: good },
+              { label: `Paso 2: Repartimos entre ${boxes} cajas`, expr: `${good} ÷ ${boxes} =`, ans: perBox }
+            ],
+            answer: perBox,
+            starter: 'SOLUCIÓN: Ponemos en cada caja ___',
+            unitCorrect: `${perBox} tomates`,
+            unitOptions: [`${perBox} tomates`, `${perBox} cajas`, `${perBox} huertas`],
+            hint1: `Primero quita los ${broken} tomates estropeados; después reparte los buenos entre las ${boxes} cajas.`,
+            hint2: `Paso 1: ${total} − ${broken} = ${good}. Paso 2: ${good} ÷ ${boxes} = ${perBox}.`
+          };
+        },
+        () => {
+          const third = randInt(14, 48);
+          const total = third * 3;
+          const who = pickOne(NAMES);
+          return {
+            id: 'g4-tercera-parte',
+            topic: 'La tercera parte (división entre 3)',
+            lines: [`El depósito del huerto escolar tiene <strong>${total} litros</strong> de agua.`, `${who} utiliza <strong>la tercera parte</strong> del agua para regar los árboles.`],
+            question: '¿Cuántos litros de agua ha utilizado?',
+            chips: [
+              { text: `${total} litros en total`, useful: true },
+              { text: 'La tercera parte (÷ 3)', useful: true },
+              { text: 'Huerto escolar', useful: false }
+            ],
+            scheme: { type: 'div', total: `${total} litros`, groups: 3, each: '¿Tercera parte?' },
+            op: '÷',
+            opOptions: [
+              { val: '÷', sym: '÷', desc: 'Dividir entre 3' },
+              { val: '×', sym: '×', desc: 'Multiplicar por 3' },
+              { val: '−', sym: '−', desc: 'Restar 3' }
+            ],
+            steps: [{ label: 'La tercera parte es dividir entre 3', expr: `${total} ÷ 3 =`, ans: third }],
+            answer: third,
+            starter: 'SOLUCIÓN: Ha utilizado ___',
+            unitCorrect: `${third} litros`,
+            unitOptions: [`${third} litros`, `${third} árboles`, `${third} depósitos`],
+            hint1: 'Calcular la tercera parte significa dividir en 3 partes iguales (÷ 3).',
+            hint2: `Divide ${total} ÷ 3 = ${third}. Comprueba: ${third} × 3 = ${total}.`
+          };
+        },
+        () => {
+          const n = randInt(3, 6);
+          const price = randInt(6, 12);
+          const sub = n * price;
+          const guide = randInt(11, 24);
+          const total = sub + guide;
+          const shelves = randInt(4, 8);
+          const hour = randInt(10, 12);
+          const who = pickOne(NAMES);
+          return {
+            id: 'g4-reto-feria-sobrantes',
+            hard: true,
+            topic: 'Reto · Datos sobrantes (2 pasos)',
+            lines: [
+              `En la feria del libro de Zaragoza cada caseta tiene ${shelves} estanterías y abre a las ${hour}.`,
+              `${who} compra <strong>${n} novelas</strong> a <strong>${price} euros</strong> cada una y una guía de <strong>${guide} euros</strong>.`
+            ],
+            question: `¿Cuánto pagó ${who} en total por toda la compra?`,
+            chips: [
+              { text: `${n} novelas`, useful: true },
+              { text: `${price} euros cada novela`, useful: true },
+              { text: `Guía de ${guide} euros`, useful: true },
+              { text: `${shelves} estanterías`, useful: false },
+              { text: `Abre a las ${hour}`, useful: false }
+            ],
+            scheme: { type: 'two', stepA: `1.º Novelas: ${n} × ${price} €`, stepB: `2.º Total: novelas + ${guide} €` },
+            op: '× y +',
+            opOptions: [
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' }
+            ],
+            steps: [
+              { label: `Paso 1: ¿Cuánto cuestan las ${n} novelas?`, expr: `${n} × ${price} =`, ans: sub },
+              { label: 'Paso 2: Sumamos la guía', expr: `${sub} + ${guide} =`, ans: total }
+            ],
+            answer: total,
+            starter: `SOLUCIÓN: ${who} pagó en total ___`,
+            unitCorrect: `${total} euros`,
+            unitOptions: [`${total} euros`, `${total} estanterías`, `${total} novelas`],
+            hint1: `Las ${shelves} estanterías y la hora (${hour}) son datos inútiles. Solo usa precios y cantidades compradas.`,
+            hint2: `Paso 1: ${n} × ${price} = ${sub} €. Paso 2: ${sub} + ${guide} = ${total} €.`
+          };
+        },
+        () => {
+          const bagKg = randInt(4, 8);
+          const bags = randInt(6, 15);
+          const total = bagKg * bags;
+          const apples = randInt(Math.floor(total * 0.35), Math.floor(total * 0.65));
+          const pears = total - apples;
+          const trucks = randInt(2, 4);
+          const hours = randInt(6, 8);
+          return {
+            id: 'g4-reto-cooperativa-sobrantes',
+            hard: true,
+            topic: 'Reto · Datos sobrantes (2 pasos)',
+            lines: [
+              `En una cooperativa trabajan ${hours} horas y usan ${trucks} camiones para traer <strong>${apples} kilos</strong> de manzanas y <strong>${pears} kilos</strong> de peras.`,
+              `Envasan toda la fruta junta en bolsas iguales de <strong>${bagKg} kilos</strong>.`
+            ],
+            question: `¿Cuántas bolsas de ${bagKg} kilos llenan en total?`,
+            chips: [
+              { text: `${apples} kg de manzanas`, useful: true },
+              { text: `${pears} kg de peras`, useful: true },
+              { text: `Bolsas de ${bagKg} kilos`, useful: true },
+              { text: `${trucks} camiones`, useful: false },
+              { text: `${hours} horas de trabajo`, useful: false }
+            ],
+            scheme: { type: 'two', stepA: `1.º Fruta total: ${apples} + ${pears}`, stepB: `2.º Bolsas: total ÷ ${bagKg}` },
+            op: '+ y ÷',
+            opOptions: [
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' },
+              { val: '+ y ×', sym: '+ y ×', desc: 'Sumar y luego multiplicar' },
+              { val: '− y ÷', sym: '− y ÷', desc: 'Restar y luego dividir' }
+            ],
+            steps: [
+              { label: 'Paso 1: ¿Cuántos kilos de fruta hay en total?', expr: `${apples} + ${pears} =`, ans: total },
+              { label: `Paso 2: Repartimos en bolsas de ${bagKg} kg`, expr: `${total} ÷ ${bagKg} =`, ans: bags }
+            ],
+            answer: bags,
+            starter: 'SOLUCIÓN: Llenan en total ___',
+            unitCorrect: `${bags} bolsas`,
+            unitOptions: [`${bags} bolsas`, `${bags} camiones`, `${bags} horas`],
+            hint1: `Ni los ${trucks} camiones ni las ${hours} horas intervienen en el cálculo de las bolsas.`,
+            hint2: `Paso 1: ${apples} + ${pears} = ${total} kg. Paso 2: ${total} ÷ ${bagKg} = ${bags} bolsas.`
+          };
+        },
+        () => {
+          const n = randInt(3, 6);
+          const price = randInt(5, 9);
+          const cost = n * price;
+          const bill = pickBillFor(cost);
+          const change = bill - cost;
+          const age = randInt(9, 11);
+          const mins = pickOne([85, 95, 105, 110]);
+          const who = pickOne(NAMES);
+          return {
+            id: 'g4-reto-cine-sobrantes',
+            hard: true,
+            topic: 'Reto · Datos sobrantes (2 pasos)',
+            lines: [
+              `${who} tiene ${age} años y va al cine a ver una película que dura ${mins} minutos.`,
+              `Compra <strong>${n} entradas</strong> a <strong>${price} euros</strong> cada una y paga con un billete de <strong>${bill} euros</strong>.`
+            ],
+            question: '¿Cuántos euros le devuelven de cambio?',
+            chips: [
+              { text: `${n} entradas`, useful: true },
+              { text: `${price} euros cada entrada`, useful: true },
+              { text: `Billete de ${bill} euros`, useful: true },
+              { text: `${who} tiene ${age} años`, useful: false },
+              { text: `Dura ${mins} minutos`, useful: false }
+            ],
+            scheme: { type: 'two', stepA: `1.º Entradas: ${n} × ${price} €`, stepB: `2.º Cambio: ${bill} € − coste` },
+            op: '× y −',
+            opOptions: [
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+              { val: '+ y −', sym: '+ y −', desc: 'Sumar y luego restar' }
+            ],
+            steps: [
+              { label: `Paso 1: ¿Cuánto cuestan las ${n} entradas?`, expr: `${n} × ${price} =`, ans: cost },
+              { label: `Paso 2: ¿Cuánto le devuelven de ${bill} €?`, expr: `${bill} − ${cost} =`, ans: change }
+            ],
+            answer: change,
+            starter: 'SOLUCIÓN: Le devuelven de cambio ___',
+            unitCorrect: `${change} euros`,
+            unitOptions: [`${change} euros`, `${change} minutos`, `${change} años`],
+            hint1: `La edad (${age} años) y la duración (${mins} minutos) no aportan nada para calcular el cambio.`,
+            hint2: `Paso 1: ${n} × ${price} = ${cost} €. Paso 2: ${bill} − ${cost} = ${change} €.`
+          };
+        }
+      ]
+    };
+
+    function mutateNumberChip(text, forbiddenNums) {
+      const m = text.match(/(\d+)/);
+      if (!m) return null;
+      const orig = Number(m[1]);
+      const deltas = orig >= 100
+        ? [10, -10, 20, -20, 5, -5, 12]
+        : (orig >= 20 ? [5, -5, 10, -10, 3, -3, 4] : [2, 3, -2, 4, 5, 1]);
+      for (const d of shuffle(deltas)) {
+        const fake = orig + d;
+        if (fake >= 2 && fake !== orig && !forbiddenNums.has(fake)) {
+          forbiddenNums.add(fake);
+          return text.replace(m[1], String(fake));
+        }
+      }
+      return null;
+    }
+
+    function enrichChips(problem, lvl) {
+      const plain = problem.lines.map(l => l.replace(/<[^>]+>/g, '')).join(' ') + ' ' + problem.question;
+      const forbidden = new Set((plain.match(/\d+/g) || []).map(Number));
+      const chips = problem.chips.map(c => ({ ...c }));
+      const usefulChips = chips.filter(c => c.useful);
+      const existingFalse = chips.filter(c => !c.useful).length;
+
+      // Always add at least 1 plausible false numerical option (altered number not in text)
+      const targetFakeCount = lvl === 'inicial' ? 1 : (existingFalse >= 2 ? 1 : 2);
+      let added = 0;
+      for (const uc of shuffle(usefulChips)) {
+        if (added >= targetFakeCount) break;
+        const fakeText = mutateNumberChip(uc.text, forbidden);
+        if (fakeText && !chips.some(c => c.text === fakeText)) {
+          chips.push({ text: fakeText, useful: false, invented: true });
+          added++;
+        }
+      }
+
+      problem.chips = shuffle(chips);
+      return problem;
+    }
+
+    function generateDeck(lvl) {
+      return shuffle(PROBLEM_GENERATORS[lvl]).map(fn => enrichChips(fn(), lvl));
+    }
+
+    const LEVEL_LABELS = {
+      inicial: 'Nivel inicial',
+      '3': '3.º Primaria',
+      '4': '4.º Primaria'
+    };
+
+    const $ = id => document.getElementById(id);
+    const Aula = window.Aula || {
+      begin() {}, activate() {}, attempt() {}, hint() {}, reveal() {}
+    };
+
+    let currentLevel = null;
+    let guidedMode = true;
+    let deck = [];
+    let index = 0;
+    let totalShown = 0;
+    let solvedCount = 0;
+    let currentStep = 1; // 1..4 in guided mode
+    let selectedChips = new Set();
+    let selectedOp = null;
+    let stepInputs = [];
+    let activeInputIdx = 0;
+    let hintLevel = 0;
+    let problemSolved = false;
+    let showDirectScheme = false;
+
+    function aulaMode() {
+      return guidedMode ? 'Paso a paso' : 'Directo';
+    }
+
+    function shuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function plainTextProblem(p) {
+      const stripped = p.lines.map(l => l.replace(/<[^>]+>/g, '')).join(' ');
+      return `${stripped} ${p.question}`;
+    }
+
+    function setFeedback(text, kind = '') {
+      const el = $('feedbackBox');
+      el.textContent = text;
+      el.className = kind ? `feedback ${kind}` : 'feedback';
+    }
+
+    function setHint(text) {
+      $('hintBox').textContent = text;
+    }
+
+    function speakText(text) {
+      try {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'es-ES';
+        u.rate = 0.94;
+        window.speechSynthesis.speak(u);
+      } catch {}
+    }
+
+    function selectLevel(lvl) {
+      currentLevel = lvl;
+      document.body.dataset.level = lvl;
+      document.querySelectorAll('.level-btn').forEach(b => {
+        b.setAttribute('aria-pressed', String(b.dataset.pick === lvl));
+      });
+      $('welcomeView').hidden = true;
+      $('workView').hidden = false;
+      deck = generateDeck(lvl);
+      index = 0;
+      totalShown = 1;
+      solvedCount = 0;
+      Aula.activate(aulaMode());
+      loadProblem();
+    }
+
+    function currentProblem() {
+      return deck[index % deck.length];
+    }
+
+    function loadProblem() {
+      const p = currentProblem();
+      currentStep = 1;
+      selectedChips = new Set();
+      selectedOp = null;
+      stepInputs = p.steps.map(() => '');
+      activeInputIdx = 0;
+      hintLevel = 0;
+      problemSolved = false;
+      showDirectScheme = false;
+
+      $('problemTag').textContent = `${p.hard ? '★ ' : ''}${LEVEL_LABELS[currentLevel]} · ${p.topic}`;
+      $('problemLines').innerHTML = p.lines.map(l => `<p>${l}</p>`).join('');
+      $('problemQuestion').textContent = p.question;
+      $('progressText').textContent = `Problema #${totalShown}`;
+      $('solvedText').textContent = `${solvedCount} ${solvedCount === 1 ? 'resuelto' : 'resueltos'}`;
+      $('stepper').hidden = !guidedMode;
+
+      setFeedback('');
+      setHint('');
+
+      Aula.begin(aulaMode(), `${p.topic}: ${plainTextProblem(p)}`, LEVEL_LABELS[currentLevel]);
+
+      renderStep();
+    }
+
+    function updateStepper() {
+      document.querySelectorAll('.step-tab').forEach(tab => {
+        const s = Number(tab.dataset.step);
+        tab.classList.remove('active', 'done');
+        if (problemSolved || s < currentStep) tab.classList.add('done');
+        else if (s === currentStep) tab.classList.add('active');
+      });
+    }
+
+    function renderSchemeHtml(scheme) {
+      if (scheme.type === 'add') {
+        return `
+          <div class="scheme-box">
+            <div class="scheme-caption">Esquema visual · Juntar partes</div>
+            <div class="bar-model">
+              <div class="bar-total unknown">${escapeHtml(scheme.total)}</div>
+              <div class="bar-parts">
+                ${scheme.parts.map(pt => `<div class="bar-part">${escapeHtml(pt)}</div>`).join('')}
+              </div>
+            </div>
+          </div>`;
+      }
+      if (scheme.type === 'sub') {
+        return `
+          <div class="scheme-box">
+            <div class="scheme-caption">Esquema visual · Total y partes</div>
+            <div class="bar-model">
+              <div class="bar-total">${escapeHtml(scheme.total)}</div>
+              <div class="bar-parts">
+                <div class="bar-part removed">${escapeHtml(scheme.taken)}</div>
+                <div class="bar-part unknown">${escapeHtml(scheme.left)}</div>
+              </div>
+            </div>
+          </div>`;
+      }
+      if (scheme.type === 'mul') {
+        const visualCount = Math.min(scheme.groups, 6);
+        const extra = scheme.groups > 6 ? `<div class="bar-part">… (${scheme.groups} grupos)</div>` : '';
+        return `
+          <div class="scheme-box">
+            <div class="scheme-caption">Esquema visual · ${scheme.groups} grupos iguales</div>
+            <div class="bar-model">
+              <div class="bar-total unknown">${escapeHtml(scheme.total)}</div>
+              <div class="bar-parts">
+                ${Array.from({ length: visualCount }, () => `<div class="bar-part">${escapeHtml(scheme.each)}</div>`).join('')}
+                ${extra}
+              </div>
+            </div>
+          </div>`;
+      }
+      if (scheme.type === 'div') {
+        const visualCount = Math.min(scheme.groups, 6);
+        const extra = scheme.groups > 6 ? `<div class="bar-part unknown">… (${scheme.groups} partes)</div>` : '';
+        return `
+          <div class="scheme-box">
+            <div class="scheme-caption">Esquema visual · Repartir en ${scheme.groups} partes iguales</div>
+            <div class="bar-model">
+              <div class="bar-total">${escapeHtml(scheme.total)}</div>
+              <div class="bar-parts">
+                ${Array.from({ length: visualCount }, () => `<div class="bar-part unknown">${escapeHtml(scheme.each)}</div>`).join('')}
+                ${extra}
+              </div>
+            </div>
+          </div>`;
+      }
+      return `
+        <div class="scheme-box">
+          <div class="scheme-caption">Esquema visual · Problema de 2 pasos</div>
+          <div class="bar-model">
+            <div class="bar-part">${escapeHtml(scheme.stepA)}</div>
+            <div class="bar-part unknown">${escapeHtml(scheme.stepB)}</div>
+          </div>
+        </div>`;
+    }
+
+    function renderKeypadHtml() {
+      const keys = ['7','8','9','4','5','6','1','2','3','C','0','⌫'];
+      return `
+        <div class="keypad" aria-label="Teclado numérico">
+          ${keys.map(k => `<button type="button" class="kp-btn ${k === 'C' || k === '⌫' ? 'util' : ''}" data-kp="${k}">${k}</button>`).join('')}
+        </div>`;
+    }
+
+    function wireKeypad(container) {
+      container.querySelectorAll('[data-kp]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const k = btn.dataset.kp;
+          const inputs = [...container.querySelectorAll('.num-input')];
+          const inp = inputs[activeInputIdx] || inputs[0];
+          if (!inp || inp.readOnly) return;
+          if (k === 'C') inp.value = '';
+          else if (k === '⌫') inp.value = inp.value.slice(0, -1);
+          else if (inp.value.length < 5) inp.value += k;
+          stepInputs[activeInputIdx] = inp.value;
+          inp.focus();
+        });
+      });
+    }
+
+    function renderStep() {
+      const p = currentProblem();
+      const box = $('stepArea');
+      if (!guidedMode) {
+        renderDirectMode(p, box);
+        return;
+      }
+      updateStepper();
+
+      if (currentStep === 1) {
+        box.innerHTML = `
+          <h2 class="step-title">Paso 1 · Selecciona los datos clave</h2>
+          <p class="step-sub">Toca solo los datos verdaderos que necesitas para responder. ¡Cuidado: hay opciones falsas y datos que sobran!</p>
+          <div class="chip-grid" id="chipGrid">
+            ${p.chips.map((c, i) => `
+              <button type="button" class="data-chip" data-chip="${i}" aria-pressed="${selectedChips.has(i)}">${escapeHtml(c.text)}</button>
+            `).join('')}
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="checkStep1Btn">Comprobar datos</button>
+            <button type="button" class="btn" id="hintStepBtn">💡 Pista</button>
+          </div>
+        `;
+        box.querySelectorAll('[data-chip]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const i = Number(btn.dataset.chip);
+            if (selectedChips.has(i)) selectedChips.delete(i);
+            else selectedChips.add(i);
+            btn.setAttribute('aria-pressed', String(selectedChips.has(i)));
+            btn.classList.remove('is-wrong', 'is-right');
+          });
+        });
+        $('checkStep1Btn').addEventListener('click', () => {
+          const expected = p.chips.map((c, i) => c.useful ? i : -1).filter(i => i >= 0);
+          const chosen = [...selectedChips].sort((a, b) => a - b);
+          const ok = expected.length === chosen.length && expected.every((v, idx) => v === chosen[idx]);
+          box.querySelectorAll('[data-chip]').forEach(btn => {
+            const i = Number(btn.dataset.chip);
+            const isSel = selectedChips.has(i);
+            btn.classList.remove('is-right', 'is-wrong');
+            if (isSel && p.chips[i].useful) btn.classList.add('is-right');
+            else if (isSel && !p.chips[i].useful) btn.classList.add('is-wrong');
+          });
+          if (ok) {
+            setFeedback('¡Genial! Has seleccionado exactamente los datos verdaderos y necesarios.', 'good');
+            setHint('');
+            currentStep = 2;
+            setTimeout(() => { setFeedback(''); renderStep(); }, 650);
+          } else {
+            const inventedPicked = chosen.filter(i => p.chips[i].invented).length;
+            const uselessPicked = chosen.filter(i => !p.chips[i].useful && !p.chips[i].invented).length;
+            const msg = inventedPicked > 0
+              ? '¡Ojo! Has marcado alguna opción falsa cuyo número no aparece en el problema. Vuelve a leer el enunciado.'
+              : uselessPicked > 0
+                ? 'Has marcado algún dato del enunciado que no aporta nada para responder a la pregunta.'
+                : `Te falta marcar algún dato importante (en este problema hay ${expected.length} datos clave).`;
+            setFeedback(msg, 'try');
+          }
+        });
+        $('hintStepBtn').addEventListener('click', () => {
+          const useful = p.chips.filter(c => c.useful).map(c => c.text).join(' · ');
+          Aula.hint(aulaMode());
+          setHint(`Fíjate en los números que responden a la pregunta: ${useful}.`);
+        });
+        return;
+      }
+
+      if (currentStep === 2) {
+        box.innerHTML = `
+          <h2 class="step-title">Paso 2 · Observa el esquema y elige la operación</h2>
+          <p class="step-sub">Mira el dibujo del problema y decide qué operación te permite resolverlo.</p>
+          ${renderSchemeHtml(p.scheme)}
+          <div class="op-grid" id="opGrid">
+            ${p.opOptions.map(o => `
+              <button type="button" class="op-btn" data-op="${escapeHtml(o.val)}" aria-pressed="${selectedOp === o.val}">
+                <span class="op-symbol">${escapeHtml(o.sym)}</span>
+                <span class="op-desc">${escapeHtml(o.desc)}</span>
+              </button>
+            `).join('')}
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="checkStep2Btn">Comprobar operación</button>
+            <button type="button" class="btn" id="hintStepBtn">💡 Pista</button>
+          </div>
+        `;
+        box.querySelectorAll('[data-op]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectedOp = btn.dataset.op;
+            box.querySelectorAll('[data-op]').forEach(b => {
+              b.setAttribute('aria-pressed', String(b === btn));
+              b.classList.remove('is-wrong', 'is-right');
+            });
+          });
+        });
+        $('checkStep2Btn').addEventListener('click', () => {
+          if (!selectedOp) {
+            setFeedback('Elige primero una operación.', 'try');
+            return;
+          }
+          const ok = selectedOp === p.op;
+          box.querySelectorAll('[data-op]').forEach(b => {
+            if (b.dataset.op === selectedOp) b.classList.add(ok ? 'is-right' : 'is-wrong');
+          });
+          if (ok) {
+            setFeedback('¡Exacto! Esa es la operación que resuelve el problema.', 'good');
+            setHint('');
+            currentStep = 3;
+            setTimeout(() => { setFeedback(''); renderStep(); }, 650);
+          } else {
+            Aula.attempt(aulaMode(), false, `Operación: ${selectedOp}`);
+            setFeedback('Piensa si el resultado debe ser mayor o menor y observa las partes del esquema.', 'try');
+          }
+        });
+        $('hintStepBtn').addEventListener('click', () => {
+          Aula.hint(aulaMode());
+          setHint(p.hint1);
+        });
+        return;
+      }
+
+      if (currentStep === 3) {
+        box.innerHTML = `
+          <h2 class="step-title">Paso 3 · Calcula el resultado</h2>
+          <p class="step-sub">Escribe la respuesta usando el teclado o los botones numéricos.</p>
+          ${renderSchemeHtml(p.scheme)}
+          <div class="calc-layout">
+            <div class="calc-stack">
+              ${p.steps.map((st, idx) => `
+                <div class="eq-card">
+                  <div class="eq-label">${escapeHtml(st.label)}</div>
+                  <div class="eq-row">
+                    <span>${escapeHtml(st.expr)}</span>
+                    <input type="text" inputmode="numeric" class="num-input ${idx === activeInputIdx ? 'active' : ''}" data-step-input="${idx}" value="${escapeHtml(stepInputs[idx] || '')}" aria-label="${escapeHtml(st.label)}">
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            ${renderKeypadHtml()}
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="checkStep3Btn">Comprobar cálculo</button>
+            <button type="button" class="btn" id="hintStepBtn">💡 Pista</button>
+            <button type="button" class="btn" id="revealStepBtn">Ver solución</button>
+          </div>
+        `;
+        const inputs = [...box.querySelectorAll('.num-input')];
+        inputs.forEach((inp, idx) => {
+          inp.addEventListener('focus', () => {
+            activeInputIdx = idx;
+            inputs.forEach((el, j) => el.classList.toggle('active', j === idx));
+          });
+          inp.addEventListener('input', () => {
+            inp.value = inp.value.replace(/[^0-9]/g, '').slice(0, 5);
+            stepInputs[idx] = inp.value;
+            inp.classList.remove('is-wrong', 'is-right');
+          });
+          inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter') $('checkStep3Btn').click();
+          });
+        });
+        wireKeypad(box);
+        if (inputs[0]) inputs[0].focus();
+
+        $('checkStep3Btn').addEventListener('click', () => {
+          let allFilled = true;
+          let allOk = true;
+          inputs.forEach((inp, idx) => {
+            const val = inp.value.trim();
+            if (!val) allFilled = false;
+            const ok = Number(val) === p.steps[idx].ans;
+            inp.classList.remove('is-right', 'is-wrong');
+            if (val) inp.classList.add(ok ? 'is-right' : 'is-wrong');
+            if (!ok) allOk = false;
+          });
+          if (!allFilled) {
+            setFeedback('Completa el cálculo antes de comprobar.', 'try');
+            return;
+          }
+          const finalVal = inputs[inputs.length - 1].value.trim();
+          Aula.attempt(aulaMode(), allOk, finalVal);
+          if (allOk) {
+            setFeedback('¡Cálculo perfecto! Vamos al último paso para escribir la solución completa.', 'good');
+            setHint('');
+            currentStep = 4;
+            setTimeout(() => { setFeedback(''); renderStep(); }, 650);
+          } else {
+            setFeedback('Revisa la operación marcada en naranja. Puedes usar una pista si la necesitas.', 'try');
+          }
+        });
+
+        $('hintStepBtn').addEventListener('click', () => {
+          hintLevel++;
+          const txt = hintLevel === 1 ? p.hint1 : p.hint2;
+          Aula.hint(aulaMode());
+          setHint(txt);
+        });
+
+        $('revealStepBtn').addEventListener('click', () => {
+          inputs.forEach((inp, idx) => {
+            inp.value = String(p.steps[idx].ans);
+            stepInputs[idx] = inp.value;
+            inp.classList.remove('is-wrong');
+            inp.classList.add('is-right');
+          });
+          Aula.reveal(aulaMode());
+          setHint(`Solución paso a paso: ${p.steps.map(s => `${s.expr} ${s.ans}`).join(' · ')}`);
+          setFeedback('Solución mostrada. Pulsa «Comprobar cálculo» para pasar a la frase final o ve al siguiente problema.', 'try');
+        });
+        return;
+      }
+
+      // Step 4: Sentence starter & unit verification
+      const opts = shuffle(p.unitOptions);
+      box.innerHTML = `
+        <h2 class="step-title">Paso 4 · Completa la solución</h2>
+        <p class="step-sub">Elige la respuesta con las palabras correctas para contestar a la pregunta.</p>
+        <div class="starter-box" id="starterPreview">${escapeHtml(p.starter)}</div>
+        <div class="unit-grid">
+          ${opts.map(u => `<button type="button" class="data-chip" data-unit="${escapeHtml(u)}">${escapeHtml(u)}</button>`).join('')}
+        </div>
+        <div id="doneChecklist" class="checklist" hidden>
+          <strong>✓ Problema completado</strong>
+          □ He elegido los datos útiles · □ He usado el esquema y la operación · □ He comprobado el resultado con su unidad.
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="nextProblemBtn" hidden>Siguiente problema →</button>
+        </div>
+      `;
+      box.querySelectorAll('[data-unit]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (problemSolved) return;
+          const chosen = btn.dataset.unit;
+          const ok = chosen === p.unitCorrect;
+          btn.classList.add(ok ? 'is-right' : 'is-wrong');
+          if (ok) {
+            problemSolved = true;
+            solvedCount++;
+            $('solvedText').textContent = `${solvedCount} ${solvedCount === 1 ? 'resuelto' : 'resueltos'}`;
+            $('starterPreview').textContent = p.starter.replace('___', chosen) + '.';
+            $('doneChecklist').hidden = false;
+            $('nextProblemBtn').hidden = false;
+            updateStepper();
+            setFeedback('¡Enhorabuena! Has resuelto todo el problema paso a paso.', 'good');
+            box.querySelectorAll('[data-unit]').forEach(b => { b.disabled = true; });
+          } else {
+            setFeedback('Fíjate bien en qué pregunta el problema para elegir la unidad correcta.', 'try');
+          }
+        });
+      });
+      $('nextProblemBtn').addEventListener('click', goNextProblem);
+    }
+
+    function renderDirectMode(p, box) {
+      box.innerHTML = `
+        <h2 class="step-title">Resuelve directamente</h2>
+        <p class="step-sub">Elige la operación y escribe el resultado final.</p>
+        ${showDirectScheme ? renderSchemeHtml(p.scheme) : ''}
+        <div class="op-grid" style="margin-bottom:16px;">
+          ${p.opOptions.map(o => `
+            <button type="button" class="op-btn" data-op="${escapeHtml(o.val)}" aria-pressed="${selectedOp === o.val}">
+              <span class="op-symbol">${escapeHtml(o.sym)}</span>
+              <span class="op-desc">${escapeHtml(o.desc)}</span>
+            </button>
+          `).join('')}
+        </div>
+        <div class="calc-layout">
+          <div class="calc-stack">
+            <div class="eq-card">
+              <div class="eq-label">Resultado final (${escapeHtml(p.unitCorrect.replace(/^\d+\s*/, ''))})</div>
+              <div class="eq-row">
+                <input type="text" inputmode="numeric" class="num-input active" id="directInput" value="${escapeHtml(stepInputs[0] || '')}" aria-label="Resultado final">
+              </div>
+            </div>
+          </div>
+          ${renderKeypadHtml()}
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="checkDirectBtn">Comprobar</button>
+          <button type="button" class="btn" id="toggleSchemeBtn">${showDirectScheme ? 'Ocultar esquema' : 'Ver esquema visual'}</button>
+          <button type="button" class="btn" id="hintDirectBtn">💡 Pista</button>
+          <button type="button" class="btn" id="revealDirectBtn">Ver solución</button>
+          <button type="button" class="btn btn-primary" id="nextDirectBtn" ${problemSolved ? '' : 'hidden'}>Siguiente problema →</button>
+        </div>
+      `;
+      activeInputIdx = 0;
+      const inp = $('directInput');
+      inp.addEventListener('input', () => {
+        inp.value = inp.value.replace(/[^0-9]/g, '').slice(0, 5);
+        stepInputs[0] = inp.value;
+        inp.classList.remove('is-wrong', 'is-right');
+      });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') $('checkDirectBtn').click();
+      });
+      wireKeypad(box);
+      box.querySelectorAll('[data-op]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedOp = btn.dataset.op;
+          box.querySelectorAll('[data-op]').forEach(b => {
+            b.setAttribute('aria-pressed', String(b === btn));
+            b.classList.remove('is-wrong', 'is-right');
+          });
+        });
+      });
+      $('toggleSchemeBtn').addEventListener('click', () => {
+        showDirectScheme = !showDirectScheme;
+        renderStep();
+      });
+      $('hintDirectBtn').addEventListener('click', () => {
+        hintLevel++;
+        const txt = hintLevel === 1 ? p.hint1 : p.hint2;
+        Aula.hint(aulaMode());
+        setHint(txt);
+      });
+      $('revealDirectBtn').addEventListener('click', () => {
+        selectedOp = p.op;
+        inp.value = String(p.answer);
+        stepInputs[0] = inp.value;
+        Aula.reveal(aulaMode());
+        setHint(`Solución: ${p.steps.map(s => `${s.expr} ${s.ans}`).join(' · ')} (${p.unitCorrect}).`);
+        $('nextDirectBtn').hidden = false;
+      });
+      $('checkDirectBtn').addEventListener('click', () => {
+        const val = inp.value.trim();
+        if (!val) {
+          setFeedback('Escribe el resultado antes de comprobar.', 'try');
+          return;
+        }
+        const opOk = !selectedOp || selectedOp === p.op;
+        const numOk = Number(val) === p.answer;
+        const ok = opOk && numOk;
+        Aula.attempt(aulaMode(), ok, `${selectedOp || ''} = ${val}`.trim());
+        inp.classList.add(numOk ? 'is-right' : 'is-wrong');
+        if (ok) {
+          if (!problemSolved) {
+            problemSolved = true;
+            solvedCount++;
+            $('solvedText').textContent = `${solvedCount} ${solvedCount === 1 ? 'resuelto' : 'resueltos'}`;
+          }
+          setFeedback(`¡Correcto! ${p.starter.replace('___', p.unitCorrect)}.`, 'good');
+          $('nextDirectBtn').hidden = false;
+        } else if (!opOk) {
+          setFeedback('Revisa la operación elegida. Puedes pulsar «Ver esquema visual» para ayudarte.', 'try');
+        } else {
+          setFeedback('Ese resultado no coincide todavía. Repasa el cálculo o pide una pista.', 'try');
+        }
+      });
+      $('nextDirectBtn').addEventListener('click', goNextProblem);
+      inp.focus();
+    }
+
+    function goNextProblem() {
+      index++;
+      totalShown++;
+      if (index >= deck.length) {
+        deck = generateDeck(currentLevel);
+        index = 0;
+      }
+      loadProblem();
+    }
+
+    document.querySelectorAll('.pick-card').forEach(btn => {
+      btn.addEventListener('click', () => selectLevel(btn.dataset.level));
+    });
+    document.querySelectorAll('.level-btn').forEach(btn => {
+      btn.addEventListener('click', () => selectLevel(btn.dataset.pick));
+    });
+    $('modeGuidedBtn').addEventListener('click', () => {
+      if (guidedMode) return;
+      guidedMode = true;
+      $('modeGuidedBtn').setAttribute('aria-pressed', 'true');
+      $('modeDirectBtn').setAttribute('aria-pressed', 'false');
+      Aula.activate('Paso a paso');
+      loadProblem();
+    });
+    $('modeDirectBtn').addEventListener('click', () => {
+      if (!guidedMode) return;
+      guidedMode = false;
+      $('modeGuidedBtn').setAttribute('aria-pressed', 'false');
+      $('modeDirectBtn').setAttribute('aria-pressed', 'true');
+      Aula.activate('Directo');
+      loadProblem();
+    });
+    $('speakProblemBtn').addEventListener('click', () => {
+      if (!currentLevel) return;
+      speakText(plainTextProblem(currentProblem()));
+    });
+    $('newProblemBtn').addEventListener('click', () => {
+      if (!currentLevel) return;
+      goNextProblem();
+    });
+  })();
+  </script>
+</body>
+</html>

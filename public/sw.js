@@ -1,9 +1,11 @@
-// Service Worker para Mi aula · Aplicaciones (PWA + resiliencia ante cortes de Wi-Fi)
-const CACHE_NAME = 'mi-aula-v4';
+// Service Worker para Mi aula · Aplicaciones (PWA + modo offline completo en el aula)
+const CACHE_NAME = 'mi-aula-v5';
 const PRECACHE_URLS = [
   '/',
   '/abrir',
   '/favicon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
   '/manifest.json',
   '/styles/tokens.css',
   '/styles/portal.css',
@@ -12,13 +14,37 @@ const PRECACHE_URLS = [
   '/scripts/gate.js',
   '/scripts/qrcode.js',
   '/registro.js',
-  '/assets/mercadito-cover.webp'
+  '/assets/mercadito-cover.webp',
+  // All 10 built-in interactive apps for resilient offline classroom use
+  '/apps/mercadito/',
+  '/apps/palabras/',
+  '/apps/ortografia/',
+  '/apps/ortografia/style.css',
+  '/apps/ortografia/data.js',
+  '/apps/ortografia/app.js',
+  '/apps/taller-lengua-u3/',
+  '/apps/calculadora/',
+  '/apps/numero-protagonista/',
+  '/apps/taller-multiplicacion/',
+  '/apps/penaltis-tablas/',
+  '/apps/taller-problemas/',
+  '/apps/clases-palabras/'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE_URLS).catch(() => {}))
+      .then(cache => Promise.allSettled(
+        PRECACHE_URLS.map(url =>
+          fetch(url, { cache: 'no-cache' })
+            .then(resp => {
+              if (resp && resp.status === 200 && resp.type === 'basic') {
+                return cache.put(new Request(self.location.origin + url), resp);
+              }
+            })
+            .catch(() => {})
+        )
+      ))
       .then(() => self.skipWaiting())
   );
 });
@@ -37,6 +63,23 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Network-first with cache fallback for public app catalog so the portal renders offline
+  if (url.pathname === '/api/apps' && !url.searchParams.get('all')) {
+    const catalogKey = new Request(url.origin + '/api/apps');
+    event.respondWith(
+      fetch(request)
+        .then(resp => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then(c => c.put(catalogKey, clone));
+          }
+          return resp;
+        })
+        .catch(() => caches.match(catalogKey))
+    );
+    return;
+  }
 
   // Never cache dynamic API, short code redirects, or teacher panel HTML
   if (
@@ -71,10 +114,11 @@ self.addEventListener('fetch', event => {
   }
 
   // Network-first with cache fallback for portal, apps, JS and CSS
-  // Use pathname-only key for app documents so ?libre=1 / ?aula=1 share cached HTML cleanly
-  const cacheKey = url.pathname.startsWith('/apps/') && (url.pathname.endsWith('/') || url.pathname.endsWith('.html'))
-    ? new Request(url.origin + url.pathname)
-    : request;
+  // Use pathname-only key for app documents and /abrir so query params share cached HTML cleanly
+  const isPathOnlyDoc =
+    url.pathname === '/abrir' ||
+    (url.pathname.startsWith('/apps/') && (url.pathname.endsWith('/') || url.pathname.endsWith('.html')));
+  const cacheKey = isPathOnlyDoc ? new Request(url.origin + url.pathname) : request;
 
   event.respondWith(
     fetch(request)

@@ -181,6 +181,21 @@
               <tbody id="sessionsBody"></tbody>
             </table>
           </div>
+
+          <div id="sessionsPagination" class="pagination-bar no-print" hidden>
+            <div class="pagination-info" id="paginationInfo"></div>
+            <div class="pagination-controls">
+              <label class="sr-only" for="pageSizeSelect">Sesiones por página</label>
+              <select id="pageSizeSelect" class="matrix-select">
+                <option value="25">25 / página</option>
+                <option value="50" selected>50 / página</option>
+                <option value="100">100 / página</option>
+              </select>
+              <button id="prevPageBtn" class="btn btn-sm" type="button">← Anterior</button>
+              <span id="pageIndicator" class="pagination-page">Página 1 de 1</span>
+              <button id="nextPageBtn" class="btn btn-sm" type="button">Siguiente →</button>
+            </div>
+          </div>
         </section>
       </div>
 
@@ -381,6 +396,20 @@
       <button id="closeDetailBtn" class="dialog-close" type="button" aria-label="Cerrar">×</button>
     </div>
     <div id="detailBody" style="margin-top:16px;"></div>
+  </dialog>
+
+  <dialog id="studentReportDialog" class="aula-dialog report-dialog" aria-labelledby="studentReportTitle">
+    <div class="dialog-head no-print">
+      <div>
+        <h2 id="studentReportTitle">Informe individual</h2>
+        <div id="studentReportSubtitle" style="font-size:13.5px;color:var(--ink-secondary);margin-top:3px;"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="printStudentReportBtn" class="btn btn-primary btn-sm" type="button">🖨️ Imprimir / PDF</button>
+        <button id="closeStudentReportBtn" class="dialog-close" type="button" aria-label="Cerrar">×</button>
+      </div>
+    </div>
+    <div id="studentReportBody" class="student-report-sheet"></div>
   </dialog>
 
   <script src="/scripts/docente.js"></script>

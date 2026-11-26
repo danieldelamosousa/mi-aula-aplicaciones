@@ -6,6 +6,8 @@
   let liveMode = false;
   let liveTimer = null;
   let lastLoadedAt = null;
+  let currentPage = 1;
+  let pageSize = 50;
 
   function escapeHtml(text) {
     const div = document.createElement('div');
@@ -134,14 +136,28 @@
 
   // Load Dashboard
   async function loadDashboard() {
+    const url = new URL('/api/teacher/dashboard', location.origin);
     const range = $('filterRange') ? $('filterRange').value : 'all';
-    const qs = range && range !== 'all' ? `?range=${encodeURIComponent(range)}` : '';
-    const res = await fetch(`/api/teacher/dashboard${qs}`, { cache: 'no-store' });
+    const fStudent = $('filterStudent') ? $('filterStudent').value : '';
+    const fApp = $('filterApp') ? $('filterApp').value : '';
+    const fStatus = $('filterStatus') ? $('filterStatus').value : '';
+
+    if (range && range !== 'all') url.searchParams.set('range', range);
+    if (fStudent) url.searchParams.set('student', fStudent);
+    if (fApp) url.searchParams.set('app', fApp);
+    if (fStatus) url.searchParams.set('status', fStatus);
+    url.searchParams.set('page', String(currentPage));
+    url.searchParams.set('pageSize', String(pageSize));
+
+    const res = await fetch(url.pathname + url.search, { cache: 'no-store' });
     if (res.status === 401) {
       setLiveMode(false);
       return checkAuth();
     }
     state = await res.json();
+    if (state.pagination && state.pagination.page) {
+      currentPage = state.pagination.page;
+    }
     lastLoadedAt = new Date();
     renderAll();
   }
@@ -231,10 +247,11 @@
         <div class="weak-card-title">${escapeHtml(label)}</div>
         <div class="weak-card-meta">${w.correct} de ${w.attempts} aciertos · Pulsar para filtrar sesiones</div>
       `;
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         $('filterApp').value = w.app || '';
         $('filterStudent').value = '';
-        renderSessionsTable();
+        currentPage = 1;
+        await loadDashboard();
         $('sessionsBody').scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
       grid.append(btn);
@@ -262,8 +279,9 @@
 
     const truncNote = $('sessionsTruncatedNote');
     if (truncNote) {
-      if (state.sessionsTruncated) {
-        truncNote.textContent = `Mostrando las 300 sesiones más recientes de ${state.totalSessionsCount}. Los totales y la matriz incluyen todo el periodo.`;
+      const p = state.pagination;
+      if (p && p.totalItems > p.pageSize) {
+        truncNote.textContent = `Mostrando ${p.startIndex}–${p.endIndex} de ${p.totalItems} sesiones (página ${p.page} de ${p.totalPages}). Los totales y la matriz incluyen todo el periodo.`;
         truncNote.hidden = false;
       } else {
         truncNote.hidden = true;
@@ -276,7 +294,7 @@
 
     const studentNames = [...new Set([
       ...state.students.map(s => (typeof s === 'string' ? s : s.name)),
-      ...state.sessions.flatMap(s => s.students)
+      ...(state.byStudent || []).map(s => s.name)
     ])].sort((a, b) => a.localeCompare(b, 'es'));
 
     $('filterStudent').innerHTML = '<option value="">Todos</option>' +
@@ -299,7 +317,6 @@
     const fRange = $('filterRange') ? $('filterRange').value : 'all';
     const fStudent = $('filterStudent').value;
     const fApp = $('filterApp').value;
-    const fStatus = $('filterStatus').value;
 
     // Update CSV export link with active filters
     const csvUrl = new URL('/api/teacher/export.csv', location.origin);
@@ -308,22 +325,31 @@
     if (fApp) csvUrl.searchParams.set('app', fApp);
     $('exportCsvBtn').href = csvUrl.pathname + csvUrl.search;
 
-    const filtered = state.sessions.filter(s => {
-      if (fStudent && !s.students.includes(fStudent)) return false;
-      if (fApp && s.app !== fApp) return false;
-      if (fStatus && s.status !== fStatus) return false;
-      return true;
-    });
-
+    const rows = Array.isArray(state.sessions) ? state.sessions : [];
     const tbody = $('sessionsBody');
     tbody.replaceChildren();
 
-    if (!filtered.length) {
+    const pagBar = $('sessionsPagination');
+    const pag = state.pagination;
+    if (pagBar && pag) {
+      if (pag.totalItems === 0) {
+        pagBar.hidden = true;
+      } else {
+        pagBar.hidden = false;
+        $('paginationInfo').textContent = `Mostrando ${pag.startIndex}–${pag.endIndex} de ${pag.totalItems} ${pag.totalItems === 1 ? 'sesión' : 'sesiones'}`;
+        $('pageIndicator').textContent = `Página ${pag.page} de ${pag.totalPages}`;
+        $('prevPageBtn').disabled = !pag.hasPrev;
+        $('nextPageBtn').disabled = !pag.hasNext;
+        if ($('pageSizeSelect')) $('pageSizeSelect').value = String(pag.pageSize);
+      }
+    }
+
+    if (!rows.length) {
       tbody.innerHTML = `<tr><td colspan="8" class="empty-cell">Todavía no hay sesiones que coincidan con este filtro.<br><small>Abre una aplicación en modo «Trabajo en el aula» para empezar a registrar resultados.</small></td></tr>`;
       return;
     }
 
-    for (const s of filtered) {
+    for (const s of rows) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${escapeHtml(formatDate(s.createdAt))}</td>
@@ -402,6 +428,180 @@
     if (e.target === $('detailDialog')) $('detailDialog').close();
   });
 
+  // Individual Student Report Dialog
+  async function openStudentReport(studentName) {
+    const fRange = $('filterRange') ? $('filterRange').value : 'all';
+    const url = new URL('/api/teacher/student-report', location.origin);
+    url.searchParams.set('student', studentName);
+    if (fRange && fRange !== 'all') url.searchParams.set('range', fRange);
+
+    const res = await fetch(url.pathname + url.search, { cache: 'no-store' });
+    if (!res.ok) {
+      showNotice('No se pudo generar el informe individual.', true);
+      return;
+    }
+    const r = await res.json();
+
+    $('studentReportTitle').textContent = `Informe individual · ${r.student.name}`;
+    $('studentReportSubtitle').textContent = `${formatRangeLabel(r.range)} · Generado el ${formatDate(r.generatedAt)}`;
+
+    const ov = r.overview || {};
+    const gradeStr = ov.attempts > 0 ? ((ov.correct / ov.attempts) * 10).toFixed(1).replace('.', ',') : '—';
+    const accStr = ov.accuracy === null || ov.accuracy === undefined ? '—' : `${ov.accuracy}%`;
+
+    let trendHtml = '<span class="trend-pill">Sin suficientes semanas para comparar</span>';
+    if (typeof r.trendDelta === 'number') {
+      if (r.trendDelta >= 5) {
+        trendHtml = `<span class="trend-pill up">↗ Mejora de +${r.trendDelta} % frente a semanas anteriores</span>`;
+      } else if (r.trendDelta <= -5) {
+        trendHtml = `<span class="trend-pill down">↘ Descenso de ${r.trendDelta} % frente a semanas anteriores</span>`;
+      } else {
+        const sign = r.trendDelta > 0 ? '+' : '';
+        trendHtml = `<span class="trend-pill">→ Evolución estable (${sign}${r.trendDelta} %)</span>`;
+      }
+    }
+
+    const timelineHtml = (r.timeline && r.timeline.length)
+      ? `<div class="timeline-chart">${r.timeline.map(w => {
+          const pct = w.accuracy === null ? 0 : w.accuracy;
+          const tone = pct >= 75 ? '' : (pct >= 50 ? 'mid' : 'low');
+          return `
+            <div class="timeline-col">
+              <div class="timeline-pct">${w.accuracy === null ? '—' : `${pct}%`}</div>
+              <div class="timeline-bar-wrap">
+                <div class="timeline-bar ${tone}" style="height:${w.accuracy === null ? 4 : Math.max(8, pct)}%"></div>
+              </div>
+              <div class="timeline-lbl">${escapeHtml(w.label)}</div>
+              <div class="timeline-meta">${w.sessions} ses. · ${w.attempts} int.</div>
+            </div>`;
+        }).join('')}</div>`
+      : '<p class="report-empty">Todavía no hay suficientes sesiones en este periodo para mostrar la evolución semanal.</p>';
+
+    const strengthsHtml = (r.strengths && r.strengths.length)
+      ? `<ul class="report-pill-list">${r.strengths.map(b => {
+          const lbl = [b.mode, b.level].filter(Boolean).join(' · ') || 'General';
+          return `<li class="report-pill-item good"><span><strong>${escapeHtml(b.appTitle)}</strong> · ${escapeHtml(lbl)}</span><strong>${b.accuracy}% (${b.correct}/${b.attempts})</strong></li>`;
+        }).join('')}</ul>`
+      : '<p class="report-empty">Aún sin bloques consolidados (se necesitan al menos 2 intentos con ≥ 80 % de acierto).</p>';
+
+    const reinforceHtml = (r.toReinforce && r.toReinforce.length)
+      ? `<ul class="report-pill-list">${r.toReinforce.map(b => {
+          const lbl = [b.mode, b.level].filter(Boolean).join(' · ') || 'General';
+          return `<li class="report-pill-item warn"><span><strong>${escapeHtml(b.appTitle)}</strong> · ${escapeHtml(lbl)}</span><strong>${b.accuracy}% (${b.correct}/${b.attempts})</strong></li>`;
+        }).join('')}</ul>`
+      : '<p class="report-empty">No se detectan bloques por debajo del 75 % de acierto en este periodo.</p>';
+
+    const appsTableHtml = (r.byApp && r.byApp.length)
+      ? `<div class="table-wrap"><table><thead><tr><th>Aplicación</th><th>Área</th><th>Sesiones</th><th>Acierto</th><th>Pistas</th><th>Tiempo</th></tr></thead><tbody>${r.byApp.map(a => `
+          <tr>
+            <td><strong>${escapeHtml(a.title)}</strong></td>
+            <td>${escapeHtml(a.area || '—')}</td>
+            <td>${a.sessions}</td>
+            <td>${renderAccuracy(a.accuracy, a.attempts)}</td>
+            <td>${a.hints || 0}</td>
+            <td>${escapeHtml(formatDuration(a.activeMs))}</td>
+          </tr>`).join('')}</tbody></table></div>`
+      : '<p class="report-empty">Todavía no hay sesiones registradas para este alumno en el periodo seleccionado.</p>';
+
+    const recentHtml = (r.recentSessions && r.recentSessions.length)
+      ? `<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Aplicación</th><th>Resultado</th><th>Pistas</th><th>Tiempo</th></tr></thead><tbody>${r.recentSessions.map(s => `
+          <tr>
+            <td>${escapeHtml(formatDate(s.createdAt))}</td>
+            <td><strong>${escapeHtml(s.appTitle)}</strong></td>
+            <td>${s.attempts > 0 ? `${s.accuracy}% (${s.correct}/${s.attempts})` : 'Sin intentos'}</td>
+            <td>${s.hints || 0}</td>
+            <td>${escapeHtml(formatDuration(s.activeMs))}</td>
+          </tr>`).join('')}</tbody></table></div>`
+      : '<p class="report-empty">Sin sesiones recientes.</p>';
+
+    $('studentReportBody').innerHTML = `
+      <div class="report-header-card">
+        <div>
+          <h3 class="report-student-name">${escapeHtml(r.student.name)}</h3>
+          <div class="report-meta">
+            ${escapeHtml([r.aulaName || 'Mi aula', r.student.course ? `Curso: ${r.student.course}` : '', `Periodo: ${formatRangeLabel(r.range)}`].filter(Boolean).join(' · '))}
+          </div>
+        </div>
+        <div class="report-meta">Fecha: ${escapeHtml(formatDate(r.generatedAt))}</div>
+      </div>
+
+      <div class="report-kpis">
+        <div class="report-kpi">
+          <div class="report-kpi-label">Sesiones</div>
+          <div class="report-kpi-value">${ov.sessions || 0}</div>
+          <div class="report-kpi-sub">${(r.byApp || []).length} apps trabajadas</div>
+        </div>
+        <div class="report-kpi">
+          <div class="report-kpi-label">Acierto global</div>
+          <div class="report-kpi-value">${accStr}</div>
+          <div class="report-kpi-sub">Nota orientativa: ${gradeStr} / 10</div>
+        </div>
+        <div class="report-kpi">
+          <div class="report-kpi-label">Respuestas</div>
+          <div class="report-kpi-value">${ov.correct || 0}/${ov.attempts || 0}</div>
+          <div class="report-kpi-sub">${ov.hints || 0} pistas · ${ov.reveals || 0} soluciones</div>
+        </div>
+        <div class="report-kpi">
+          <div class="report-kpi-label">Tiempo activo</div>
+          <div class="report-kpi-value">${escapeHtml(formatDuration(ov.activeMs || 0))}</div>
+          <div class="report-kpi-sub">Trabajo efectivo</div>
+        </div>
+      </div>
+
+      <div class="report-section">
+        <div class="report-section-head">
+          <h3>Evolución temporal (por semana)</h3>
+          ${trendHtml}
+        </div>
+        ${timelineHtml}
+      </div>
+
+      <div class="report-two-col">
+        <div class="report-section">
+          <div class="report-section-head"><h3>Fortalezas (≥ 80 %)</h3></div>
+          ${strengthsHtml}
+        </div>
+        <div class="report-section">
+          <div class="report-section-head"><h3>Contenidos para reforzar (&lt; 75 %)</h3></div>
+          ${reinforceHtml}
+        </div>
+      </div>
+
+      <div class="report-section">
+        <div class="report-section-head"><h3>Resumen por aplicación</h3></div>
+        ${appsTableHtml}
+      </div>
+
+      <div class="report-section">
+        <div class="report-section-head"><h3>Últimas sesiones</h3></div>
+        ${recentHtml}
+      </div>
+    `;
+
+    $('studentReportDialog').showModal();
+  }
+
+  if ($('closeStudentReportBtn')) {
+    $('closeStudentReportBtn').addEventListener('click', () => $('studentReportDialog').close());
+  }
+  if ($('studentReportDialog')) {
+    $('studentReportDialog').addEventListener('click', e => {
+      if (e.target === $('studentReportDialog')) $('studentReportDialog').close();
+    });
+  }
+  if ($('printStudentReportBtn')) {
+    $('printStudentReportBtn').addEventListener('click', () => {
+      document.body.classList.add('printing-student-report');
+      const cleanup = () => {
+        document.body.classList.remove('printing-student-report');
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      window.print();
+      setTimeout(cleanup, 1500);
+    });
+  }
+
   // Students section
   function renderStudentsSection() {
     const tbody = $('studentProgressBody');
@@ -420,11 +620,18 @@
           <td>${st.sessions}</td>
           <td>${renderAccuracy(acc, st.attempts)}</td>
           <td>${escapeHtml(formatDuration(st.activeMs))}</td>
-          <td class="no-print"><button class="btn btn-sm view-st-btn" type="button">Ver sesiones</button></td>
+          <td class="no-print">
+            <div class="student-actions">
+              <button class="btn btn-primary btn-sm report-st-btn" type="button">📄 Informe</button>
+              <button class="btn btn-sm view-st-btn" type="button">Sesiones</button>
+            </div>
+          </td>
         `;
-        tr.querySelector('.view-st-btn').addEventListener('click', () => {
+        tr.querySelector('.report-st-btn').addEventListener('click', () => openStudentReport(st.name));
+        tr.querySelector('.view-st-btn').addEventListener('click', async () => {
           $('filterStudent').value = st.name;
-          renderSessionsTable();
+          currentPage = 1;
+          await loadDashboard();
           document.querySelector('.tab-btn[data-tab="sesiones"]').click();
         });
         tbody.append(tr);
@@ -551,10 +758,11 @@
 
       tr.innerHTML = firstCell + globalCell + appCells;
       tr.querySelectorAll('.matrix-cell-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
           $('filterStudent').value = btn.dataset.student || '';
           $('filterApp').value = btn.dataset.app || '';
-          renderSessionsTable();
+          currentPage = 1;
+          await loadDashboard();
           document.querySelector('.tab-btn[data-tab="sesiones"]').click();
         });
       });
@@ -741,23 +949,51 @@
     if (lbl) lbl.textContent = liveMode ? 'En directo · 15 s' : 'En directo';
     if (liveMode) {
       liveTimer = setInterval(() => {
-        if (!document.hidden && !$('detailDialog')?.open) loadDashboard();
+        if (!document.hidden && !$('detailDialog')?.open && !$('studentReportDialog')?.open) loadDashboard();
       }, 15000);
     }
   }
 
-  // Filter & toolbar listeners
+  function reloadFromFirstPage() {
+    currentPage = 1;
+    loadDashboard();
+  }
+
+  // Filter, pagination & toolbar listeners
   if ($('liveToggleBtn')) {
     $('liveToggleBtn').addEventListener('click', () => {
       setLiveMode(!liveMode);
       if (liveMode) loadDashboard();
     });
   }
-  if ($('filterRange')) $('filterRange').addEventListener('change', loadDashboard);
+  if ($('filterRange')) $('filterRange').addEventListener('change', reloadFromFirstPage);
   if ($('matrixScale')) $('matrixScale').addEventListener('change', renderStudentAppMatrix);
-  $('filterStudent').addEventListener('change', renderSessionsTable);
-  $('filterApp').addEventListener('change', renderSessionsTable);
-  $('filterStatus').addEventListener('change', renderSessionsTable);
+  $('filterStudent').addEventListener('change', reloadFromFirstPage);
+  $('filterApp').addEventListener('change', reloadFromFirstPage);
+  $('filterStatus').addEventListener('change', reloadFromFirstPage);
+  if ($('pageSizeSelect')) {
+    $('pageSizeSelect').addEventListener('change', () => {
+      pageSize = Number($('pageSizeSelect').value) || 50;
+      currentPage = 1;
+      loadDashboard();
+    });
+  }
+  if ($('prevPageBtn')) {
+    $('prevPageBtn').addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        loadDashboard();
+      }
+    });
+  }
+  if ($('nextPageBtn')) {
+    $('nextPageBtn').addEventListener('click', () => {
+      if (state?.pagination?.hasNext) {
+        currentPage++;
+        loadDashboard();
+      }
+    });
+  }
   $('refreshBtn').addEventListener('click', loadDashboard);
   $('printBtn').addEventListener('click', () => window.print());
 

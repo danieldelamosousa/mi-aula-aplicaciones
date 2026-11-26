@@ -120,6 +120,29 @@
               <span class="penalty-ball">⚽</span>
             </div>
           </div>`;
+      case 'problems':
+        return `
+          <div class="card-cover cover-problems" aria-hidden="true">
+            <div class="problems-steps">
+              <span class="prob-step s1">1. Datos</span>
+              <span class="prob-arrow">→</span>
+              <span class="prob-step s2">2. Esquema</span>
+              <span class="prob-arrow">→</span>
+              <span class="prob-step s3">3. Solución</span>
+            </div>
+            <span class="cover-caption">Lee · Dibuja · Calcula</span>
+          </div>`;
+      case 'grammar':
+        return `
+          <div class="card-cover cover-grammar" aria-hidden="true">
+            <div class="grammar-chips">
+              <span class="gram-chip det">La</span>
+              <span class="gram-chip sus">perra</span>
+              <span class="gram-chip adj">alegre</span>
+              <span class="gram-chip ver">corre</span>
+            </div>
+            <span class="cover-caption">Sustantivo · Adjetivo · Verbo · Oración</span>
+          </div>`;
       default: {
         const initial = (app.title || 'A').trim().charAt(0).toUpperCase();
         return `

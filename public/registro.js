@@ -142,8 +142,23 @@
     flush();
   }
 
+  let retryDelayMs = 1500;
+  let retryTimer = null;
+
+  function scheduleFlush(delay) {
+    if (retryTimer) clearTimeout(retryTimer);
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      flush();
+    }, delay);
+  }
+
   async function flush() {
     if (free || sending || !queue.length || blocked) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setStatus(`Sin conexión · ${queue.length} en cola`, 'warn');
+      return;
+    }
     sending = true;
     try {
       const res = await fetch('/api/events', {
@@ -158,20 +173,68 @@
           blocked = true;
           setStatus(data.error || 'Sesión cerrada', 'err');
         } else {
-          setStatus('Pendiente de guardar…', 'warn');
+          setStatus(`Pendiente · ${queue.length} en cola`, 'warn');
+          retryDelayMs = Math.min(30000, retryDelayMs * 2);
+          scheduleFlush(retryDelayMs);
         }
         return;
       }
       const ids = new Set(data.saved || []);
       queue = queue.filter(e => !ids.has(e.id));
+      retryDelayMs = 1500;
       persist();
       setStatus(queue.length ? 'Guardando…' : 'Guardado', queue.length ? 'sync' : 'ok');
     } catch {
-      setStatus('Sin conexión · en cola', 'warn');
+      setStatus(`Sin conexión · ${queue.length} en cola`, 'warn');
+      retryDelayMs = Math.min(30000, retryDelayMs * 2);
+      scheduleFlush(retryDelayMs);
     } finally {
       sending = false;
     }
-    if (queue.length && !blocked) setTimeout(flush, 1200);
+    if (queue.length && !blocked && retryDelayMs === 1500) {
+      scheduleFlush(900);
+    }
+  }
+
+  // Resync any pending event queues left in localStorage from earlier offline sessions
+  async function flushOtherStoredQueues() {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    try {
+      const prefix = 'mi-aula:';
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(prefix) && k !== storeKey && !k.includes('dua') && !k.includes('favoritas') && !k.includes('recientes')) {
+          keys.push(k);
+        }
+      }
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        let saved;
+        try { saved = JSON.parse(raw); } catch { continue; }
+        if (!saved || !Array.isArray(saved.queue) || !saved.queue.length) continue;
+        const otherToken = k.slice(prefix.length);
+        if (!otherToken || otherToken.length < 8) continue;
+        const res = await fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: otherToken, events: saved.queue.slice(0, 30) })
+        });
+        if (res.status === 403 || res.status === 404) {
+          saved.queue = [];
+          localStorage.setItem(k, JSON.stringify(saved));
+          continue;
+        }
+        if (!res.ok) continue;
+        const data = await res.json();
+        const ids = new Set(data.saved || []);
+        saved.queue = saved.queue.filter(e => !ids.has(e.id));
+        localStorage.setItem(k, JSON.stringify(saved));
+      }
+    } catch {
+      // Offline or storage unavailable
+    }
   }
 
   // ---- DUA Text-to-Speech (es-ES) ----
@@ -473,12 +536,23 @@
     }
   });
 
-  window.addEventListener('online', flush);
+  window.addEventListener('online', () => {
+    retryDelayMs = 1500;
+    flush();
+    flushOtherStoredQueues();
+  });
+  window.addEventListener('offline', () => {
+    if (!free && !blocked) {
+      setStatus(queue.length ? `Sin conexión · ${queue.length} en cola` : 'Sin conexión (modo local)', 'warn');
+    }
+  });
   window.addEventListener('pagehide', () => {
     stopSpeech();
     enqueue('heartbeat', null);
     persist();
   });
+
+  setTimeout(() => { flushOtherStoredQueues(); }, 4000);
 
   setInterval(() => {
     tick();

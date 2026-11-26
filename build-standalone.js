@@ -19,7 +19,9 @@ const APP_IDS = [
   'calculadora',
   'numero-protagonista',
   'taller-multiplicacion',
-  'penaltis-tablas'
+  'penaltis-tablas',
+  'taller-problemas',
+  'clases-palabras'
 ];
 
 const INLINE_BRIDGE = `<script>(function(){'use strict';

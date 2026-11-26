@@ -9,117 +9,12 @@ const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
-const DB_PATH = path.join(DATA_DIR, 'aula-db.json');
+const DB_PATH = process.env.AULA_DB_PATH ? path.resolve(process.env.AULA_DB_PATH) : path.join(DATA_DIR, 'aula-db.json');
 
-const BUILT_IN_APPS = [
-  {
-    id: 'mercadito',
-    title: 'El mercadito',
-    area: 'Matemáticas',
-    cycle: '2.º ciclo',
-    courses: ['3.º', '4.º'],
-    unit: 'Dinero y cálculo',
-    description: 'Compra, paga y devuelve el cambio con monedas y billetes. Elige el nivel y practica a tu ritmo.',
-    coverType: 'market',
-    visible: true,
-    builtIn: true
-  },
-  {
-    id: 'palabras',
-    title: 'Taller de palabras',
-    area: 'Lengua',
-    cycle: '2.º ciclo',
-    courses: ['3.º', '4.º'],
-    unit: 'U2',
-    description: 'Subraya prefijos y sufijos y forma palabras derivadas a partir de una raíz. Contenidos de 3.º y 4.º.',
-    coverType: 'words',
-    visible: true,
-    builtIn: true
-  },
-  {
-    id: 'ortografia',
-    title: 'Taller de ortografía',
-    area: 'Lengua',
-    cycle: '2.º ciclo',
-    courses: ['3.º', '4.º'],
-    unit: 'U2',
-    description: 'Practica las tildes y clasifica palabras. Corrige mayúsculas y coloca los tipos de punto en textos con párrafos.',
-    coverType: 'ortho',
-    visible: true,
-    builtIn: true
-  },
-  {
-    id: 'taller-lengua-u3',
-    title: 'Taller de Lengua U3',
-    area: 'Lengua',
-    cycle: '3.º y 4.º',
-    courses: ['3.º', '4.º'],
-    unit: 'U3',
-    description: 'En 3.º, practica palabras polisémicas, aumentativos, diminutivos, palabras compuestas y listas. En 4.º, repasa sinónimos, adjetivos, descripciones de animales, diptongos e hiatos.',
-    coverType: 'lengua-u3',
-    visible: true,
-    builtIn: true
-  },
-  {
-    id: 'calculadora',
-    title: 'Calculadora bloqueada',
-    area: 'Matemáticas',
-    cycle: '2.º ciclo',
-    courses: ['3.º', '4.º'],
-    unit: 'Cálculo mental',
-    description: 'Alcanza el número objetivo con sumas, restas y multiplicaciones sin usar las teclas bloqueadas. Retos aleatorios de 2 y 3 cifras.',
-    coverType: 'calc',
-    visible: true,
-    builtIn: true
-  },
-  {
-    id: 'numero-protagonista',
-    title: 'El número protagonista',
-    area: 'Matemáticas',
-    cycle: '2.º ciclo',
-    courses: ['3.º', '4.º'],
-    unit: 'Numeración',
-    description: 'Explora un número de 4 o 6 cifras. Practica el valor posicional, la descomposición, el redondeo y el Número sol.',
-    coverType: 'number',
-    visible: true,
-    builtIn: true
-  },
-  {
-    id: 'taller-multiplicacion',
-    title: 'Taller de multiplicación U3',
-    area: 'Matemáticas',
-    cycle: '3.º y 4.º',
-    courses: ['3.º', '4.º'],
-    unit: 'U3',
-    description: 'Elige tu curso y practica grupos iguales, tablas y problemas, con un teclado numérico para responder.',
-    coverType: 'multiply',
-    visible: true,
-    builtIn: true
-  },
-  {
-    id: 'penaltis-tablas',
-    title: 'Penaltis de las tablas',
-    area: 'Matemáticas',
-    cycle: '2.º ciclo',
-    courses: ['3.º', '4.º'],
-    unit: 'Tablas',
-    description: 'Practica las tablas del 1 al 10 chutando el resultado correcto o forma sumas repetidas con pelotas y aros.',
-    coverType: 'penalty',
-    visible: true,
-    builtIn: true
-  }
-];
-
-const DEFAULT_STUDENTS = [
-  { name: 'Lucía G.', course: '3.º' },
-  { name: 'Mateo R.', course: '3.º' },
-  { name: 'Sofía M.', course: '3.º' },
-  { name: 'Hugo P.', course: '3.º' },
-  { name: 'Valeria C.', course: '4.º' },
-  { name: 'Leo D.', course: '4.º' },
-  { name: 'Martina S.', course: '4.º' },
-  { name: 'Daniel V.', course: '4.º' }
-];
+// Populated from ./functions/_lib/core.mjs before the server starts listening
+let core = null;
+let BUILT_IN_APPS = [];
+let DEFAULT_STUDENTS = [];
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -229,12 +124,7 @@ function formatRetryMessage(retryAfterSec) {
 }
 
 function resolveDateCutoff(range) {
-  const now = new Date();
-  if (range === 'today') return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  if (range === '7d') return new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString();
-  if (range === '30d') return new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString();
-  if (range === '90d') return new Date(now.getTime() - 90 * 24 * 3600 * 1000).toISOString();
-  return null;
+  return core.resolveDateCutoff(range);
 }
 
 function createInitialDb() {
@@ -255,14 +145,14 @@ function createInitialDb() {
       allowGuestStudents: true,
       allowedTeacherEmail: ''
     },
-    students: DEFAULT_STUDENTS,
-    apps: BUILT_IN_APPS,
+    students: DEFAULT_STUDENTS.map(s => ({ ...s })),
+    apps: BUILT_IN_APPS.map(a => ({ ...a, visible: true, builtIn: true })),
     sessions: []
   };
 }
 
 function loadDb() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   if (!fs.existsSync(DB_PATH)) {
     const initial = createInitialDb();
     saveDb(initial);
@@ -270,13 +160,18 @@ function loadDb() {
   }
   try {
     const raw = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-    // Ensure all built-in apps exist
-    const existingIds = new Set((raw.apps || []).map(a => a.id));
+    // Ensure all built-in apps exist and carry updated metadata
+    const byId = new Map((raw.apps || []).map(a => [a.id, a]));
     raw.apps = raw.apps || [];
     for (const bi of BUILT_IN_APPS) {
-      if (!existingIds.has(bi.id)) raw.apps.push(bi);
+      if (!byId.has(bi.id)) {
+        raw.apps.push({ ...bi, visible: true, builtIn: true });
+      } else {
+        const existing = byId.get(bi.id);
+        if (!existing.courses && bi.courses) existing.courses = bi.courses;
+      }
     }
-    raw.students = Array.isArray(raw.students) ? raw.students : DEFAULT_STUDENTS;
+    raw.students = Array.isArray(raw.students) ? raw.students : DEFAULT_STUDENTS.map(s => ({ ...s }));
     raw.sessions = Array.isArray(raw.sessions) ? raw.sessions : [];
     return raw;
   } catch (err) {
@@ -288,13 +183,13 @@ function loadDb() {
 }
 
 function saveDb(data) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   const tmpPath = `${DB_PATH}.tmp`;
   fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
   fs.renameSync(tmpPath, DB_PATH);
 }
 
-let db = loadDb();
+let db = null;
 
 function generateShortCode() {
   const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -974,22 +869,8 @@ const server = http.createServer(async (req, res) => {
           ? db.sessions.filter(s => (s.createdAt || '') >= cutoffIso)
           : db.sessions;
         const summaries = scopedSessions.map(summarizeSession);
-        let totalAttempts = 0;
-        let totalCorrect = 0;
-        let totalActiveMs = 0;
-        let activeSessions = 0;
-        const byApp = {};
-        const byStudent = {};
+
         const weakMap = new Map();
-        const nowMs = Date.now();
-        const liveSessions = [];
-
-        for (const st of db.students) {
-          const name = typeof st === 'string' ? st : st.name;
-          const course = typeof st === 'string' ? '' : (st.course || '');
-          byStudent[name] = { name, course, sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} };
-        }
-
         for (const rawSession of scopedSessions) {
           for (const ev of rawSession.events || []) {
             if (ev.kind !== 'attempt') continue;
@@ -1010,62 +891,22 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
-        for (const s of summaries) {
-          totalAttempts += s.attempts;
-          totalCorrect += s.correct;
-          totalActiveMs += s.activeMs;
-          if (s.status === 'activa') {
-            activeSessions++;
-            const lastMs = new Date(s.lastActivityAt || s.createdAt).getTime() || 0;
-            const isRecentlyActive = nowMs - lastMs < 5 * 60 * 1000;
-            const needsAttention = (s.attempts >= 2 && s.accuracy !== null && s.accuracy < 55) || (s.hints + s.reveals >= 3);
-            liveSessions.push({
-              ...s,
-              isRecentlyActive,
-              needsAttention
-            });
-          }
+        const page = Number(parsedUrl.searchParams.get('page')) || 1;
+        const pageSize = Number(parsedUrl.searchParams.get('pageSize')) || 50;
+        const filters = {
+          student: parsedUrl.searchParams.get('student') || '',
+          app: parsedUrl.searchParams.get('app') || '',
+          status: parsedUrl.searchParams.get('status') || ''
+        };
 
-          if (!byApp[s.app]) {
-            byApp[s.app] = { app: s.app, title: s.appTitle, sessions: 0, attempts: 0, correct: 0, activeMs: 0 };
-          }
-          byApp[s.app].sessions++;
-          byApp[s.app].attempts += s.attempts;
-          byApp[s.app].correct += s.correct;
-          byApp[s.app].activeMs += s.activeMs;
-
-          for (const studentName of s.students) {
-            if (!byStudent[studentName]) {
-              byStudent[studentName] = { name: studentName, course: '', sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} };
-            }
-            const rec = byStudent[studentName];
-            rec.sessions++;
-            rec.attempts += s.attempts;
-            rec.correct += s.correct;
-            rec.hints += s.hints;
-            rec.activeMs += s.activeMs;
-            if (!rec.apps[s.app]) {
-              rec.apps[s.app] = { title: s.appTitle, sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0 };
-            }
-            rec.apps[s.app].sessions++;
-            rec.apps[s.app].attempts += s.attempts;
-            rec.apps[s.app].correct += s.correct;
-            rec.apps[s.app].hints += s.hints;
-            rec.apps[s.app].activeMs += s.activeMs;
-          }
-        }
-
-        liveSessions.sort((a, b) =>
-          Number(b.needsAttention) - Number(a.needsAttention) ||
-          new Date(b.lastActivityAt || b.createdAt).getTime() - new Date(a.lastActivityAt || a.createdAt).getTime()
-        );
-
-        const weakSpots = [...weakMap.values()]
-          .filter(w => w.attempts >= 3)
-          .map(w => ({ ...w, accuracy: Math.round((w.correct / w.attempts) * 100) }))
-          .filter(w => w.accuracy < 80)
-          .sort((a, b) => a.accuracy - b.accuracy || b.attempts - a.attempts)
-          .slice(0, 6);
+        const aggregated = core.aggregateDashboard({
+          summaries,
+          students: db.students,
+          weakRows: [...weakMap.values()],
+          page,
+          pageSize,
+          filters
+        });
 
         return sendJson(res, 200, {
           range,
@@ -1080,23 +921,52 @@ const server = http.createServer(async (req, res) => {
             allowGuestStudents: db.config.allowGuestStudents !== false,
             allowedTeacherEmail: db.config.allowedTeacherEmail || ''
           },
-          metrics: {
-            totalSessions: summaries.length,
-            activeSessions,
-            totalAttempts,
-            totalCorrect,
-            accuracy: totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : null,
-            totalActiveMs
-          },
-          byApp: Object.values(byApp),
-          byStudent: Object.values(byStudent),
-          weakSpots,
-          liveSessions: liveSessions.slice(0, 40),
+          ...aggregated,
           students: db.students,
+          apps: db.apps
+        });
+      }
+
+      if (method === 'GET' && pathname === '/api/teacher/student-report') {
+        const studentName = String(parsedUrl.searchParams.get('student') || '').trim();
+        if (!studentName) {
+          return sendJson(res, 400, { error: 'Indica el nombre del alumno.' });
+        }
+        const range = parsedUrl.searchParams.get('range') || 'all';
+        const cutoffIso = resolveDateCutoff(range);
+        const scopedSessions = (cutoffIso
+          ? db.sessions.filter(s => (s.createdAt || '') >= cutoffIso)
+          : db.sessions
+        ).filter(s => Array.isArray(s.students) && s.students.includes(studentName));
+
+        const summaries = scopedSessions.map(summarizeSession);
+        const attemptEvents = [];
+        for (const rawSession of scopedSessions) {
+          for (const ev of rawSession.events || []) {
+            if (ev.kind !== 'attempt') continue;
+            attemptEvents.push({
+              app: rawSession.app,
+              appTitle: rawSession.appTitle,
+              mode: ev.mode || '',
+              level: ev.level || '',
+              correct: Boolean(ev.correct)
+            });
+          }
+        }
+
+        const studentRec = db.students.find(st => (typeof st === 'string' ? st : st.name) === studentName);
+        const report = core.buildStudentReport({
+          studentName,
+          studentCourse: typeof studentRec === 'string' ? '' : (studentRec?.course || ''),
+          summaries,
+          attemptEvents,
           apps: db.apps,
-          totalSessionsCount: summaries.length,
-          sessionsTruncated: summaries.length > 300,
-          sessions: summaries.slice(0, 300)
+          range
+        });
+
+        return sendJson(res, 200, {
+          aulaName: db.config.aulaName,
+          ...report
         });
       }
 
@@ -1393,6 +1263,18 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`Mi aula escuchando en http://localhost:${PORT}`);
+async function startServer() {
+  core = await import('./functions/_lib/core.mjs');
+  BUILT_IN_APPS = core.BUILT_IN_APPS;
+  DEFAULT_STUDENTS = core.DEFAULT_STUDENTS;
+  db = loadDb();
+
+  server.listen(PORT, HOST, () => {
+    console.log(`Mi aula escuchando en http://localhost:${PORT}`);
+  });
+}
+
+startServer().catch(err => {
+  console.error('Error iniciando Mi aula:', err);
+  process.exit(1);
 });
