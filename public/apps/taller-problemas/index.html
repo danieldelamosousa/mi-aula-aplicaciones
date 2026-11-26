@@ -14,10 +14,10 @@
   --muted: #4c645e;
   --line: #d4e0dc;
   --navy: #143b34;
-  --accent: #186655;
-  --soft: #e3f5ee;
-  --glow: #b7e4d3;
-  --wash: #f2faf7;
+  --accent: #1d5799;
+  --soft: #e6f0fc;
+  --glow: #a6cbf2;
+  --wash: #f2f7fe;
   --white: #ffffff;
   --good-bg: #e2f6ea;
   --good: #14532d;
@@ -26,16 +26,25 @@
   --hint-bg: #ebf3fc;
   --hint: #1d4373;
 }
+body[data-level="inicial"] {
+  --navy: #1a3d6b;
+  --accent: #1d5799;
+  --soft: #e6f0fc;
+  --glow: #a6cbf2;
+  --wash: #f2f7fe;
+}
 body[data-level="3"] {
-  --accent: #1a5d3e;
-  --soft: #e4f6eb;
-  --glow: #b2e2c4;
-  --wash: #f2fbf5;
+  --navy: #14402c;
+  --accent: #176641;
+  --soft: #e4f6ec;
+  --glow: #a8dfc0;
+  --wash: #f1fbf5;
 }
 body[data-level="4"] {
-  --accent: #824712;
+  --navy: #5c310d;
+  --accent: #8c4810;
   --soft: #fff0d9;
-  --glow: #f5ce93;
+  --glow: #f2c583;
   --wash: #fffaf0;
 }
 * { box-sizing: border-box; }
@@ -84,8 +93,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   flex-wrap: wrap;
 }
 .level-btn {
-  border: 1px solid rgba(255,255,255,.28);
-  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.32);
+  background: rgba(255,255,255,.12);
   color: #fff;
   border-radius: 10px;
   padding: 8px 13px;
@@ -93,10 +102,20 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   font-weight: 700;
   font-size: .92rem;
 }
-.level-btn[aria-pressed="true"] {
-  background: #e6f68f;
-  border-color: #e6f68f;
-  color: #143b34;
+.level-btn[data-pick="inicial"][aria-pressed="true"] {
+  background: #cfe5ff;
+  border-color: #cfe5ff;
+  color: #133968;
+}
+.level-btn[data-pick="3"][aria-pressed="true"] {
+  background: #c9f2d8;
+  border-color: #c9f2d8;
+  color: #12472b;
+}
+.level-btn[data-pick="4"][aria-pressed="true"] {
+  background: #ffe0ae;
+  border-color: #ffe0ae;
+  color: #5c310d;
 }
 
 .wrap {
@@ -136,13 +155,13 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   text-align: left;
   padding: 18px;
   border-radius: 16px;
-  border: 2px solid #b8e0d3;
-  background: #effaf6;
-  color: #144a3d;
+  border: 2px solid #9bc1ec;
+  background: #eef5ff;
+  color: #17457a;
   min-height: 138px;
 }
-.pick-card[data-level="3"] { border-color: #b4dfc3; background: #edf9f1; color: #175234; }
-.pick-card[data-level="4"] { border-color: #efca90; background: #fff7e8; color: #7a4110; }
+.pick-card[data-level="3"] { border-color: #9cdab5; background: #edf9f1; color: #145334; }
+.pick-card[data-level="4"] { border-color: #ecc07d; background: #fff6e6; color: #7a3d0d; }
 .pick-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(20,59,52,.1); }
 .pick-tag {
   display: inline-block;
@@ -1445,6 +1464,74 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
             hint1: 'Reunimos los visitantes del sábado y del domingo. Hay que sumar.',
             hint2: `Suma ${a} + ${b} = ${ans}.`
           };
+        },
+        () => {
+          const [a, b] = pickCarryAdd(118, 285, 112, 265);
+          const ans = a + b;
+          const buses = randInt(3, 6);
+          const mins = pickOne([35, 45, 50, 55]);
+          const euros = randInt(5, 9);
+          return {
+            id: 'g3-reto-excursion-sobrantes',
+            hard: true,
+            topic: 'Reto · Datos sobrantes (suma)',
+            lines: [
+              `El colegio organiza una excursión en ${buses} autobuses. El viaje dura ${mins} minutos y cuesta ${euros} euros.`,
+              `Se apuntan <strong>${a} alumnos</strong> de Infantil y <strong>${b} alumnos</strong> de Primaria.`
+            ],
+            question: '¿Cuántos alumnos se han apuntado en total?',
+            chips: [
+              { text: `${a} alumnos de Infantil`, useful: true },
+              { text: `${b} alumnos de Primaria`, useful: true },
+              { text: `${buses} autobuses`, useful: false },
+              { text: `${mins} minutos de viaje`, useful: false },
+              { text: `${euros} euros`, useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} Infantil`, `${b} Primaria`], total: '¿Total alumnos?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Juntamos Infantil y Primaria (el resto sobra)', expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Se han apuntado en total ___',
+            unitCorrect: `${ans} alumnos`,
+            unitOptions: [`${ans} alumnos`, `${ans} minutos`, `${ans} euros`],
+            hint1: `Los ${buses} autobuses, los ${mins} minutos y los ${euros} euros NO hacen falta: solo pregunta por los alumnos.`,
+            hint2: `Suma solo ${a} + ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickBorrowSub(220, 460, 75, 195);
+          const ans = a - b;
+          const shirts = randInt(90, 160);
+          const rackets = randInt(12, 28);
+          const hour = randInt(9, 10);
+          return {
+            id: 'g3-reto-tienda-sobrantes',
+            hard: true,
+            topic: 'Reto · Datos sobrantes (resta)',
+            lines: [
+              `Una tienda de deportes abre a las ${hour} y tiene ${shirts} camisetas y <strong>${a} balones</strong>.`,
+              `Durante el lunes vende <strong>${b} balones</strong> y ${rackets} raquetas.`
+            ],
+            question: '¿Cuántos balones quedan todavía en la tienda?',
+            chips: [
+              { text: `${a} balones al principio`, useful: true },
+              { text: `Vende ${b} balones`, useful: true },
+              { text: `${shirts} camisetas`, useful: false },
+              { text: `${rackets} raquetas vendidas`, useful: false },
+              { text: `Abre a las ${hour}`, useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} balones`, taken: `${b} vendidos`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Restamos solo los balones vendidos', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En la tienda quedan ___',
+            unitCorrect: `${ans} balones`,
+            unitOptions: [`${ans} balones`, `${ans} camisetas`, `${ans} raquetas`],
+            hint1: `Solo pregunta por los balones: las ${shirts} camisetas, las ${rackets} raquetas y la hora sobran.`,
+            hint2: `Resta ${a} − ${b} = ${ans}. Prueba: ${ans} + ${b} = ${a}.`
+          };
         }
       ],
 
@@ -1880,12 +1967,183 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
             hint1: 'Calcular la tercera parte significa dividir en 3 partes iguales (÷ 3).',
             hint2: `Divide ${total} ÷ 3 = ${third}. Comprueba: ${third} × 3 = ${total}.`
           };
+        },
+        () => {
+          const n = randInt(3, 6);
+          const price = randInt(6, 12);
+          const sub = n * price;
+          const guide = randInt(11, 24);
+          const total = sub + guide;
+          const shelves = randInt(4, 8);
+          const hour = randInt(10, 12);
+          const who = pickOne(NAMES);
+          return {
+            id: 'g4-reto-feria-sobrantes',
+            hard: true,
+            topic: 'Reto · Datos sobrantes (2 pasos)',
+            lines: [
+              `En la feria del libro de Zaragoza cada caseta tiene ${shelves} estanterías y abre a las ${hour}.`,
+              `${who} compra <strong>${n} novelas</strong> a <strong>${price} euros</strong> cada una y una guía de <strong>${guide} euros</strong>.`
+            ],
+            question: `¿Cuánto pagó ${who} en total por toda la compra?`,
+            chips: [
+              { text: `${n} novelas`, useful: true },
+              { text: `${price} euros cada novela`, useful: true },
+              { text: `Guía de ${guide} euros`, useful: true },
+              { text: `${shelves} estanterías`, useful: false },
+              { text: `Abre a las ${hour}`, useful: false }
+            ],
+            scheme: { type: 'two', stepA: `1.º Novelas: ${n} × ${price} €`, stepB: `2.º Total: novelas + ${guide} €` },
+            op: '× y +',
+            opOptions: [
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' }
+            ],
+            steps: [
+              { label: `Paso 1: ¿Cuánto cuestan las ${n} novelas?`, expr: `${n} × ${price} =`, ans: sub },
+              { label: 'Paso 2: Sumamos la guía', expr: `${sub} + ${guide} =`, ans: total }
+            ],
+            answer: total,
+            starter: `SOLUCIÓN: ${who} pagó en total ___`,
+            unitCorrect: `${total} euros`,
+            unitOptions: [`${total} euros`, `${total} estanterías`, `${total} novelas`],
+            hint1: `Las ${shelves} estanterías y la hora (${hour}) son datos inútiles. Solo usa precios y cantidades compradas.`,
+            hint2: `Paso 1: ${n} × ${price} = ${sub} €. Paso 2: ${sub} + ${guide} = ${total} €.`
+          };
+        },
+        () => {
+          const bagKg = randInt(4, 8);
+          const bags = randInt(6, 15);
+          const total = bagKg * bags;
+          const apples = randInt(Math.floor(total * 0.35), Math.floor(total * 0.65));
+          const pears = total - apples;
+          const trucks = randInt(2, 4);
+          const hours = randInt(6, 8);
+          return {
+            id: 'g4-reto-cooperativa-sobrantes',
+            hard: true,
+            topic: 'Reto · Datos sobrantes (2 pasos)',
+            lines: [
+              `En una cooperativa trabajan ${hours} horas y usan ${trucks} camiones para traer <strong>${apples} kilos</strong> de manzanas y <strong>${pears} kilos</strong> de peras.`,
+              `Envasan toda la fruta junta en bolsas iguales de <strong>${bagKg} kilos</strong>.`
+            ],
+            question: `¿Cuántas bolsas de ${bagKg} kilos llenan en total?`,
+            chips: [
+              { text: `${apples} kg de manzanas`, useful: true },
+              { text: `${pears} kg de peras`, useful: true },
+              { text: `Bolsas de ${bagKg} kilos`, useful: true },
+              { text: `${trucks} camiones`, useful: false },
+              { text: `${hours} horas de trabajo`, useful: false }
+            ],
+            scheme: { type: 'two', stepA: `1.º Fruta total: ${apples} + ${pears}`, stepB: `2.º Bolsas: total ÷ ${bagKg}` },
+            op: '+ y ÷',
+            opOptions: [
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' },
+              { val: '+ y ×', sym: '+ y ×', desc: 'Sumar y luego multiplicar' },
+              { val: '− y ÷', sym: '− y ÷', desc: 'Restar y luego dividir' }
+            ],
+            steps: [
+              { label: 'Paso 1: ¿Cuántos kilos de fruta hay en total?', expr: `${apples} + ${pears} =`, ans: total },
+              { label: `Paso 2: Repartimos en bolsas de ${bagKg} kg`, expr: `${total} ÷ ${bagKg} =`, ans: bags }
+            ],
+            answer: bags,
+            starter: 'SOLUCIÓN: Llenan en total ___',
+            unitCorrect: `${bags} bolsas`,
+            unitOptions: [`${bags} bolsas`, `${bags} camiones`, `${bags} horas`],
+            hint1: `Ni los ${trucks} camiones ni las ${hours} horas intervienen en el cálculo de las bolsas.`,
+            hint2: `Paso 1: ${apples} + ${pears} = ${total} kg. Paso 2: ${total} ÷ ${bagKg} = ${bags} bolsas.`
+          };
+        },
+        () => {
+          const n = randInt(3, 6);
+          const price = randInt(5, 9);
+          const cost = n * price;
+          const bill = pickBillFor(cost);
+          const change = bill - cost;
+          const age = randInt(9, 11);
+          const mins = pickOne([85, 95, 105, 110]);
+          const who = pickOne(NAMES);
+          return {
+            id: 'g4-reto-cine-sobrantes',
+            hard: true,
+            topic: 'Reto · Datos sobrantes (2 pasos)',
+            lines: [
+              `${who} tiene ${age} años y va al cine a ver una película que dura ${mins} minutos.`,
+              `Compra <strong>${n} entradas</strong> a <strong>${price} euros</strong> cada una y paga con un billete de <strong>${bill} euros</strong>.`
+            ],
+            question: '¿Cuántos euros le devuelven de cambio?',
+            chips: [
+              { text: `${n} entradas`, useful: true },
+              { text: `${price} euros cada entrada`, useful: true },
+              { text: `Billete de ${bill} euros`, useful: true },
+              { text: `${who} tiene ${age} años`, useful: false },
+              { text: `Dura ${mins} minutos`, useful: false }
+            ],
+            scheme: { type: 'two', stepA: `1.º Entradas: ${n} × ${price} €`, stepB: `2.º Cambio: ${bill} € − coste` },
+            op: '× y −',
+            opOptions: [
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+              { val: '+ y −', sym: '+ y −', desc: 'Sumar y luego restar' }
+            ],
+            steps: [
+              { label: `Paso 1: ¿Cuánto cuestan las ${n} entradas?`, expr: `${n} × ${price} =`, ans: cost },
+              { label: `Paso 2: ¿Cuánto le devuelven de ${bill} €?`, expr: `${bill} − ${cost} =`, ans: change }
+            ],
+            answer: change,
+            starter: 'SOLUCIÓN: Le devuelven de cambio ___',
+            unitCorrect: `${change} euros`,
+            unitOptions: [`${change} euros`, `${change} minutos`, `${change} años`],
+            hint1: `La edad (${age} años) y la duración (${mins} minutos) no aportan nada para calcular el cambio.`,
+            hint2: `Paso 1: ${n} × ${price} = ${cost} €. Paso 2: ${bill} − ${cost} = ${change} €.`
+          };
         }
       ]
     };
 
+    function mutateNumberChip(text, forbiddenNums) {
+      const m = text.match(/(\d+)/);
+      if (!m) return null;
+      const orig = Number(m[1]);
+      const deltas = orig >= 100
+        ? [10, -10, 20, -20, 5, -5, 12]
+        : (orig >= 20 ? [5, -5, 10, -10, 3, -3, 4] : [2, 3, -2, 4, 5, 1]);
+      for (const d of shuffle(deltas)) {
+        const fake = orig + d;
+        if (fake >= 2 && fake !== orig && !forbiddenNums.has(fake)) {
+          forbiddenNums.add(fake);
+          return text.replace(m[1], String(fake));
+        }
+      }
+      return null;
+    }
+
+    function enrichChips(problem, lvl) {
+      const plain = problem.lines.map(l => l.replace(/<[^>]+>/g, '')).join(' ') + ' ' + problem.question;
+      const forbidden = new Set((plain.match(/\d+/g) || []).map(Number));
+      const chips = problem.chips.map(c => ({ ...c }));
+      const usefulChips = chips.filter(c => c.useful);
+      const existingFalse = chips.filter(c => !c.useful).length;
+
+      // Always add at least 1 plausible false numerical option (altered number not in text)
+      const targetFakeCount = lvl === 'inicial' ? 1 : (existingFalse >= 2 ? 1 : 2);
+      let added = 0;
+      for (const uc of shuffle(usefulChips)) {
+        if (added >= targetFakeCount) break;
+        const fakeText = mutateNumberChip(uc.text, forbidden);
+        if (fakeText && !chips.some(c => c.text === fakeText)) {
+          chips.push({ text: fakeText, useful: false, invented: true });
+          added++;
+        }
+      }
+
+      problem.chips = shuffle(chips);
+      return problem;
+    }
+
     function generateDeck(lvl) {
-      return shuffle(PROBLEM_GENERATORS[lvl]).map(fn => fn());
+      return shuffle(PROBLEM_GENERATORS[lvl]).map(fn => enrichChips(fn(), lvl));
     }
 
     const LEVEL_LABELS = {
@@ -1988,7 +2246,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
       problemSolved = false;
       showDirectScheme = false;
 
-      $('problemTag').textContent = `${LEVEL_LABELS[currentLevel]} · ${p.topic}`;
+      $('problemTag').textContent = `${p.hard ? '★ ' : ''}${LEVEL_LABELS[currentLevel]} · ${p.topic}`;
       $('problemLines').innerHTML = p.lines.map(l => `<p>${l}</p>`).join('');
       $('problemQuestion').textContent = p.question;
       $('progressText').textContent = `Problema #${totalShown}`;
@@ -2114,7 +2372,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
       if (currentStep === 1) {
         box.innerHTML = `
           <h2 class="step-title">Paso 1 · Selecciona los datos clave</h2>
-          <p class="step-sub">Toca solo los datos que necesitas para responder a la pregunta.</p>
+          <p class="step-sub">Toca solo los datos verdaderos que necesitas para responder. ¡Cuidado: hay opciones falsas y datos que sobran!</p>
           <div class="chip-grid" id="chipGrid">
             ${p.chips.map((c, i) => `
               <button type="button" class="data-chip" data-chip="${i}" aria-pressed="${selectedChips.has(i)}">${escapeHtml(c.text)}</button>
@@ -2146,15 +2404,18 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
             else if (isSel && !p.chips[i].useful) btn.classList.add('is-wrong');
           });
           if (ok) {
-            setFeedback('¡Genial! Has seleccionado exactamente los datos necesarios.', 'good');
+            setFeedback('¡Genial! Has seleccionado exactamente los datos verdaderos y necesarios.', 'good');
             setHint('');
             currentStep = 2;
             setTimeout(() => { setFeedback(''); renderStep(); }, 650);
           } else {
-            const extras = chosen.filter(i => !p.chips[i].useful).length;
-            const msg = extras > 0
-              ? 'Hay algún dato marcado que no hace falta para calcular la respuesta. Revisa la pregunta.'
-              : `Te falta marcar algún dato importante (en este problema hay ${expected.length} datos clave).`;
+            const inventedPicked = chosen.filter(i => p.chips[i].invented).length;
+            const uselessPicked = chosen.filter(i => !p.chips[i].useful && !p.chips[i].invented).length;
+            const msg = inventedPicked > 0
+              ? '¡Ojo! Has marcado alguna opción falsa cuyo número no aparece en el problema. Vuelve a leer el enunciado.'
+              : uselessPicked > 0
+                ? 'Has marcado algún dato del enunciado que no aporta nada para responder a la pregunta.'
+                : `Te falta marcar algún dato importante (en este problema hay ${expected.length} datos clave).`;
             setFeedback(msg, 'try');
           }
         });

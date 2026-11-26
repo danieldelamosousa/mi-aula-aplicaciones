@@ -89,28 +89,45 @@ async function runTests() {
     }
   }));
 
-  // 4. Stress-test procedural problem generator in taller-problemas (40 templates x 50 runs = 2,000 instances)
-  suites.push(test('Taller de problemas procedural generator verification (40 templates × 50 runs = 2,000 problems)', () => {
+  // 4. Stress-test procedural problem generator in taller-problemas (45 templates x 50 runs = 2,250 instances)
+  suites.push(test('Taller de problemas procedural generator + false options + distinct colors (45 templates × 50 runs = 2,250 problems)', () => {
     const html = fs.readFileSync(path.join(ROOT, 'public/apps/taller-problemas/index.html'), 'utf8');
+    // Distinct colors for Nivel inicial (blue) vs 3.º (green) vs 4.º (amber)
+    assert.ok(html.includes('body[data-level="inicial"]'), 'Missing dedicated Nivel inicial color theme');
+    const iniAccent = html.match(/body\[data-level="inicial"\][\s\S]*?--accent:\s*(#[0-9a-f]+)/i);
+    const g3Accent = html.match(/body\[data-level="3"\][\s\S]*?--accent:\s*(#[0-9a-f]+)/i);
+    const g4Accent = html.match(/body\[data-level="4"\][\s\S]*?--accent:\s*(#[0-9a-f]+)/i);
+    assert.ok(iniAccent && g3Accent && g4Accent, 'All 3 levels must define --accent');
+    assert.notStrictEqual(iniAccent[1], g3Accent[1], 'Nivel inicial and 3.º must have distinct accent colors');
+    assert.notStrictEqual(g3Accent[1], g4Accent[1], '3.º and 4.º must have distinct accent colors');
+
     const startIdx = html.indexOf('const NAMES =');
-    const endIdx = html.indexOf('function generateDeck(lvl)');
+    const endIdx = html.indexOf('const LEVEL_LABELS =');
     assert.ok(startIdx > 0 && endIdx > startIdx, 'Could not locate PROBLEM_GENERATORS block');
-    const snippet = html.slice(startIdx, endIdx) + '\nPROBLEM_GENERATORS;';
-    const generators = vm.runInNewContext(snippet);
+    const shuffleDef = 'function shuffle(arr){const c=[...arr];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}return c;}\n';
+    const snippet = shuffleDef + html.slice(startIdx, endIdx) + '\n({ PROBLEM_GENERATORS, enrichChips });';
+    const { PROBLEM_GENERATORS: generators, enrichChips } = vm.runInNewContext(snippet);
 
     let totalGenerated = 0;
     let totalTemplates = 0;
+    let hardTemplates = 0;
     for (const [lvl, fns] of Object.entries(generators)) {
       assert.ok(fns.length >= 12, `Level ${lvl} should have at least 12 templates`);
       totalTemplates += fns.length;
 
       for (const fn of fns) {
         const distinctAnswers = new Set();
+        let isHard = false;
         for (let run = 0; run < 50; run++) {
-          const p = fn();
+          const p = enrichChips(fn(), lvl);
+          if (p.hard) isHard = true;
           totalGenerated++;
           assert.ok(Number.isInteger(p.answer) && p.answer > 0, `${p.id} answer must be positive integer, got ${p.answer}`);
           assert.ok(p.chips.some(c => c.useful), `${p.id} must have useful chips`);
+          assert.ok(p.chips.some(c => !c.useful && c.invented), `${p.id} must include at least 1 invented false chip`);
+          if (lvl !== 'inicial') {
+            assert.ok(p.chips.filter(c => !c.useful).length >= 2, `${p.id} in ${lvl} should have at least 2 false/useless chips`);
+          }
           assert.ok(p.opOptions.some(o => o.val === p.op), `${p.id} op ${p.op} must exist in opOptions`);
           assert.ok(p.unitOptions.includes(p.unitCorrect), `${p.id} unitCorrect must exist in unitOptions`);
           assert.strictEqual(new Set(p.unitOptions).size, p.unitOptions.length, `${p.id} unitOptions must be unique`);
@@ -142,11 +159,13 @@ async function runTests() {
           }
           distinctAnswers.add(p.answer);
         }
+        if (isHard) hardTemplates++;
         assert.ok(distinctAnswers.size >= 3, `Template in ${lvl} should produce varied answers across runs`);
       }
     }
-    assert.strictEqual(totalTemplates, 40, 'Expected 40 problem templates');
-    assert.strictEqual(totalGenerated, 2000, 'Expected 2,000 verified generated problems');
+    assert.strictEqual(totalTemplates, 45, 'Expected 45 problem templates');
+    assert.strictEqual(hardTemplates, 5, 'Expected 5 hard distractor templates');
+    assert.strictEqual(totalGenerated, 2250, 'Expected 2,250 verified generated problems');
   }));
 
   // 5. Unit tests for core.mjs analytics, pagination & student report
