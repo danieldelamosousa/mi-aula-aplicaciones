@@ -342,6 +342,110 @@
       });
       list.append(row);
     }
+
+    renderStudentAppMatrix();
+  }
+
+  function formatRangeLabel(range) {
+    switch (range) {
+      case 'today': return 'Hoy';
+      case '7d': return 'Últimos 7 días';
+      case '30d': return 'Últimos 30 días';
+      case '90d': return 'Último trimestre';
+      default: return 'Todo el histórico';
+    }
+  }
+
+  function renderStudentAppMatrix() {
+    const thead = $('matrixHead');
+    const tbody = $('matrixBody');
+    if (!thead || !tbody || !state) return;
+
+    const scale = $('matrixScale') ? $('matrixScale').value : '10';
+    const fRange = $('filterRange') ? $('filterRange').value : 'all';
+
+    // Update Additio CSV export URL
+    const additioBtn = $('exportAdditioBtn');
+    if (additioBtn) {
+      const additioUrl = new URL('/api/teacher/export-additio.csv', location.origin);
+      if (fRange && fRange !== 'all') additioUrl.searchParams.set('range', fRange);
+      additioUrl.searchParams.set('scale', scale);
+      additioBtn.href = additioUrl.pathname + additioUrl.search;
+    }
+
+    if ($('matrixSubtitle')) {
+      $('matrixSubtitle').textContent = `Periodo: ${formatRangeLabel(fRange)} · Pulsa cualquier celda con resultados para ver sus sesiones.`;
+    }
+
+    const builtInApps = (state.apps || []).filter(a => a.builtIn);
+    thead.innerHTML = `
+      <tr>
+        <th>Alumno</th>
+        <th>Global</th>
+        ${builtInApps.map(a => `<th class="matrix-app-col" title="${escapeHtml(a.title)}">${escapeHtml(a.title)}</th>`).join('')}
+      </tr>`;
+
+    tbody.replaceChildren();
+    const sorted = [...(state.byStudent || [])].sort((a, b) =>
+      (a.course || 'ZZ').localeCompare(b.course || 'ZZ', 'es') || a.name.localeCompare(b.name, 'es')
+    );
+
+    if (!sorted.length) {
+      tbody.innerHTML = `<tr><td colspan="${builtInApps.length + 2}" class="empty-cell">Añade alumnado para ver la matriz por aplicación.</td></tr>`;
+      return;
+    }
+
+    const formatCellScore = (correct, attempts) => {
+      if (!attempts) return null;
+      const pct = Math.round((correct / attempts) * 100);
+      const grade = ((correct / attempts) * 10).toFixed(1).replace('.', ',');
+      const tone = pct >= 75 ? 'high' : (pct >= 50 ? 'mid' : 'low');
+      return {
+        label: scale === '100' ? `${pct}%` : grade,
+        sub: `${correct}/${attempts}`,
+        tone,
+        pct
+      };
+    };
+
+    for (const st of sorted) {
+      const tr = document.createElement('tr');
+      const globalScore = formatCellScore(st.correct, st.attempts);
+
+      const firstCell = `
+        <td>
+          <strong>${escapeHtml(st.name)}</strong>
+          ${st.course ? `<span class="matrix-course-tag">${escapeHtml(st.course)}</span>` : ''}
+        </td>`;
+
+      const globalCell = globalScore
+        ? `<td><button type="button" class="matrix-cell-btn ${globalScore.tone}" data-student="${escapeHtml(st.name)}" data-app=""><span class="matrix-score">${escapeHtml(globalScore.label)}</span><span class="matrix-sub">${escapeHtml(globalScore.sub)}</span></button></td>`
+        : '<td><span class="matrix-empty">—</span></td>';
+
+      const appCells = builtInApps.map(app => {
+        const rec = st.apps && st.apps[app.id];
+        if (!rec || (!rec.attempts && !rec.sessions)) {
+          return '<td><span class="matrix-empty">—</span></td>';
+        }
+        const sc = formatCellScore(rec.correct, rec.attempts);
+        if (!sc) {
+          return `<td><button type="button" class="matrix-cell-btn neutral" data-student="${escapeHtml(st.name)}" data-app="${escapeHtml(app.id)}" title="${escapeHtml(rec.sessions || 1)} sesión sin intentos"><span class="matrix-score">•</span><span class="matrix-sub">${escapeHtml(formatDuration(rec.activeMs || 0))}</span></button></td>`;
+        }
+        const titleTip = `${st.name} en ${app.title}: ${rec.correct}/${rec.attempts} aciertos (${sc.pct}%) · ${formatDuration(rec.activeMs || 0)}`;
+        return `<td><button type="button" class="matrix-cell-btn ${sc.tone}" data-student="${escapeHtml(st.name)}" data-app="${escapeHtml(app.id)}" title="${escapeHtml(titleTip)}"><span class="matrix-score">${escapeHtml(sc.label)}</span><span class="matrix-sub">${escapeHtml(sc.sub)}</span></button></td>`;
+      }).join('');
+
+      tr.innerHTML = firstCell + globalCell + appCells;
+      tr.querySelectorAll('.matrix-cell-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          $('filterStudent').value = btn.dataset.student || '';
+          $('filterApp').value = btn.dataset.app || '';
+          renderSessionsTable();
+          document.querySelector('.tab-btn[data-tab="sesiones"]').click();
+        });
+      });
+      tbody.append(tr);
+    }
   }
 
   async function saveStudents(students, message) {
@@ -513,6 +617,7 @@
 
   // Filter & toolbar listeners
   if ($('filterRange')) $('filterRange').addEventListener('change', loadDashboard);
+  if ($('matrixScale')) $('matrixScale').addEventListener('change', renderStudentAppMatrix);
   $('filterStudent').addEventListener('change', renderSessionsTable);
   $('filterApp').addEventListener('change', renderSessionsTable);
   $('filterStatus').addEventListener('change', renderSessionsTable);

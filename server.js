@@ -919,9 +919,14 @@ const server = http.createServer(async (req, res) => {
             rec.correct += s.correct;
             rec.hints += s.hints;
             rec.activeMs += s.activeMs;
-            if (!rec.apps[s.app]) rec.apps[s.app] = { title: s.appTitle, attempts: 0, correct: 0 };
+            if (!rec.apps[s.app]) {
+              rec.apps[s.app] = { title: s.appTitle, sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0 };
+            }
+            rec.apps[s.app].sessions++;
             rec.apps[s.app].attempts += s.attempts;
             rec.apps[s.app].correct += s.correct;
+            rec.apps[s.app].hints += s.hints;
+            rec.apps[s.app].activeMs += s.activeMs;
           }
         }
 
@@ -1141,6 +1146,93 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': `attachment; filename="mi-aula-resultados-${new Date().toISOString().slice(0, 10)}.csv"`,
+          'X-Robots-Tag': 'noindex, nofollow'
+        });
+        res.end(csv);
+        return;
+      }
+
+      if (method === 'GET' && pathname === '/api/teacher/export-additio.csv') {
+        const range = parsedUrl.searchParams.get('range') || 'all';
+        const scale = parsedUrl.searchParams.get('scale') === '100' ? '100' : '10';
+        const cutoffIso = resolveDateCutoff(range);
+        const builtInApps = db.apps.filter(a => a.builtIn);
+
+        const byStudent = new Map();
+        for (const st of db.students) {
+          const name = typeof st === 'string' ? st : st.name;
+          const course = typeof st === 'string' ? '' : (st.course || '');
+          byStudent.set(name, { name, course, sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} });
+        }
+
+        for (const rawSession of db.sessions) {
+          if (cutoffIso && (rawSession.createdAt || '') < cutoffIso) continue;
+          const s = summarizeSession(rawSession);
+          for (const studentName of s.students) {
+            if (!byStudent.has(studentName)) {
+              byStudent.set(studentName, { name: studentName, course: '', sessions: 0, attempts: 0, correct: 0, hints: 0, activeMs: 0, apps: {} });
+            }
+            const rec = byStudent.get(studentName);
+            rec.sessions++;
+            rec.attempts += s.attempts;
+            rec.correct += s.correct;
+            rec.hints += s.hints;
+            rec.activeMs += s.activeMs;
+            if (!rec.apps[s.app]) rec.apps[s.app] = { attempts: 0, correct: 0 };
+            rec.apps[s.app].attempts += s.attempts;
+            rec.apps[s.app].correct += s.correct;
+          }
+        }
+
+        const formatScore = (correct, attempts) => {
+          if (!attempts) return '';
+          if (scale === '100') return String(Math.round((correct / attempts) * 100));
+          return ((correct / attempts) * 10).toFixed(1).replace('.', ',');
+        };
+
+        const sortedStudents = [...byStudent.values()].sort((a, b) =>
+          (a.course || 'ZZ').localeCompare(b.course || 'ZZ', 'es') || a.name.localeCompare(b.name, 'es')
+        );
+
+        const suffix = scale === '100' ? '(%)' : '(/10)';
+        const header = [
+          'Alumno',
+          'Curso',
+          'Sesiones',
+          'Intentos',
+          'Aciertos',
+          'Acierto global (%)',
+          'Nota global (/10)',
+          'Tiempo activo (min)',
+          ...builtInApps.map(a => `${a.title} ${suffix}`)
+        ];
+
+        const rows = [header.map(csvEscape).join(';')];
+        for (const st of sortedStudents) {
+          const globalPct = st.attempts > 0 ? String(Math.round((st.correct / st.attempts) * 100)) : '';
+          const globalGrade = st.attempts > 0 ? ((st.correct / st.attempts) * 10).toFixed(1).replace('.', ',') : '';
+          const mins = (st.activeMs / 60000).toFixed(1).replace('.', ',');
+          const appCells = builtInApps.map(a => {
+            const cell = st.apps[a.id];
+            return cell ? formatScore(cell.correct, cell.attempts) : '';
+          });
+          rows.push([
+            st.name,
+            st.course,
+            st.sessions,
+            st.attempts,
+            st.correct,
+            globalPct,
+            globalGrade,
+            mins,
+            ...appCells
+          ].map(csvEscape).join(';'));
+        }
+
+        const csv = '\uFEFF' + rows.join('\r\n');
+        res.writeHead(200, {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="mi-aula-additio-${range}-${new Date().toISOString().slice(0, 10)}.csv"`,
           'X-Robots-Tag': 'noindex, nofollow'
         });
         res.end(csv);
