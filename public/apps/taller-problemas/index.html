@@ -639,7 +639,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
           <button class="mode-btn" id="modeDirectBtn" type="button" aria-pressed="false">Modo directo</button>
         </div>
         <div class="score-pill">
-          <span id="progressText">Problema 1 de 12</span>
+          <span id="progressText">Problema #1</span>
           <span>·</span>
           <span id="solvedText">0 resueltos</span>
         </div>
@@ -649,7 +649,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
         <div class="problem-card" data-aula-read>
           <div class="problem-head">
             <span class="problem-badge" id="problemTag">3.º Primaria</span>
-            <button class="read-btn" id="speakProblemBtn" type="button">🔊 Escuchar problema</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="read-btn" id="speakProblemBtn" type="button">🔊 Escuchar problema</button>
+              <button class="read-btn" id="newProblemBtn" type="button" title="Generar otro problema con números nuevos">🎲 Otro problema</button>
+            </div>
           </div>
           <div class="problem-text" id="problemLines"></div>
           <div class="problem-question" id="problemQuestion"></div>
@@ -674,919 +677,1216 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   (() => {
     'use strict';
 
-    const PROBLEMS = {
+    const NAMES = ['Vera', 'Hugo', 'Nora', 'Lucía', 'Mateo', 'Sofía', 'Valeria', 'Leo', 'Martina', 'Daniel'];
+    const PLACES = ['Alhama', 'Calatayud', 'Zaragoza', 'Huesca', 'Teruel'];
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function pickOne(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function pickTwoNames() {
+      const a = pickOne(NAMES);
+      let b = pickOne(NAMES);
+      while (b === a) b = pickOne(NAMES);
+      return [a, b];
+    }
+
+    // Nivel inicial: 2-digit addition with NO carry (u1+u2 <= 9, d1+d2 <= 9)
+    function pickNoCarryAdd() {
+      const d1 = randInt(1, 5);
+      const d2 = randInt(1, 8 - d1);
+      const u1 = randInt(1, 7);
+      const u2 = randInt(1, 9 - u1);
+      return [d1 * 10 + u1, d2 * 10 + u2];
+    }
+
+    // Nivel inicial: 2-digit subtraction with NO borrowing (u1 >= u2, d1 > d2)
+    function pickNoBorrowSub() {
+      const d1 = randInt(2, 7);
+      const d2 = randInt(1, d1 - 1);
+      const u1 = randInt(2, 9);
+      const u2 = randInt(1, u1 - 1);
+      return [d1 * 10 + u1, d2 * 10 + u2];
+    }
+
+    // 3.º: 3-digit addition guaranteed to have at least one carry
+    function pickCarryAdd(minA = 125, maxA = 485, minB = 115, maxB = 385) {
+      for (let i = 0; i < 60; i++) {
+        const a = randInt(minA, maxA);
+        const b = randInt(minB, maxB);
+        if ((a % 10) + (b % 10) >= 10 || (Math.floor(a / 10) % 10) + (Math.floor(b / 10) % 10) >= 10) {
+          return [a, b];
+        }
+      }
+      return [268, 147];
+    }
+
+    // 3.º: 3-digit subtraction guaranteed to have at least one borrow and positive gap
+    function pickBorrowSub(minA = 230, maxA = 640, minB = 115, maxB = 395) {
+      for (let i = 0; i < 60; i++) {
+        const a = randInt(minA, maxA);
+        const b = randInt(minB, Math.min(maxB, a - 35));
+        if ((a % 10) < (b % 10) || (Math.floor(a / 10) % 10) < (Math.floor(b / 10) % 10)) {
+          return [a, b];
+        }
+      }
+      return [324, 158];
+    }
+
+    // 4.º: Exact integer division D = d * q
+    function pickExactDiv(minD, maxD, minQ, maxQ) {
+      const d = randInt(minD, maxD);
+      const q = randInt(minQ, maxQ);
+      return [d * q, d, q];
+    }
+
+    // Realistic euro bill strictly larger than cost
+    function pickBillFor(cost) {
+      const bills = [20, 50, 100, 200];
+      return bills.find(b => b > cost) || (Math.ceil((cost + 10) / 50) * 50);
+    }
+
+    const PROBLEM_GENERATORS = {
       inicial: [
-        {
-          id: 'ini-1',
-          topic: 'Suma (juntar)',
-          lines: ['En la biblioteca del cole hay <strong>14 cuentos</strong>.', 'Vera coloca <strong>12 cuentos</strong> más en la estantería.'],
-          question: '¿Cuántos cuentos hay ahora en total?',
-          chips: [
-            { text: '14 cuentos', useful: true },
-            { text: '12 cuentos más', useful: true },
-            { text: 'En la biblioteca', useful: false }
-          ],
-          scheme: { type: 'add', parts: ['14 cuentos', '12 cuentos'], total: '¿Total?' },
-          op: '+',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar (juntar)' },
-            { val: '−', sym: '−', desc: 'Restar (quitar)' }
-          ],
-          steps: [{ label: 'Juntamos los dos grupos', expr: '14 + 12 =', ans: 26 }],
-          answer: 26,
-          starter: 'SOLUCIÓN: Ahora hay ___',
-          unitCorrect: '26 cuentos',
-          unitOptions: ['26 cuentos', '26 euros', '26 minutos'],
-          hint1: 'Si colocamos más cuentos en la estantería, habrá más que al principio. Hay que sumar.',
-          hint2: 'Suma 14 + 12. Primero las unidades (4 + 2 = 6) y luego las decenas (1 + 1 = 2).'
+        () => {
+          const [a, b] = pickNoCarryAdd();
+          const ans = a + b;
+          const who = pickOne(NAMES);
+          return {
+            id: 'ini-cuentos',
+            topic: 'Suma (juntar)',
+            lines: [`En la biblioteca del cole hay <strong>${a} cuentos</strong>.`, `${who} coloca <strong>${b} cuentos</strong> más en la estantería.`],
+            question: '¿Cuántos cuentos hay ahora en total?',
+            chips: [
+              { text: `${a} cuentos`, useful: true },
+              { text: `${b} cuentos más`, useful: true },
+              { text: 'En la biblioteca', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} cuentos`, `${b} cuentos`], total: '¿Total?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar (juntar)' }, { val: '−', sym: '−', desc: 'Restar (quitar)' }],
+            steps: [{ label: 'Juntamos los dos grupos', expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Ahora hay ___',
+            unitCorrect: `${ans} cuentos`,
+            unitOptions: [`${ans} cuentos`, `${ans} euros`, `${ans} minutos`],
+            hint1: 'Si colocamos más cuentos en la estantería, habrá más que al principio. Hay que sumar.',
+            hint2: `Suma ${a} + ${b}: unidades ${a % 10} + ${b % 10} = ${(a % 10) + (b % 10)} y decenas ${Math.floor(a / 10)} + ${Math.floor(b / 10)} = ${Math.floor(a / 10) + Math.floor(b / 10)}.`
+          };
         },
-        {
-          id: 'ini-2',
-          topic: 'Resta (quitar)',
-          lines: ['Hugo lleva <strong>28 cromos</strong> al patio.', 'Regala <strong>13 cromos</strong> a su amiga Nora.'],
-          question: '¿Cuántos cromos le quedan a Hugo?',
-          chips: [
-            { text: '28 cromos', useful: true },
-            { text: 'Regala 13 cromos', useful: true },
-            { text: 'En el patio', useful: false }
-          ],
-          scheme: { type: 'sub', total: '28 cromos', taken: '13 regalados', left: '¿Quedan?' },
-          op: '−',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar (juntar)' },
-            { val: '−', sym: '−', desc: 'Restar (quitar)' }
-          ],
-          steps: [{ label: 'Quitamos los cromos regalados', expr: '28 − 13 =', ans: 15 }],
-          answer: 15,
-          starter: 'SOLUCIÓN: A Hugo le quedan ___',
-          unitCorrect: '15 cromos',
-          unitOptions: ['15 cromos', '15 libros', '15 cajas'],
-          hint1: 'Si Hugo regala cromos, al final tiene menos. Hay que restar.',
-          hint2: 'Resta 28 − 13: unidades 8 − 3 = 5, decenas 2 − 1 = 1.'
+        () => {
+          const [a, b] = pickNoBorrowSub();
+          const ans = a - b;
+          const [n1, n2] = pickTwoNames();
+          return {
+            id: 'ini-cromos',
+            topic: 'Resta (quitar)',
+            lines: [`${n1} lleva <strong>${a} cromos</strong> al patio.`, `Regala <strong>${b} cromos</strong> a ${n2}.`],
+            question: `¿Cuántos cromos le quedan a ${n1}?`,
+            chips: [
+              { text: `${a} cromos`, useful: true },
+              { text: `Regala ${b} cromos`, useful: true },
+              { text: 'En el patio', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} cromos`, taken: `${b} regalados`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar (juntar)' }, { val: '−', sym: '−', desc: 'Restar (quitar)' }],
+            steps: [{ label: 'Quitamos los cromos regalados', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: `SOLUCIÓN: A ${n1} le quedan ___`,
+            unitCorrect: `${ans} cromos`,
+            unitOptions: [`${ans} cromos`, `${ans} libros`, `${ans} cajas`],
+            hint1: `Si ${n1} regala cromos, al final tiene menos. Hay que restar.`,
+            hint2: `Resta ${a} − ${b}: unidades ${a % 10} − ${b % 10} = ${(a % 10) - (b % 10)} y decenas ${Math.floor(a / 10)} − ${Math.floor(b / 10)} = ${Math.floor(a / 10) - Math.floor(b / 10)}.`
+          };
         },
-        {
-          id: 'ini-3',
-          topic: 'Suma (juntar)',
-          lines: ['En una cesta hay <strong>21 manzanas</strong>.', 'El abuelo pone <strong>15 peras</strong> en la misma cesta.'],
-          question: '¿Cuántas piezas de fruta hay en la cesta?',
-          chips: [
-            { text: '21 manzanas', useful: true },
-            { text: '15 peras', useful: true },
-            { text: 'Una cesta', useful: false }
-          ],
-          scheme: { type: 'add', parts: ['21 manzanas', '15 peras'], total: '¿Fruta total?' },
-          op: '+',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar (juntar)' },
-            { val: '−', sym: '−', desc: 'Restar (quitar)' }
-          ],
-          steps: [{ label: 'Juntamos manzanas y peras', expr: '21 + 15 =', ans: 36 }],
-          answer: 36,
-          starter: 'SOLUCIÓN: En la cesta hay ___',
-          unitCorrect: '36 piezas de fruta',
-          unitOptions: ['36 piezas de fruta', '36 árboles', '36 euros'],
-          hint1: 'Queremos saber cuánta fruta hay juntando manzanas y peras. Hay que sumar.',
-          hint2: 'Suma 21 + 15: 1 + 5 = 6 y 2 + 1 = 3.'
+        () => {
+          const [a, b] = pickNoCarryAdd();
+          const ans = a + b;
+          const [f1, f2] = pickOne([['manzanas', 'peras'], ['naranjas', 'plátanos'], ['melocotones', 'cerezas']]);
+          return {
+            id: 'ini-fruta',
+            topic: 'Suma (juntar)',
+            lines: [`En una cesta hay <strong>${a} ${f1}</strong>.`, `El abuelo pone <strong>${b} ${f2}</strong> en la misma cesta.`],
+            question: '¿Cuántas piezas de fruta hay en la cesta?',
+            chips: [
+              { text: `${a} ${f1}`, useful: true },
+              { text: `${b} ${f2}`, useful: true },
+              { text: 'Una cesta', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} ${f1}`, `${b} ${f2}`], total: '¿Fruta total?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar (juntar)' }, { val: '−', sym: '−', desc: 'Restar (quitar)' }],
+            steps: [{ label: `Juntamos ${f1} y ${f2}`, expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En la cesta hay ___',
+            unitCorrect: `${ans} piezas de fruta`,
+            unitOptions: [`${ans} piezas de fruta`, `${ans} árboles`, `${ans} euros`],
+            hint1: `Queremos saber cuánta fruta hay juntando ${f1} y ${f2}. Hay que sumar.`,
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
         },
-        {
-          id: 'ini-4',
-          topic: 'Resta (dinero)',
-          lines: ['Nora tiene <strong>35 euros</strong> en su hucha.', 'Compra un juego que cuesta <strong>12 euros</strong>.'],
-          question: '¿Cuántos euros le quedan en la hucha?',
-          chips: [
-            { text: '35 euros', useful: true },
-            { text: 'Cuesta 12 euros', useful: true },
-            { text: 'Su hucha', useful: false }
-          ],
-          scheme: { type: 'sub', total: '35 €', taken: '12 € gastados', left: '¿Quedan?' },
-          op: '−',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: 'Restamos lo que cuesta el juego', expr: '35 − 12 =', ans: 23 }],
-          answer: 23,
-          starter: 'SOLUCIÓN: En la hucha le quedan ___',
-          unitCorrect: '23 euros',
-          unitOptions: ['23 euros', '23 juegos', '23 cromos'],
-          hint1: 'Al comprar el juego gasta dinero, así que le queda menos. Hay que restar.',
-          hint2: 'Resta 35 − 12: 5 − 2 = 3 y 3 − 1 = 2.'
+        () => {
+          const [a, b] = pickNoBorrowSub();
+          const ans = a - b;
+          const who = pickOne(NAMES);
+          const item = pickOne(['un juego', 'un balón', 'un puzle', 'un cuento']);
+          return {
+            id: 'ini-hucha',
+            topic: 'Resta (dinero)',
+            lines: [`${who} tiene <strong>${a} euros</strong> en su hucha.`, `Compra ${item} que cuesta <strong>${b} euros</strong>.`],
+            question: '¿Cuántos euros le quedan en la hucha?',
+            chips: [
+              { text: `${a} euros`, useful: true },
+              { text: `Cuesta ${b} euros`, useful: true },
+              { text: 'Su hucha', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} €`, taken: `${b} € gastados`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: 'Restamos el precio al dinero que tenía', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En la hucha le quedan ___',
+            unitCorrect: `${ans} euros`,
+            unitOptions: [`${ans} euros`, `${ans} cromos`, `${ans} juegos`],
+            hint1: 'Al comprar gasta dinero, así que le queda menos. Hay que restar.',
+            hint2: `Resta ${a} − ${b}: ${a % 10} − ${b % 10} = ${(a % 10) - (b % 10)} y ${Math.floor(a / 10)} − ${Math.floor(b / 10)} = ${Math.floor(a / 10) - Math.floor(b / 10)}.`
+          };
         },
-        {
-          id: 'ini-5',
-          topic: 'Suma (subir pasajeros)',
-          lines: ['En el autobús a Calatayud van <strong>23 personas</strong>.', 'En la parada de Alhama suben <strong>14 personas</strong> más.'],
-          question: '¿Cuántas personas viajan ahora en el autobús?',
-          chips: [
-            { text: '23 personas', useful: true },
-            { text: 'Suben 14 personas', useful: true },
-            { text: 'Autobús a Calatayud', useful: false }
-          ],
-          scheme: { type: 'add', parts: ['23 personas', '14 suben'], total: '¿Total?' },
-          op: '+',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: 'Sumamos las personas que suben', expr: '23 + 14 =', ans: 37 }],
-          answer: 37,
-          starter: 'SOLUCIÓN: Ahora viajan ___',
-          unitCorrect: '37 personas',
-          unitOptions: ['37 personas', '37 paradas', '37 autobuses'],
-          hint1: 'Si suben más personas, hay más gente dentro del autobús. Hay que sumar.',
-          hint2: 'Suma 23 + 14: 3 + 4 = 7 y 2 + 1 = 3.'
+        () => {
+          const [a, b] = pickNoCarryAdd();
+          const ans = a + b;
+          const dest = pickOne(PLACES);
+          return {
+            id: 'ini-bus',
+            topic: 'Suma (subir pasajeros)',
+            lines: [`En el autobús a ${dest} van <strong>${a} personas</strong>.`, `En la siguiente parada suben <strong>${b} personas</strong> más.`],
+            question: '¿Cuántas personas viajan ahora en el autobús?',
+            chips: [
+              { text: `${a} personas`, useful: true },
+              { text: `Suben ${b} personas`, useful: true },
+              { text: `Autobús a ${dest}`, useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} personas`, `${b} suben`], total: '¿Total?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: 'Sumamos las personas que suben', expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Ahora viajan ___',
+            unitCorrect: `${ans} personas`,
+            unitOptions: [`${ans} personas`, `${ans} paradas`, `${ans} autobuses`],
+            hint1: 'Si suben más personas, hay más gente dentro del autobús. Hay que sumar.',
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
         },
-        {
-          id: 'ini-6',
-          topic: 'Resta (diferencia)',
-          lines: ['En clase hay <strong>19 pinturas</strong> rojas.', 'Se han roto <strong>7 pinturas</strong>.'],
-          question: '¿Cuántas pinturas quedan sin romper?',
-          chips: [
-            { text: '19 pinturas', useful: true },
-            { text: '7 rotas', useful: true },
-            { text: 'De color rojo', useful: false }
-          ],
-          scheme: { type: 'sub', total: '19 pinturas', taken: '7 rotas', left: '¿Quedan?' },
-          op: '−',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: 'Quitamos las pinturas rotas', expr: '19 − 7 =', ans: 12 }],
-          answer: 12,
-          starter: 'SOLUCIÓN: Quedan sin romper ___',
-          unitCorrect: '12 pinturas',
-          unitOptions: ['12 pinturas', '12 mesas', '12 folios'],
-          hint1: 'Quitamos las pinturas rotas del total que había. Hay que restar.',
-          hint2: 'Resta 19 − 7 = 12.'
+        () => {
+          const a = randInt(15, 29);
+          const b = randInt(3, Math.min(8, a % 10 === 0 ? 5 : a % 10));
+          const safeA = (a % 10) < b ? Math.floor(a / 10) * 10 + Math.max(b, 8) : a;
+          const ans = safeA - b;
+          const color = pickOne(['rojas', 'azules', 'verdes', 'amarillas']);
+          return {
+            id: 'ini-pinturas',
+            topic: 'Resta (quedan)',
+            lines: [`En clase hay <strong>${safeA} pinturas</strong> ${color}.`, `Se han roto <strong>${b} pinturas</strong>.`],
+            question: '¿Cuántas pinturas quedan sin romper?',
+            chips: [
+              { text: `${safeA} pinturas`, useful: true },
+              { text: `${b} rotas`, useful: true },
+              { text: `De color ${color.slice(0, -1)}`, useful: false }
+            ],
+            scheme: { type: 'sub', total: `${safeA} pinturas`, taken: `${b} rotas`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: 'Quitamos las pinturas rotas', expr: `${safeA} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Quedan sin romper ___',
+            unitCorrect: `${ans} pinturas`,
+            unitOptions: [`${ans} pinturas`, `${ans} mesas`, `${ans} folios`],
+            hint1: 'Quitamos las pinturas rotas del total que había. Hay que restar.',
+            hint2: `Resta ${safeA} − ${b} = ${ans}.`
+          };
         },
-        {
-          id: 'ini-7',
-          topic: 'Suma (estuche)',
-          lines: ['En un bote hay <strong>32 lápices</strong>.', 'En otro bote hay <strong>26 lápices</strong>.'],
-          question: '¿Cuántos lápices hay entre los dos botes?',
-          chips: [
-            { text: '32 lápices', useful: true },
-            { text: '26 lápices', useful: true },
-            { text: 'Dos botes', useful: false }
-          ],
-          scheme: { type: 'add', parts: ['32 lápices', '26 lápices'], total: '¿Total?' },
-          op: '+',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: 'Juntamos los lápices de ambos botes', expr: '32 + 26 =', ans: 58 }],
-          answer: 58,
-          starter: 'SOLUCIÓN: Entre los dos botes hay ___',
-          unitCorrect: '58 lápices',
-          unitOptions: ['58 lápices', '58 botes', '58 hojas'],
-          hint1: 'Queremos juntar lo que hay en un bote y en el otro. Hay que sumar.',
-          hint2: 'Suma 32 + 26: 2 + 6 = 8 y 3 + 2 = 5.'
+        () => {
+          const [a, b] = pickNoCarryAdd();
+          const ans = a + b;
+          const obj = pickOne(['lápices', 'gomas', 'rotuladores', 'canicas']);
+          return {
+            id: 'ini-botes',
+            topic: 'Suma (dos botes)',
+            lines: [`En un bote hay <strong>${a} ${obj}</strong>.`, `En otro bote hay <strong>${b} ${obj}</strong>.`],
+            question: `¿Cuántos ${obj} hay entre los dos botes?`,
+            chips: [
+              { text: `${a} ${obj}`, useful: true },
+              { text: `${b} ${obj}`, useful: true },
+              { text: 'Dos botes', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} ${obj}`, `${b} ${obj}`], total: '¿Total?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Juntamos los ${obj} de ambos botes`, expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Entre los dos botes hay ___',
+            unitCorrect: `${ans} ${obj}`,
+            unitOptions: [`${ans} ${obj}`, `${ans} botes`, `${ans} hojas`],
+            hint1: 'Queremos juntar lo que hay en un bote y en el otro. Hay que sumar.',
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
         },
-        {
-          id: 'ini-8',
-          topic: 'Resta (páginas)',
-          lines: ['Un cuento tiene <strong>46 páginas</strong>.', 'Vera ya ha leído <strong>24 páginas</strong>.'],
-          question: '¿Cuántas páginas le faltan por leer?',
-          chips: [
-            { text: '46 páginas en total', useful: true },
-            { text: '24 páginas leídas', useful: true },
-            { text: 'Un cuento', useful: false }
-          ],
-          scheme: { type: 'sub', total: '46 páginas', taken: '24 leídas', left: '¿Faltan?' },
-          op: '−',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: 'Quitamos las páginas ya leídas', expr: '46 − 24 =', ans: 22 }],
-          answer: 22,
-          starter: 'SOLUCIÓN: Le faltan por leer ___',
-          unitCorrect: '22 páginas',
-          unitOptions: ['22 páginas', '22 cuentos', '22 días'],
-          hint1: 'Para saber cuántas faltan, quitamos las leídas al total del libro. Hay que restar.',
-          hint2: 'Resta 46 − 24: 6 − 4 = 2 y 4 − 2 = 2.'
+        () => {
+          const [a, b] = pickNoBorrowSub();
+          const ans = a - b;
+          const who = pickOne(NAMES);
+          return {
+            id: 'ini-paginas',
+            topic: 'Resta (páginas)',
+            lines: [`Un cuento tiene <strong>${a} páginas</strong>.`, `${who} ya ha leído <strong>${b} páginas</strong>.`],
+            question: '¿Cuántas páginas le faltan por leer?',
+            chips: [
+              { text: `${a} páginas en total`, useful: true },
+              { text: `${b} páginas leídas`, useful: true },
+              { text: 'Un cuento', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} páginas`, taken: `${b} leídas`, left: '¿Faltan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: 'Quitamos las páginas ya leídas', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Le faltan por leer ___',
+            unitCorrect: `${ans} páginas`,
+            unitOptions: [`${ans} páginas`, `${ans} cuentos`, `${ans} días`],
+            hint1: 'Para saber cuántas faltan, quitamos las leídas al total del libro. Hay que restar.',
+            hint2: `Resta ${a} − ${b} = ${ans}.`
+          };
         },
-        {
-          id: 'ini-9',
-          topic: 'Grupos iguales (intro)',
-          lines: ['En el patio hay <strong>3 aros</strong>.', 'En cada aro ponemos <strong>5 pelotas</strong>.'],
-          question: '¿Cuántas pelotas hay en total?',
-          chips: [
-            { text: '3 aros', useful: true },
-            { text: '5 pelotas en cada aro', useful: true },
-            { text: 'En el patio', useful: false }
-          ],
-          scheme: { type: 'mul', groups: 3, each: '5 pelotas', total: '¿Total?' },
-          op: '×',
-          opOptions: [
-            { val: '×', sym: '×', desc: 'Multiplicar (grupos iguales)' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: '3 grupos de 5 pelotas (5 + 5 + 5)', expr: '3 × 5 =', ans: 15 }],
-          answer: 15,
-          starter: 'SOLUCIÓN: En total hay ___',
-          unitCorrect: '15 pelotas',
-          unitOptions: ['15 pelotas', '15 aros', '15 patios'],
-          hint1: 'Hay 3 aros con el mismo número de pelotas en cada uno. Podemos multiplicar 3 × 5.',
-          hint2: 'Cuenta de 5 en 5 tres veces: 5, 10, 15.'
+        () => {
+          const g = randInt(2, 5);
+          const each = randInt(2, 6);
+          const ans = g * each;
+          return {
+            id: 'ini-aros',
+            topic: 'Grupos iguales (intro)',
+            lines: [`En el patio hay <strong>${g} aros</strong>.`, `En cada aro ponemos <strong>${each} pelotas</strong>.`],
+            question: '¿Cuántas pelotas hay en total?',
+            chips: [
+              { text: `${g} aros`, useful: true },
+              { text: `${each} pelotas en cada aro`, useful: true },
+              { text: 'En el patio', useful: false }
+            ],
+            scheme: { type: 'mul', groups: g, each: `${each} pelotas`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '×', sym: '×', desc: 'Multiplicar (grupos iguales)' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `${g} grupos de ${each} pelotas`, expr: `${g} × ${each} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total hay ___',
+            unitCorrect: `${ans} pelotas`,
+            unitOptions: [`${ans} pelotas`, `${ans} aros`, `${ans} patios`],
+            hint1: `Hay ${g} aros con el mismo número de pelotas (${each}) en cada uno. Multiplicamos ${g} × ${each}.`,
+            hint2: `Suma ${each} repetido ${g} veces: ${Array(g).fill(each).join(' + ')} = ${ans}.`
+          };
         },
-        {
-          id: 'ini-10',
-          topic: 'Suma (flores)',
-          lines: ['En el huerto escolar plantamos <strong>30 lechugas</strong>.', 'Al día siguiente plantamos <strong>18 lechugas</strong> más.'],
-          question: '¿Cuántas lechugas hay ahora en el huerto?',
-          chips: [
-            { text: '30 lechugas', useful: true },
-            { text: '18 lechugas más', useful: true },
-            { text: 'Huerto escolar', useful: false }
-          ],
-          scheme: { type: 'add', parts: ['30 lechugas', '18 más'], total: '¿Total?' },
-          op: '+',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: 'Sumamos las lechugas plantadas', expr: '30 + 18 =', ans: 48 }],
-          answer: 48,
-          starter: 'SOLUCIÓN: Ahora hay ___',
-          unitCorrect: '48 lechugas',
-          unitOptions: ['48 lechugas', '48 tomates', '48 días'],
-          hint1: 'Si plantamos más lechugas, juntamos las dos cantidades. Hay que sumar.',
-          hint2: 'Suma 30 + 18 = 48.'
+        () => {
+          const a = randInt(2, 6) * 10;
+          const b = randInt(11, 29);
+          const ans = a + b;
+          const plant = pickOne(['lechugas', 'tomateras', 'fresas', 'zanahorias']);
+          return {
+            id: 'ini-huerto',
+            topic: 'Suma (huerto)',
+            lines: [`En el huerto escolar plantamos <strong>${a} ${plant}</strong>.`, `Al día siguiente plantamos <strong>${b} ${plant}</strong> más.`],
+            question: `¿Cuántas ${plant} hay ahora en el huerto?`,
+            chips: [
+              { text: `${a} ${plant}`, useful: true },
+              { text: `${b} ${plant} más`, useful: true },
+              { text: 'Huerto escolar', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} ${plant}`, `${b} más`], total: '¿Total?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Sumamos las ${plant} plantadas`, expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Ahora hay ___',
+            unitCorrect: `${ans} ${plant}`,
+            unitOptions: [`${ans} ${plant}`, `${ans} regaderas`, `${ans} días`],
+            hint1: 'Si plantamos más, juntamos las dos cantidades. Hay que sumar.',
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
         },
-        {
-          id: 'ini-11',
-          topic: 'Resta (galletas)',
-          lines: ['Una caja trae <strong>39 galletas</strong>.', 'En el almuerzo comemos <strong>16 galletas</strong>.'],
-          question: '¿Cuántas galletas quedan en la caja?',
-          chips: [
-            { text: '39 galletas', useful: true },
-            { text: '16 comidas', useful: true },
-            { text: 'En el almuerzo', useful: false }
-          ],
-          scheme: { type: 'sub', total: '39 galletas', taken: '16 comidas', left: '¿Quedan?' },
-          op: '−',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: 'Quitamos las galletas comidas', expr: '39 − 16 =', ans: 23 }],
-          answer: 23,
-          starter: 'SOLUCIÓN: En la caja quedan ___',
-          unitCorrect: '23 galletas',
-          unitOptions: ['23 galletas', '23 cajas', '23 recreos'],
-          hint1: 'Si nos comemos 16 galletas, quedan menos en la caja. Hay que restar.',
-          hint2: 'Resta 39 − 16: 9 − 6 = 3 y 3 − 1 = 2.'
+        () => {
+          const [a, b] = pickNoBorrowSub();
+          const ans = a - b;
+          const snack = pickOne(['galletas', 'magdalenas', 'rosquillas']);
+          return {
+            id: 'ini-galletas',
+            topic: 'Resta (almuerzo)',
+            lines: [`Una caja trae <strong>${a} ${snack}</strong>.`, `En el almuerzo comemos <strong>${b} ${snack}</strong>.`],
+            question: `¿Cuántas ${snack} quedan en la caja?`,
+            chips: [
+              { text: `${a} ${snack}`, useful: true },
+              { text: `${b} comidas`, useful: true },
+              { text: 'En el almuerzo', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} ${snack}`, taken: `${b} comidas`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Quitamos las ${snack} comidas`, expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En la caja quedan ___',
+            unitCorrect: `${ans} ${snack}`,
+            unitOptions: [`${ans} ${snack}`, `${ans} cajas`, `${ans} recreos`],
+            hint1: `Si comemos ${b}, quedan menos en la caja. Hay que restar.`,
+            hint2: `Resta ${a} − ${b} = ${ans}.`
+          };
         },
-        {
-          id: 'ini-12',
-          topic: 'Grupos iguales (intro)',
-          lines: ['El abuelo compra <strong>4 bolsas</strong> de naranjas.', 'Cada bolsa tiene <strong>6 naranjas</strong>.'],
-          question: '¿Cuántas naranjas ha comprado en total?',
-          chips: [
-            { text: '4 bolsas', useful: true },
-            { text: '6 naranjas en cada bolsa', useful: true },
-            { text: 'El abuelo', useful: false }
-          ],
-          scheme: { type: 'mul', groups: 4, each: '6 naranjas', total: '¿Total?' },
-          op: '×',
-          opOptions: [
-            { val: '×', sym: '×', desc: 'Multiplicar (grupos iguales)' },
-            { val: '+', sym: '+', desc: 'Sumar solo 4 + 6' }
-          ],
-          steps: [{ label: '4 bolsas de 6 naranjas cada una', expr: '4 × 6 =', ans: 24 }],
-          answer: 24,
-          starter: 'SOLUCIÓN: Ha comprado ___',
-          unitCorrect: '24 naranjas',
-          unitOptions: ['24 naranjas', '24 bolsas', '24 euros'],
-          hint1: 'El número 6 se repite 4 veces (una por cada bolsa). Multiplicamos 4 × 6.',
-          hint2: '6 + 6 = 12, y 12 + 12 = 24. Así que 4 × 6 = 24.'
+        () => {
+          const g = randInt(3, 5);
+          const each = randInt(3, 6);
+          const ans = g * each;
+          const fruit = pickOne(['naranjas', 'mandarinas', 'manzanas']);
+          return {
+            id: 'ini-bolsas',
+            topic: 'Grupos iguales (intro)',
+            lines: [`El abuelo compra <strong>${g} bolsas</strong> de ${fruit}.`, `Cada bolsa tiene <strong>${each} ${fruit}</strong>.`],
+            question: `¿Cuántas ${fruit} ha comprado en total?`,
+            chips: [
+              { text: `${g} bolsas`, useful: true },
+              { text: `${each} ${fruit} en cada bolsa`, useful: true },
+              { text: 'El abuelo', useful: false }
+            ],
+            scheme: { type: 'mul', groups: g, each: `${each} ${fruit}`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '×', sym: '×', desc: 'Multiplicar (grupos iguales)' }, { val: '+', sym: '+', desc: `Sumar solo ${g} + ${each}` }],
+            steps: [{ label: `${g} bolsas de ${each} ${fruit}`, expr: `${g} × ${each} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Ha comprado ___',
+            unitCorrect: `${ans} ${fruit}`,
+            unitOptions: [`${ans} ${fruit}`, `${ans} bolsas`, `${ans} euros`],
+            hint1: `El número ${each} se repite ${g} veces (una por cada bolsa). Multiplicamos ${g} × ${each}.`,
+            hint2: `${Array(g).fill(each).join(' + ')} = ${ans}.`
+          };
         }
       ],
 
       '3': [
-        {
-          id: 'g3-1',
-          topic: 'Suma con llevadas',
-          lines: ['La biblioteca de Alhama tenía <strong>268 libros</strong> de aventuras y <strong>147 libros</strong> de animales.', 'Además, la sala tiene 4 ventanas grandes.'],
-          question: '¿Cuántos libros hay en total entre las dos secciones?',
-          chips: [
-            { text: '268 libros de aventuras', useful: true },
-            { text: '147 libros de animales', useful: true },
-            { text: '4 ventanas grandes', useful: false }
-          ],
-          scheme: { type: 'add', parts: ['268 aventuras', '147 animales'], total: '¿Total libros?' },
-          op: '+',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: 'Sumamos los dos grupos de libros', expr: '268 + 147 =', ans: 415 }],
-          answer: 415,
-          starter: 'SOLUCIÓN: En total hay ___',
-          unitCorrect: '415 libros',
-          unitOptions: ['415 libros', '415 ventanas', '415 euros'],
-          hint1: 'Las 4 ventanas son un dato que sobra. Solo juntamos 268 y 147 libros.',
-          hint2: 'Suma por columnas: 8 + 7 = 15 (me llevo 1), 6 + 4 + 1 = 11 (me llevo 1), 2 + 1 + 1 = 4.'
+        () => {
+          const [a, b] = pickCarryAdd(145, 485, 115, 365);
+          const ans = a + b;
+          const extra = randInt(3, 8);
+          return {
+            id: 'g3-biblioteca',
+            topic: 'Suma con llevadas',
+            lines: [`La biblioteca de Alhama tenía <strong>${a} libros</strong> de aventuras y <strong>${b} libros</strong> de animales.`, `Además, la sala tiene ${extra} ventanas grandes.`],
+            question: '¿Cuántos libros hay en total entre las dos secciones?',
+            chips: [
+              { text: `${a} libros de aventuras`, useful: true },
+              { text: `${b} libros de animales`, useful: true },
+              { text: `${extra} ventanas grandes`, useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} aventuras`, `${b} animales`], total: '¿Total libros?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Sumamos los dos grupos de libros', expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total hay ___',
+            unitCorrect: `${ans} libros`,
+            unitOptions: [`${ans} libros`, `${ans} ventanas`, `${ans} euros`],
+            hint1: `Las ${extra} ventanas son un dato que sobra. Solo juntamos ${a} y ${b} libros.`,
+            hint2: `Suma ${a} + ${b} empezando por las unidades y anotando las llevadas → ${ans}.`
+          };
         },
-        {
-          id: 'g3-2',
-          topic: 'Resta con llevadas',
-          lines: ['Para la excursión a Zaragoza se han apuntado <strong>324 escolares</strong> en total.', 'Por la mañana ya han subido al tren <strong>158 escolares</strong>.'],
-          question: '¿Cuántos escolares faltan todavía por subir?',
-          chips: [
-            { text: '324 escolares en total', useful: true },
-            { text: '158 ya han subido', useful: true },
-            { text: 'Excursión a Zaragoza', useful: false }
-          ],
-          scheme: { type: 'sub', total: '324 escolares', taken: '158 subieron', left: '¿Faltan?' },
-          op: '−',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: 'Restamos los que ya han subido', expr: '324 − 158 =', ans: 166 }],
-          answer: 166,
-          starter: 'SOLUCIÓN: Faltan por subir ___',
-          unitCorrect: '166 escolares',
-          unitOptions: ['166 escolares', '166 trenes', '166 minutos'],
-          hint1: 'Sabemos el total (324) y una parte (158). Para hallar la otra parte, restamos.',
-          hint2: '324 − 158: desagrupamos en decenas y centenas → 166. Comprueba: 166 + 158 = 324.'
+        () => {
+          const [a, b] = pickBorrowSub(240, 580, 115, 340);
+          const ans = a - b;
+          const city = pickOne(['Zaragoza', 'Huesca', 'Teruel']);
+          return {
+            id: 'g3-excursion',
+            topic: 'Resta con llevadas',
+            lines: [`Para la excursión a ${city} se han apuntado <strong>${a} escolares</strong> en total.`, `Por la mañana ya han subido al tren <strong>${b} escolares</strong>.`],
+            question: '¿Cuántos escolares faltan todavía por subir?',
+            chips: [
+              { text: `${a} escolares en total`, useful: true },
+              { text: `${b} ya han subido`, useful: true },
+              { text: `Excursión a ${city}`, useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} escolares`, taken: `${b} subieron`, left: '¿Faltan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Restamos los que ya han subido', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Faltan por subir ___',
+            unitCorrect: `${ans} escolares`,
+            unitOptions: [`${ans} escolares`, `${ans} trenes`, `${ans} minutos`],
+            hint1: `Sabemos el total (${a}) y una parte (${b}). Para hallar la otra parte, restamos.`,
+            hint2: `Resta ${a} − ${b} desagrupando cuando haga falta. Prueba de la resta: ${ans} + ${b} = ${a}.`
+          };
         },
-        {
-          id: 'g3-3',
-          topic: 'Multiplicación (grupos iguales)',
-          lines: ['En el taller de plástica hemos preparado <strong>7 cajas</strong>.', 'En cada caja guardamos <strong>8 rotuladores</strong>.'],
-          question: '¿Cuántos rotuladores hay en total?',
-          chips: [
-            { text: '7 cajas', useful: true },
-            { text: '8 rotuladores por caja', useful: true },
-            { text: 'Taller de plástica', useful: false }
-          ],
-          scheme: { type: 'mul', groups: 7, each: '8 rotuladores', total: '¿Total?' },
-          op: '×',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: '7 cajas con 8 rotuladores cada una', expr: '7 × 8 =', ans: 56 }],
-          answer: 56,
-          starter: 'SOLUCIÓN: En total hay ___',
-          unitCorrect: '56 rotuladores',
-          unitOptions: ['56 rotuladores', '56 cajas', '56 folios'],
-          hint1: 'Todas las cajas tienen la misma cantidad (8). Multiplicamos 7 × 8.',
-          hint2: 'Recuerda la tabla del 7 o del 8: 7 × 8 = 56.'
+        () => {
+          const g = randInt(4, 9);
+          const each = randInt(4, 9);
+          const ans = g * each;
+          const item = pickOne(['rotuladores', 'ceras', 'pinceles', 'pegatinas']);
+          return {
+            id: 'g3-cajas',
+            topic: 'Multiplicación (grupos iguales)',
+            lines: [`En el taller de plástica hemos preparado <strong>${g} cajas</strong>.`, `En cada caja guardamos <strong>${each} ${item}</strong>.`],
+            question: `¿Cuántos ${item} hay en total?`,
+            chips: [
+              { text: `${g} cajas`, useful: true },
+              { text: `${each} ${item} por caja`, useful: true },
+              { text: 'Taller de plástica', useful: false }
+            ],
+            scheme: { type: 'mul', groups: g, each: `${each} ${item}`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `${g} cajas con ${each} ${item} cada una`, expr: `${g} × ${each} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total hay ___',
+            unitCorrect: `${ans} ${item}`,
+            unitOptions: [`${ans} ${item}`, `${ans} cajas`, `${ans} folios`],
+            hint1: `Todas las cajas tienen la misma cantidad (${each}). Multiplicamos ${g} × ${each}.`,
+            hint2: `Repasa la tabla del ${g} o del ${each}: ${g} × ${each} = ${ans}.`
+          };
         },
-        {
-          id: 'g3-4',
-          topic: 'Dinero (cambio)',
-          lines: ['Hugo compra una mochila de montaña que cuesta <strong>38 euros</strong>.', 'Paga en la tienda con un billete de <strong>50 euros</strong>.'],
-          question: '¿Cuántos euros le tienen que devolver?',
-          chips: [
-            { text: 'Cuesta 38 euros', useful: true },
-            { text: 'Paga con 50 euros', useful: true },
-            { text: 'Mochila de montaña', useful: false }
-          ],
-          scheme: { type: 'sub', total: '50 € entregados', taken: '38 € precio', left: '¿Cambio?' },
-          op: '−',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: 'Calculamos la diferencia para el cambio', expr: '50 − 38 =', ans: 12 }],
-          answer: 12,
-          starter: 'SOLUCIÓN: Le tienen que devolver ___',
-          unitCorrect: '12 euros',
-          unitOptions: ['12 euros', '12 mochilas', '12 billetes'],
-          hint1: 'Para calcular el cambio restamos lo que cuesta al billete con el que paga.',
-          hint2: 'De 38 hasta 40 van 2, y de 40 hasta 50 van 10. En total: 12.'
+        () => {
+          const price = pickOne([randInt(11, 18), randInt(23, 46), randInt(54, 88)]);
+          const bill = pickBillFor(price);
+          const ans = bill - price;
+          const who = pickOne(NAMES);
+          const item = pickOne(['una mochila de montaña', 'unas zapatillas', 'un juego de mesa', 'un casco de bici']);
+          return {
+            id: 'g3-cambio',
+            topic: 'Dinero (cambio)',
+            lines: [`${who} compra ${item} que cuesta <strong>${price} euros</strong>.`, `Paga en la tienda con un billete de <strong>${bill} euros</strong>.`],
+            question: '¿Cuántos euros le tienen que devolver?',
+            chips: [
+              { text: `Cuesta ${price} euros`, useful: true },
+              { text: `Paga con ${bill} euros`, useful: true },
+              { text: item[0].toUpperCase() + item.slice(1), useful: false }
+            ],
+            scheme: { type: 'sub', total: `${bill} € entregados`, taken: `${price} € precio`, left: '¿Cambio?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Calculamos la diferencia para el cambio', expr: `${bill} − ${price} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Le tienen que devolver ___',
+            unitCorrect: `${ans} euros`,
+            unitOptions: [`${ans} euros`, `${ans} billetes`, `${ans} tiendas`],
+            hint1: 'Para calcular el cambio restamos lo que cuesta al billete con el que paga.',
+            hint2: `Resta ${bill} − ${price} = ${ans}. Comprueba: ${price} + ${ans} = ${bill}.`
+          };
         },
-        {
-          id: 'g3-5',
-          topic: 'Multiplicación (tablas)',
-          lines: ['En el huerto de Nora hay <strong>6 filas</strong> de fresas.', 'En cada fila crecen <strong>9 plantas</strong>. El lunes llovió 2 horas.'],
-          question: '¿Cuántas plantas de fresa hay en el huerto?',
-          chips: [
-            { text: '6 filas', useful: true },
-            { text: '9 plantas por fila', useful: true },
-            { text: 'Llovió 2 horas', useful: false }
-          ],
-          scheme: { type: 'mul', groups: 6, each: '9 plantas', total: '¿Total?' },
-          op: '×',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: '6 filas iguales de 9 plantas', expr: '6 × 9 =', ans: 54 }],
-          answer: 54,
-          starter: 'SOLUCIÓN: En el huerto hay ___',
-          unitCorrect: '54 plantas de fresa',
-          unitOptions: ['54 plantas de fresa', '54 horas', '54 filas'],
-          hint1: 'Las 2 horas de lluvia no hacen falta. Hay 6 filas con 9 plantas en cada una.',
-          hint2: '6 × 10 = 60; si quitamos 6 nos queda 6 × 9 = 54.'
+        () => {
+          const rows = randInt(4, 9);
+          const each = randInt(5, 9);
+          const ans = rows * each;
+          const rain = randInt(2, 5);
+          const who = pickOne(NAMES);
+          return {
+            id: 'g3-huerto',
+            topic: 'Multiplicación (tablas)',
+            lines: [`En el huerto de ${who} hay <strong>${rows} filas</strong> de fresas.`, `En cada fila crecen <strong>${each} plantas</strong>. El lunes llovió ${rain} horas.`],
+            question: '¿Cuántas plantas de fresa hay en el huerto?',
+            chips: [
+              { text: `${rows} filas`, useful: true },
+              { text: `${each} plantas por fila`, useful: true },
+              { text: `Llovió ${rain} horas`, useful: false }
+            ],
+            scheme: { type: 'mul', groups: rows, each: `${each} plantas`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `${rows} filas iguales de ${each} plantas`, expr: `${rows} × ${each} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En el huerto hay ___',
+            unitCorrect: `${ans} plantas de fresa`,
+            unitOptions: [`${ans} plantas de fresa`, `${ans} horas`, `${ans} filas`],
+            hint1: `Las ${rain} horas de lluvia sobran. Hay ${rows} filas con ${each} plantas en cada una.`,
+            hint2: `Multiplica ${rows} × ${each} = ${ans}.`
+          };
         },
-        {
-          id: 'g3-6',
-          topic: 'Comparación (más que)',
-          lines: ['Vera ha recorrido <strong>185 metros</strong> en bicicleta.', 'Su abuelo ha recorrido <strong>64 metros más</strong> que Vera.'],
-          question: '¿Cuántos metros ha recorrido el abuelo?',
-          chips: [
-            { text: '185 metros (Vera)', useful: true },
-            { text: '64 metros más', useful: true },
-            { text: 'En bicicleta', useful: false }
-          ],
-          scheme: { type: 'add', parts: ['185 m (Vera)', '64 m más'], total: '¿Abuelo?' },
-          op: '+',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: 'Sumamos los 64 metros de más', expr: '185 + 64 =', ans: 249 }],
-          answer: 249,
-          starter: 'SOLUCIÓN: El abuelo ha recorrido ___',
-          unitCorrect: '249 metros',
-          unitOptions: ['249 metros', '249 bicicletas', '249 euros'],
-          hint1: 'El abuelo recorrió más metros que Vera: a los 185 de Vera le sumamos 64.',
-          hint2: '185 + 64: 5 + 4 = 9, 8 + 6 = 14 (me llevo 1), 1 + 1 = 2 → 249.'
+        () => {
+          const [a, b] = pickCarryAdd(125, 295, 38, 125);
+          const ans = a + b;
+          const who = pickOne(NAMES);
+          return {
+            id: 'g3-bici',
+            topic: 'Comparación (más que)',
+            lines: [`${who} ha recorrido <strong>${a} metros</strong> en bicicleta.`, `Su abuelo ha recorrido <strong>${b} metros más</strong> que ${who}.`],
+            question: '¿Cuántos metros ha recorrido el abuelo?',
+            chips: [
+              { text: `${a} metros (${who})`, useful: true },
+              { text: `${b} metros más`, useful: true },
+              { text: 'En bicicleta', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} m (${who})`, `${b} m más`], total: '¿Abuelo?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `Sumamos los ${b} metros de más`, expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: El abuelo ha recorrido ___',
+            unitCorrect: `${ans} metros`,
+            unitOptions: [`${ans} metros`, `${ans} bicicletas`, `${ans} euros`],
+            hint1: `El abuelo recorrió más metros que ${who}: a ${a} le sumamos ${b}.`,
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
         },
-        {
-          id: 'g3-7',
-          topic: 'Resta (comparación)',
-          lines: ['El álbum de minerales de Leo tiene <strong>240 huecos</strong>.', 'Ya tiene colocados <strong>175 minerales</strong>.'],
-          question: '¿Cuántos minerales le faltan para completar el álbum?',
-          chips: [
-            { text: '240 huecos en total', useful: true },
-            { text: '175 ya colocados', useful: true },
-            { text: 'Álbum de minerales', useful: false }
-          ],
-          scheme: { type: 'sub', total: '240 huecos', taken: '175 colocados', left: '¿Faltan?' },
-          op: '−',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: 'Calculamos lo que falta hasta 240', expr: '240 − 175 =', ans: 65 }],
-          answer: 65,
-          starter: 'SOLUCIÓN: Le faltan ___',
-          unitCorrect: '65 minerales',
-          unitOptions: ['65 minerales', '65 álbumes', '65 euros'],
-          hint1: 'Queremos saber cuánto falta desde 175 hasta 240. Restamos 240 − 175.',
-          hint2: 'De 175 a 200 van 25, y de 200 a 240 van 40. 25 + 40 = 65.'
+        () => {
+          const [a, b] = pickBorrowSub(190, 380, 95, 220);
+          const ans = a - b;
+          const who = pickOne(NAMES);
+          const col = pickOne(['minerales', 'cromos', 'sellos']);
+          return {
+            id: 'g3-album',
+            topic: 'Resta (cuántos faltan)',
+            lines: [`El álbum de ${col} de ${who} tiene <strong>${a} huecos</strong>.`, `Ya tiene colocados <strong>${b} ${col}</strong>.`],
+            question: `¿Cuántos ${col} le faltan para completar el álbum?`,
+            chips: [
+              { text: `${a} huecos en total`, useful: true },
+              { text: `${b} ya colocados`, useful: true },
+              { text: `Álbum de ${col}`, useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} huecos`, taken: `${b} colocados`, left: '¿Faltan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `Calculamos lo que falta hasta ${a}`, expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Le faltan ___',
+            unitCorrect: `${ans} ${col}`,
+            unitOptions: [`${ans} ${col}`, `${ans} álbumes`, `${ans} euros`],
+            hint1: `Queremos saber cuánto falta desde ${b} hasta ${a}. Restamos ${a} − ${b}.`,
+            hint2: `Resta ${a} − ${b} = ${ans}. Comprueba: ${ans} + ${b} = ${a}.`
+          };
         },
-        {
-          id: 'g3-8',
-          topic: 'Multiplicación (2 cifras × 1)',
-          lines: ['En cada mesa del comedor se sientan <strong>12 alumnos</strong>.', 'Hoy se han ocupado <strong>4 mesas</strong> completas.'],
-          question: '¿Cuántos alumnos comen hoy en el comedor?',
-          chips: [
-            { text: '12 alumnos por mesa', useful: true },
-            { text: '4 mesas completas', useful: true },
-            { text: 'Hoy en el comedor', useful: false }
-          ],
-          scheme: { type: 'mul', groups: 4, each: '12 alumnos', total: '¿Total?' },
-          op: '×',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: '4 mesas con 12 alumnos cada una', expr: '12 × 4 =', ans: 48 }],
-          answer: 48,
-          starter: 'SOLUCIÓN: Hoy comen en el comedor ___',
-          unitCorrect: '48 alumnos',
-          unitOptions: ['48 alumnos', '48 mesas', '48 platos'],
-          hint1: 'Cada una de las 4 mesas tiene 12 alumnos. Hay que multiplicar 12 × 4.',
-          hint2: 'Descompón 12 = 10 + 2: 10 × 4 = 40 y 2 × 4 = 8 → 48.'
+        () => {
+          const per = randInt(12, 28);
+          const g = randInt(3, 5);
+          const ans = per * g;
+          return {
+            id: 'g3-comedor',
+            topic: 'Multiplicación (2 cifras × 1)',
+            lines: [`En cada mesa del comedor se sientan <strong>${per} alumnos</strong>.`, `Hoy se han ocupado <strong>${g} mesas</strong> completas.`],
+            question: '¿Cuántos alumnos comen hoy en el comedor?',
+            chips: [
+              { text: `${per} alumnos por mesa`, useful: true },
+              { text: `${g} mesas completas`, useful: true },
+              { text: 'Hoy en el comedor', useful: false }
+            ],
+            scheme: { type: 'mul', groups: g, each: `${per} alumnos`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `${g} mesas con ${per} alumnos cada una`, expr: `${per} × ${g} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Hoy comen en el comedor ___',
+            unitCorrect: `${ans} alumnos`,
+            unitOptions: [`${ans} alumnos`, `${ans} mesas`, `${ans} platos`],
+            hint1: `Cada una de las ${g} mesas tiene ${per} alumnos. Hay que multiplicar ${per} × ${g}.`,
+            hint2: `Descompón ${per} = ${Math.floor(per / 10) * 10} + ${per % 10}: ${Math.floor(per / 10) * 10} × ${g} = ${Math.floor(per / 10) * 10 * g} y ${per % 10} × ${g} = ${(per % 10) * g} → ${ans}.`
+          };
         },
-        {
-          id: 'g3-9',
-          topic: 'Suma (3 sumandos)',
-          lines: ['En la carrera solidaria corrieron <strong>45 niños</strong> de 1.er ciclo, <strong>52 niños</strong> de 2.º ciclo y <strong>38 niños</strong> de 3.er ciclo.'],
-          question: '¿Cuántos niños participaron en total?',
-          chips: [
-            { text: '45 de 1.er ciclo', useful: true },
-            { text: '52 de 2.º ciclo', useful: true },
-            { text: '38 de 3.er ciclo', useful: true }
-          ],
-          scheme: { type: 'add', parts: ['45', '52', '38'], total: '¿Total niños?' },
-          op: '+',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar los 3 grupos' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: 'Juntamos los tres ciclos', expr: '45 + 52 + 38 =', ans: 135 }],
-          answer: 135,
-          starter: 'SOLUCIÓN: En total participaron ___',
-          unitCorrect: '135 niños',
-          unitOptions: ['135 niños', '135 ciclos', '135 metros'],
-          hint1: 'Queremos saber el total reuniendo los tres ciclos. Sumamos 45 + 52 + 38.',
-          hint2: 'Truco asociativo: junta primero 52 + 38 = 90, y luego 90 + 45 = 135.'
+        () => {
+          const a = randInt(24, 68);
+          const b = randInt(22, 64);
+          const c = randInt(18, 56);
+          const ans = a + b + c;
+          return {
+            id: 'g3-carrera',
+            topic: 'Suma (3 sumandos)',
+            lines: [`En la carrera solidaria corrieron <strong>${a} niños</strong> de 1.er ciclo, <strong>${b} niños</strong> de 2.º ciclo y <strong>${c} niños</strong> de 3.er ciclo.`],
+            question: '¿Cuántos niños participaron en total?',
+            chips: [
+              { text: `${a} de 1.er ciclo`, useful: true },
+              { text: `${b} de 2.º ciclo`, useful: true },
+              { text: `${c} de 3.er ciclo`, useful: true }
+            ],
+            scheme: { type: 'add', parts: [`${a}`, `${b}`, `${c}`], total: '¿Total niños?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar los 3 grupos' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Juntamos los tres ciclos', expr: `${a} + ${b} + ${c} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total participaron ___',
+            unitCorrect: `${ans} niños`,
+            unitOptions: [`${ans} niños`, `${ans} ciclos`, `${ans} metros`],
+            hint1: `Queremos saber el total reuniendo los tres ciclos. Sumamos ${a} + ${b} + ${c}.`,
+            hint2: `Agrupa primero dos números (${a} + ${b} = ${a + b}) y luego suma ${c} → ${ans}.`
+          };
         },
-        {
-          id: 'g3-10',
-          topic: 'Multiplicación (dinero)',
-          lines: ['Cada entrada al museo de Teruel cuesta <strong>9 euros</strong>.', 'Van <strong>5 personas</strong> de la familia de Martina.'],
-          question: '¿Cuánto pagan en total por las entradas?',
-          chips: [
-            { text: '9 euros por entrada', useful: true },
-            { text: '5 personas', useful: true },
-            { text: 'Museo de Teruel', useful: false }
-          ],
-          scheme: { type: 'mul', groups: 5, each: '9 €', total: '¿Precio total?' },
-          op: '×',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: '5 entradas a 9 euros cada una', expr: '5 × 9 =', ans: 45 }],
-          answer: 45,
-          starter: 'SOLUCIÓN: En total pagan ___',
-          unitCorrect: '45 euros',
-          unitOptions: ['45 euros', '45 entradas', '45 museos'],
-          hint1: 'Cada persona paga 9 euros, y son 5 personas. Multiplicamos 5 × 9.',
-          hint2: 'Tabla del 5: 5 × 9 = 45.'
+        () => {
+          const price = randInt(4, 9);
+          const people = randInt(3, 8);
+          const ans = price * people;
+          const city = pickOne(['Teruel', 'Zaragoza', 'Huesca']);
+          const who = pickOne(NAMES);
+          return {
+            id: 'g3-museo',
+            topic: 'Multiplicación (dinero)',
+            lines: [`Cada entrada al museo de ${city} cuesta <strong>${price} euros</strong>.`, `Van <strong>${people} personas</strong> de la familia de ${who}.`],
+            question: '¿Cuánto pagan en total por las entradas?',
+            chips: [
+              { text: `${price} euros por entrada`, useful: true },
+              { text: `${people} personas`, useful: true },
+              { text: `Museo de ${city}`, useful: false }
+            ],
+            scheme: { type: 'mul', groups: people, each: `${price} €`, total: '¿Precio total?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `${people} entradas a ${price} euros cada una`, expr: `${people} × ${price} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total pagan ___',
+            unitCorrect: `${ans} euros`,
+            unitOptions: [`${ans} euros`, `${ans} entradas`, `${ans} museos`],
+            hint1: `Cada persona paga ${price} euros, y son ${people} personas. Multiplicamos ${people} × ${price}.`,
+            hint2: `Multiplica ${people} × ${price} = ${ans}.`
+          };
         },
-        {
-          id: 'g3-11',
-          topic: 'Resta con llevadas',
-          lines: ['Una panadería horneó <strong>410 magdalenas</strong> por la mañana.', 'Antes de mediodía vendió <strong>265 magdalenas</strong>.'],
-          question: '¿Cuántas magdalenas quedan todavía sin vender?',
-          chips: [
-            { text: '410 magdalenas horneadas', useful: true },
-            { text: '265 vendidas', useful: true },
-            { text: 'Antes de mediodía', useful: false }
-          ],
-          scheme: { type: 'sub', total: '410 magdalenas', taken: '265 vendidas', left: '¿Quedan?' },
-          op: '−',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: 'Restamos las vendidas al total', expr: '410 − 265 =', ans: 145 }],
-          answer: 145,
-          starter: 'SOLUCIÓN: Quedan sin vender ___',
-          unitCorrect: '145 magdalenas',
-          unitOptions: ['145 magdalenas', '145 euros', '145 panaderías'],
-          hint1: 'Si se venden 265, las quitamos de las 410 iniciales. Hay que restar.',
-          hint2: '410 − 265 = 145. Prueba: 145 + 265 = 410.'
+        () => {
+          const [a, b] = pickBorrowSub(310, 620, 145, 365);
+          const ans = a - b;
+          const item = pickOne(['magdalenas', 'rosquillas', 'croissants']);
+          return {
+            id: 'g3-panaderia',
+            topic: 'Resta con llevadas',
+            lines: [`Una panadería horneó <strong>${a} ${item}</strong> por la mañana.`, `Antes de mediodía vendió <strong>${b} ${item}</strong>.`],
+            question: `¿Cuántas ${item} quedan todavía sin vender?`,
+            chips: [
+              { text: `${a} ${item} horneadas`, useful: true },
+              { text: `${b} vendidas`, useful: true },
+              { text: 'Antes de mediodía', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} ${item}`, taken: `${b} vendidas`, left: '¿Quedan?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Restamos las vendidas al total', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Quedan sin vender ___',
+            unitCorrect: `${ans} ${item}`,
+            unitOptions: [`${ans} ${item}`, `${ans} euros`, `${ans} panaderías`],
+            hint1: `Si se venden ${b}, las quitamos de las ${a} iniciales. Hay que restar.`,
+            hint2: `${a} − ${b} = ${ans}. Prueba: ${ans} + ${b} = ${a}.`
+          };
         },
-        {
-          id: 'g3-12',
-          topic: 'Multiplicación (2 cifras × 1)',
-          lines: ['En cada paquete vienen <strong>24 folios</strong> de colores.', 'La clase ha comprado <strong>3 paquetes</strong>.'],
-          question: '¿Cuántos folios de colores tienen en total?',
-          chips: [
-            { text: '24 folios por paquete', useful: true },
-            { text: '3 paquetes', useful: true },
-            { text: 'De colores', useful: false }
-          ],
-          scheme: { type: 'mul', groups: 3, each: '24 folios', total: '¿Total?' },
-          op: '×',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '−', sym: '−', desc: 'Restar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' }
-          ],
-          steps: [{ label: '3 paquetes de 24 folios', expr: '24 × 3 =', ans: 72 }],
-          answer: 72,
-          starter: 'SOLUCIÓN: Tienen en total ___',
-          unitCorrect: '72 folios',
-          unitOptions: ['72 folios', '72 paquetes', '72 colores'],
-          hint1: 'Son 3 paquetes iguales de 24 folios. Multiplicamos 24 × 3.',
-          hint2: '20 × 3 = 60 y 4 × 3 = 12 → 60 + 12 = 72.'
+        () => {
+          const per = randInt(14, 32);
+          const packs = randInt(2, 5);
+          const ans = per * packs;
+          return {
+            id: 'g3-folios',
+            topic: 'Multiplicación (2 cifras × 1)',
+            lines: [`En cada paquete vienen <strong>${per} folios</strong> de colores.`, `La clase ha comprado <strong>${packs} paquetes</strong>.`],
+            question: '¿Cuántos folios de colores tienen en total?',
+            chips: [
+              { text: `${per} folios por paquete`, useful: true },
+              { text: `${packs} paquetes`, useful: true },
+              { text: 'De colores', useful: false }
+            ],
+            scheme: { type: 'mul', groups: packs, each: `${per} folios`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: `${packs} paquetes de ${per} folios`, expr: `${per} × ${packs} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Tienen en total ___',
+            unitCorrect: `${ans} folios`,
+            unitOptions: [`${ans} folios`, `${ans} paquetes`, `${ans} colores`],
+            hint1: `Son ${packs} paquetes iguales de ${per} folios. Multiplicamos ${per} × ${packs}.`,
+            hint2: `${Math.floor(per / 10) * 10} × ${packs} = ${Math.floor(per / 10) * 10 * packs} y ${per % 10} × ${packs} = ${(per % 10) * packs} → ${ans}.`
+          };
+        },
+        () => {
+          const [a, b] = pickBorrowSub(180, 420, 65, 175);
+          const ans = a - b;
+          const [n1, n2] = pickTwoNames();
+          return {
+            id: 'g3-diferencia',
+            topic: 'Comparación (cuántos más)',
+            lines: [`${n1} ha conseguido <strong>${a} puntos</strong> en un juego de cálculo.`, `${n2} ha conseguido <strong>${b} puntos</strong>.`],
+            question: `¿Cuántos puntos más ha conseguido ${n1} que ${n2}?`,
+            chips: [
+              { text: `${a} puntos (${n1})`, useful: true },
+              { text: `${b} puntos (${n2})`, useful: true },
+              { text: 'Juego de cálculo', useful: false }
+            ],
+            scheme: { type: 'sub', total: `${a} pts (${n1})`, taken: `${b} pts (${n2})`, left: '¿Diferencia?' },
+            op: '−',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar (diferencia)' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Calculamos la diferencia entre los dos', expr: `${a} − ${b} =`, ans }],
+            answer: ans,
+            starter: `SOLUCIÓN: ${n1} ha conseguido ___ más`,
+            unitCorrect: `${ans} puntos`,
+            unitOptions: [`${ans} puntos`, `${ans} juegos`, `${ans} euros`],
+            hint1: 'Cuando preguntan «cuántos más» comparando dos cantidades, calculamos la diferencia restando.',
+            hint2: `Resta ${a} − ${b} = ${ans}.`
+          };
+        },
+        () => {
+          const a = randInt(125, 345);
+          const b = randInt(115, 295);
+          const ans = a + b;
+          const [p1, p2] = ['sábado', 'domingo'];
+          return {
+            id: 'g3-visitantes',
+            topic: 'Suma (fin de semana)',
+            lines: [`Al balneario de Alhama fueron <strong>${a} visitantes</strong> el ${p1}.`, `El ${p2} acudieron <strong>${b} visitantes</strong>.`],
+            question: '¿Cuántos visitantes fueron en todo el fin de semana?',
+            chips: [
+              { text: `${a} el ${p1}`, useful: true },
+              { text: `${b} el ${p2}`, useful: true },
+              { text: 'Balneario de Alhama', useful: false }
+            ],
+            scheme: { type: 'add', parts: [`${a} (${p1})`, `${b} (${p2})`], total: '¿Fin de semana?' },
+            op: '+',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '−', sym: '−', desc: 'Restar' }, { val: '×', sym: '×', desc: 'Multiplicar' }],
+            steps: [{ label: 'Juntamos sábado y domingo', expr: `${a} + ${b} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: Fueron en total ___',
+            unitCorrect: `${ans} visitantes`,
+            unitOptions: [`${ans} visitantes`, `${ans} días`, `${ans} balnearios`],
+            hint1: 'Reunimos los visitantes del sábado y del domingo. Hay que sumar.',
+            hint2: `Suma ${a} + ${b} = ${ans}.`
+          };
         }
       ],
 
       '4': [
-        {
-          id: 'g4-1',
-          topic: 'División (reparto exacto)',
-          lines: ['La bibliotecaria reparte <strong>72 libros nuevos</strong> en partes iguales entre <strong>6 estanterías</strong>.', 'Cada estantería mide 2 metros.'],
-          question: '¿Cuántos libros coloca en cada estantería?',
-          chips: [
-            { text: '72 libros nuevos', useful: true },
-            { text: '6 estanterías iguales', useful: true },
-            { text: 'Mide 2 metros', useful: false }
-          ],
-          scheme: { type: 'div', total: '72 libros', groups: 6, each: '¿Cada estantería?' },
-          op: '÷',
-          opOptions: [
-            { val: '×', sym: '×', desc: 'Multiplicar' },
-            { val: '÷', sym: '÷', desc: 'Dividir (repartir)' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: 'Repartimos 72 entre 6 estanterías', expr: '72 ÷ 6 =', ans: 12 }],
-          answer: 12,
-          starter: 'SOLUCIÓN: Coloca en cada estantería ___',
-          unitCorrect: '12 libros',
-          unitOptions: ['12 libros', '12 metros', '12 estanterías'],
-          hint1: 'Repartir en partes iguales es dividir. Los 2 metros son un dato que sobra.',
-          hint2: '6 × 10 = 60 y 6 × 2 = 12 → 6 × 12 = 72. Por tanto, 72 ÷ 6 = 12.'
+        () => {
+          const [total, d, q] = pickExactDiv(4, 9, 8, 22);
+          const extra = randInt(2, 4);
+          return {
+            id: 'g4-reparto-libros',
+            topic: 'División (reparto exacto)',
+            lines: [`La bibliotecaria reparte <strong>${total} libros nuevos</strong> en partes iguales entre <strong>${d} estanterías</strong>.`, `Cada estantería mide ${extra} metros.`],
+            question: '¿Cuántos libros coloca en cada estantería?',
+            chips: [
+              { text: `${total} libros nuevos`, useful: true },
+              { text: `${d} estanterías iguales`, useful: true },
+              { text: `Mide ${extra} metros`, useful: false }
+            ],
+            scheme: { type: 'div', total: `${total} libros`, groups: d, each: '¿Cada estantería?' },
+            op: '÷',
+            opOptions: [{ val: '×', sym: '×', desc: 'Multiplicar' }, { val: '÷', sym: '÷', desc: 'Dividir (repartir)' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Repartimos ${total} entre ${d} estanterías`, expr: `${total} ÷ ${d} =`, ans: q }],
+            answer: q,
+            starter: 'SOLUCIÓN: Coloca en cada estantería ___',
+            unitCorrect: `${q} libros`,
+            unitOptions: [`${q} libros`, `${q} metros`, `${q} estanterías`],
+            hint1: `Repartir en partes iguales es dividir. Los ${extra} metros son un dato que sobra.`,
+            hint2: `Busca qué número multiplicado por ${d} da ${total}: ${d} × ${q} = ${total}.`
+          };
         },
-        {
-          id: 'g4-2',
-          topic: 'Problema de 2 pasos (compra y cambio)',
-          lines: ['Vera compra <strong>3 cuadernos</strong> a <strong>4 euros</strong> cada uno.', 'Paga en caja con un billete de <strong>20 euros</strong>.'],
-          question: '¿Cuántos euros le devuelven de cambio?',
-          chips: [
-            { text: '3 cuadernos', useful: true },
-            { text: '4 euros cada cuaderno', useful: true },
-            { text: 'Billete de 20 euros', useful: true }
-          ],
-          scheme: { type: 'two', stepA: '1.º Coste: 3 × 4 €', stepB: '2.º Cambio: 20 € − coste' },
-          op: '× y −',
-          opOptions: [
-            { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
-            { val: '+ y −', sym: '+ y −', desc: 'Sumar y luego restar' },
-            { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' }
-          ],
-          steps: [
-            { label: 'Paso 1: ¿Cuánto cuestan los 3 cuadernos?', expr: '3 × 4 =', ans: 12 },
-            { label: 'Paso 2: ¿Cuánto le devuelven de 20 €?', expr: '20 − 12 =', ans: 8 }
-          ],
-          answer: 8,
-          starter: 'SOLUCIÓN: Le devuelven de cambio ___',
-          unitCorrect: '8 euros',
-          unitOptions: ['8 euros', '8 cuadernos', '8 billetes'],
-          hint1: 'Primero averigua el precio de los 3 cuadernos (3 × 4) y después réstalo a 20.',
-          hint2: 'Paso 1: 3 × 4 = 12 €. Paso 2: 20 − 12 = 8 €.'
+        () => {
+          const n = randInt(3, 7);
+          const price = randInt(3, 9);
+          const cost = n * price;
+          const bill = pickBillFor(cost);
+          const change = bill - cost;
+          const who = pickOne(NAMES);
+          const item = pickOne(['cuadernos', 'carpetas', 'estuches', 'botellas']);
+          return {
+            id: 'g4-2pasos-cambio',
+            topic: 'Problema de 2 pasos (compra y cambio)',
+            lines: [`${who} compra <strong>${n} ${item}</strong> a <strong>${price} euros</strong> cada uno.`, `Paga en caja con un billete de <strong>${bill} euros</strong>.`],
+            question: '¿Cuántos euros le devuelven de cambio?',
+            chips: [
+              { text: `${n} ${item}`, useful: true },
+              { text: `${price} euros cada uno`, useful: true },
+              { text: `Billete de ${bill} euros`, useful: true }
+            ],
+            scheme: { type: 'two', stepA: `1.º Coste: ${n} × ${price} €`, stepB: `2.º Cambio: ${bill} € − coste` },
+            op: '× y −',
+            opOptions: [
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '+ y −', sym: '+ y −', desc: 'Sumar y luego restar' },
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' }
+            ],
+            steps: [
+              { label: `Paso 1: ¿Cuánto cuestan los ${n} ${item}?`, expr: `${n} × ${price} =`, ans: cost },
+              { label: `Paso 2: ¿Cuánto le devuelven de ${bill} €?`, expr: `${bill} − ${cost} =`, ans: change }
+            ],
+            answer: change,
+            starter: 'SOLUCIÓN: Le devuelven de cambio ___',
+            unitCorrect: `${change} euros`,
+            unitOptions: [`${change} euros`, `${change} ${item}`, `${change} billetes`],
+            hint1: `Primero averigua el precio de los ${n} ${item} (${n} × ${price}) y después réstalo a ${bill}.`,
+            hint2: `Paso 1: ${n} × ${price} = ${cost} €. Paso 2: ${bill} − ${cost} = ${change} €.`
+          };
         },
-        {
-          id: 'g4-3',
-          topic: 'Multiplicación (3 cifras × 1)',
-          lines: ['Un autobús de ruta entre Zaragoza y Huesca recorre <strong>145 kilómetros</strong> cada día.', 'Hace exactamente el mismo recorrido durante <strong>4 días</strong>.'],
-          question: '¿Cuántos kilómetros recorre en total en esos 4 días?',
-          chips: [
-            { text: '145 km al día', useful: true },
-            { text: '4 días', useful: true },
-            { text: 'Zaragoza y Huesca', useful: false }
-          ],
-          scheme: { type: 'mul', groups: 4, each: '145 km', total: '¿Total km?' },
-          op: '×',
-          opOptions: [
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '×', sym: '×', desc: 'Multiplicar' },
-            { val: '÷', sym: '÷', desc: 'Dividir' }
-          ],
-          steps: [{ label: 'Repetimos 145 km durante 4 días', expr: '145 × 4 =', ans: 580 }],
-          answer: 580,
-          starter: 'SOLUCIÓN: En total recorre ___',
-          unitCorrect: '580 kilómetros',
-          unitOptions: ['580 kilómetros', '580 días', '580 autobuses'],
-          hint1: 'Cada día hace los mismos 145 km, 4 veces. Hay que multiplicar 145 × 4.',
-          hint2: '100 × 4 = 400, 40 × 4 = 160 y 5 × 4 = 20 → 400 + 160 + 20 = 580.'
+        () => {
+          const km = randInt(115, 245);
+          const days = randInt(3, 6);
+          const ans = km * days;
+          return {
+            id: 'g4-autobus-km',
+            topic: 'Multiplicación (3 cifras × 1)',
+            lines: [`Un autobús de ruta entre Zaragoza y Huesca recorre <strong>${km} kilómetros</strong> cada día.`, `Hace exactamente el mismo recorrido durante <strong>${days} días</strong>.`],
+            question: `¿Cuántos kilómetros recorre en total en esos ${days} días?`,
+            chips: [
+              { text: `${km} km al día`, useful: true },
+              { text: `${days} días`, useful: true },
+              { text: 'Zaragoza y Huesca', useful: false }
+            ],
+            scheme: { type: 'mul', groups: days, each: `${km} km`, total: '¿Total km?' },
+            op: '×',
+            opOptions: [{ val: '+', sym: '+', desc: 'Sumar' }, { val: '×', sym: '×', desc: 'Multiplicar' }, { val: '÷', sym: '÷', desc: 'Dividir' }],
+            steps: [{ label: `Repetimos ${km} km durante ${days} días`, expr: `${km} × ${days} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: En total recorre ___',
+            unitCorrect: `${ans} kilómetros`,
+            unitOptions: [`${ans} kilómetros`, `${ans} días`, `${ans} autobuses`],
+            hint1: `Cada día hace los mismos ${km} km, ${days} veces. Hay que multiplicar ${km} × ${days}.`,
+            hint2: `Descompón ${km} en centenas, decenas y unidades y multiplica por ${days} → ${ans}.`
+          };
         },
-        {
-          id: 'g4-4',
-          topic: 'Problema de 2 pasos (juntar y repartir)',
-          lines: ['En 3.º hay <strong>18 alumnos</strong> y en 4.º hay <strong>22 alumnos</strong>.', 'Para las estaciones de Matemáticas formamos grupos iguales de <strong>5 alumnos</strong>.'],
-          question: '¿Cuántos grupos de 5 alumnos podemos formar?',
-          chips: [
-            { text: '18 alumnos de 3.º', useful: true },
-            { text: '22 alumnos de 4.º', useful: true },
-            { text: 'Grupos de 5 alumnos', useful: true }
-          ],
-          scheme: { type: 'two', stepA: '1.º Total alumnos: 18 + 22', stepB: '2.º Reparto: total ÷ 5' },
-          op: '+ y ÷',
-          opOptions: [
-            { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' },
-            { val: '+ y ×', sym: '+ y ×', desc: 'Sumar y luego multiplicar' },
-            { val: '− y ÷', sym: '− y ÷', desc: 'Restar y luego dividir' }
-          ],
-          steps: [
-            { label: 'Paso 1: ¿Cuántos alumnos hay en total?', expr: '18 + 22 =', ans: 40 },
-            { label: 'Paso 2: ¿Cuántos grupos de 5 salen?', expr: '40 ÷ 5 =', ans: 8 }
-          ],
-          answer: 8,
-          starter: 'SOLUCIÓN: Podemos formar ___',
-          unitCorrect: '8 grupos',
-          unitOptions: ['8 grupos', '8 alumnos', '8 estaciones'],
-          hint1: 'Primero junta los alumnos de 3.º y 4.º; luego divide ese total en grupos de 5.',
-          hint2: 'Paso 1: 18 + 22 = 40 alumnos. Paso 2: 40 ÷ 5 = 8 grupos.'
+        () => {
+          const teamSize = randInt(4, 7);
+          const teams = randInt(5, 11);
+          const total = teamSize * teams;
+          const g3 = randInt(Math.floor(total * 0.35), Math.floor(total * 0.6));
+          const g4 = total - g3;
+          return {
+            id: 'g4-2pasos-grupos',
+            topic: 'Problema de 2 pasos (juntar y repartir)',
+            lines: [`En 3.º hay <strong>${g3} alumnos</strong> y en 4.º hay <strong>${g4} alumnos</strong>.`, `Para las estaciones de Matemáticas formamos grupos iguales de <strong>${teamSize} alumnos</strong>.`],
+            question: `¿Cuántos grupos de ${teamSize} alumnos podemos formar?`,
+            chips: [
+              { text: `${g3} alumnos de 3.º`, useful: true },
+              { text: `${g4} alumnos de 4.º`, useful: true },
+              { text: `Grupos de ${teamSize} alumnos`, useful: true }
+            ],
+            scheme: { type: 'two', stepA: `1.º Total alumnos: ${g3} + ${g4}`, stepB: `2.º Reparto: total ÷ ${teamSize}` },
+            op: '+ y ÷',
+            opOptions: [
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' },
+              { val: '+ y ×', sym: '+ y ×', desc: 'Sumar y luego multiplicar' },
+              { val: '− y ÷', sym: '− y ÷', desc: 'Restar y luego dividir' }
+            ],
+            steps: [
+              { label: 'Paso 1: ¿Cuántos alumnos hay en total?', expr: `${g3} + ${g4} =`, ans: total },
+              { label: `Paso 2: ¿Cuántos grupos de ${teamSize} salen?`, expr: `${total} ÷ ${teamSize} =`, ans: teams }
+            ],
+            answer: teams,
+            starter: 'SOLUCIÓN: Podemos formar ___',
+            unitCorrect: `${teams} grupos`,
+            unitOptions: [`${teams} grupos`, `${teams} alumnos`, `${teams} estaciones`],
+            hint1: `Primero junta los alumnos de 3.º y 4.º; luego divide ese total en grupos de ${teamSize}.`,
+            hint2: `Paso 1: ${g3} + ${g4} = ${total}. Paso 2: ${total} ÷ ${teamSize} = ${teams} grupos.`
+          };
         },
-        {
-          id: 'g4-5',
-          topic: 'El triple',
-          lines: ['Hugo ha leído <strong>36 páginas</strong> esta semana.', 'Valeria ha leído <strong>el triple</strong> de páginas que Hugo.'],
-          question: '¿Cuántas páginas ha leído Valeria?',
-          chips: [
-            { text: '36 páginas (Hugo)', useful: true },
-            { text: 'El triple (× 3)', useful: true },
-            { text: 'Esta semana', useful: false }
-          ],
-          scheme: { type: 'mul', groups: 3, each: '36 págs.', total: '¿Valeria?' },
-          op: '×',
-          opOptions: [
-            { val: '×', sym: '×', desc: 'Multiplicar por 3' },
-            { val: '÷', sym: '÷', desc: 'Dividir entre 3' },
-            { val: '+', sym: '+', desc: 'Sumar 3' }
-          ],
-          steps: [{ label: 'El triple es multiplicar por 3', expr: '36 × 3 =', ans: 108 }],
-          answer: 108,
-          starter: 'SOLUCIÓN: Valeria ha leído ___',
-          unitCorrect: '108 páginas',
-          unitOptions: ['108 páginas', '108 semanas', '108 libros'],
-          hint1: '«El triple» significa 3 veces la misma cantidad: multiplicamos por 3.',
-          hint2: '30 × 3 = 90 y 6 × 3 = 18 → 90 + 18 = 108.'
+        () => {
+          const base = randInt(18, 65);
+          const factor = pickOne([2, 3]);
+          const word = factor === 2 ? 'el doble' : 'el triple';
+          const ans = base * factor;
+          const [n1, n2] = pickTwoNames();
+          return {
+            id: 'g4-doble-triple',
+            topic: factor === 2 ? 'El doble' : 'El triple',
+            lines: [`${n1} ha leído <strong>${base} páginas</strong> esta semana.`, `${n2} ha leído <strong>${word}</strong> de páginas que ${n1}.`],
+            question: `¿Cuántas páginas ha leído ${n2}?`,
+            chips: [
+              { text: `${base} páginas (${n1})`, useful: true },
+              { text: `${word[0].toUpperCase() + word.slice(1)} (× ${factor})`, useful: true },
+              { text: 'Esta semana', useful: false }
+            ],
+            scheme: { type: 'mul', groups: factor, each: `${base} págs.`, total: `¿${n2}?` },
+            op: '×',
+            opOptions: [
+              { val: '×', sym: '×', desc: `Multiplicar por ${factor}` },
+              { val: '÷', sym: '÷', desc: `Dividir entre ${factor}` },
+              { val: '+', sym: '+', desc: `Sumar ${factor}` }
+            ],
+            steps: [{ label: `${word[0].toUpperCase() + word.slice(1)} es multiplicar por ${factor}`, expr: `${base} × ${factor} =`, ans }],
+            answer: ans,
+            starter: `SOLUCIÓN: ${n2} ha leído ___`,
+            unitCorrect: `${ans} páginas`,
+            unitOptions: [`${ans} páginas`, `${ans} semanas`, `${ans} libros`],
+            hint1: `«${word[0].toUpperCase() + word.slice(1)}» significa ${factor} veces la misma cantidad: multiplicamos por ${factor}.`,
+            hint2: `${Math.floor(base / 10) * 10} × ${factor} = ${Math.floor(base / 10) * 10 * factor} y ${base % 10} × ${factor} = ${(base % 10) * factor} → ${ans}.`
+          };
         },
-        {
-          id: 'g4-6',
-          topic: 'La mitad (división entre 2)',
-          lines: ['En la plaza del Pilar había <strong>96 sillas</strong> preparadas para el concierto.', 'Al terminar, ya se han recogido <strong>la mitad</strong> de las sillas.'],
-          question: '¿Cuántas sillas se han recogido?',
-          chips: [
-            { text: '96 sillas en total', useful: true },
-            { text: 'La mitad (÷ 2)', useful: true },
-            { text: 'Plaza del Pilar', useful: false }
-          ],
-          scheme: { type: 'div', total: '96 sillas', groups: 2, each: '¿Mitad?' },
-          op: '÷',
-          opOptions: [
-            { val: '÷', sym: '÷', desc: 'Dividir entre 2' },
-            { val: '×', sym: '×', desc: 'Multiplicar por 2' },
-            { val: '−', sym: '−', desc: 'Restar 2' }
-          ],
-          steps: [{ label: 'La mitad se calcula dividiendo entre 2', expr: '96 ÷ 2 =', ans: 48 }],
-          answer: 48,
-          starter: 'SOLUCIÓN: Se han recogido ___',
-          unitCorrect: '48 sillas',
-          unitOptions: ['48 sillas', '48 conciertos', '48 plazas'],
-          hint1: 'Calcular la mitad es repartir en 2 partes iguales: dividimos entre 2.',
-          hint2: 'La mitad de 90 es 45 y la mitad de 6 es 3 → 45 + 3 = 48.'
+        () => {
+          const half = randInt(24, 92);
+          const total = half * 2;
+          return {
+            id: 'g4-mitad',
+            topic: 'La mitad (división entre 2)',
+            lines: [`En la plaza del Pilar había <strong>${total} sillas</strong> preparadas para el concierto.`, `Al terminar, ya se han recogido <strong>la mitad</strong> de las sillas.`],
+            question: '¿Cuántas sillas se han recogido?',
+            chips: [
+              { text: `${total} sillas en total`, useful: true },
+              { text: 'La mitad (÷ 2)', useful: true },
+              { text: 'Plaza del Pilar', useful: false }
+            ],
+            scheme: { type: 'div', total: `${total} sillas`, groups: 2, each: '¿Mitad?' },
+            op: '÷',
+            opOptions: [
+              { val: '÷', sym: '÷', desc: 'Dividir entre 2' },
+              { val: '×', sym: '×', desc: 'Multiplicar por 2' },
+              { val: '−', sym: '−', desc: 'Restar 2' }
+            ],
+            steps: [{ label: 'La mitad se calcula dividiendo entre 2', expr: `${total} ÷ 2 =`, ans: half }],
+            answer: half,
+            starter: 'SOLUCIÓN: Se han recogido ___',
+            unitCorrect: `${half} sillas`,
+            unitOptions: [`${half} sillas`, `${half} conciertos`, `${half} plazas`],
+            hint1: 'Calcular la mitad es repartir en 2 partes iguales: dividimos entre 2.',
+            hint2: `Divide ${total} ÷ 2 = ${half}. Comprueba: ${half} × 2 = ${total}.`
+          };
         },
-        {
-          id: 'g4-7',
-          topic: 'Problema de 2 pasos (cajas y venta)',
-          lines: ['Un frutero recibe <strong>5 cajas</strong> con <strong>16 kilos</strong> de cerezas en cada caja.', 'Durante la mañana vende <strong>35 kilos</strong>.'],
-          question: '¿Cuántos kilos de cerezas le quedan para la tarde?',
-          chips: [
-            { text: '5 cajas', useful: true },
-            { text: '16 kilos por caja', useful: true },
-            { text: 'Vende 35 kilos', useful: true }
-          ],
-          scheme: { type: 'two', stepA: '1.º Total cerezas: 5 × 16', stepB: '2.º Quedan: total − 35' },
-          op: '× y −',
-          opOptions: [
-            { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
-            { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
-            { val: '÷ y −', sym: '÷ y −', desc: 'Dividir y luego restar' }
-          ],
-          steps: [
-            { label: 'Paso 1: ¿Cuántos kilos recibe en total?', expr: '5 × 16 =', ans: 80 },
-            { label: 'Paso 2: ¿Cuántos kilos le quedan?', expr: '80 − 35 =', ans: 45 }
-          ],
-          answer: 45,
-          starter: 'SOLUCIÓN: Para la tarde le quedan ___',
-          unitCorrect: '45 kilos de cerezas',
-          unitOptions: ['45 kilos de cerezas', '45 cajas', '45 euros'],
-          hint1: 'Primero calcula todos los kilos recibidos (5 × 16) y luego resta los 35 vendidos.',
-          hint2: 'Paso 1: 5 × 16 = 80 kg. Paso 2: 80 − 35 = 45 kg.'
+        () => {
+          const boxes = randInt(4, 8);
+          const kgPer = randInt(12, 22);
+          const total = boxes * kgPer;
+          const sold = randInt(Math.floor(total * 0.25), Math.floor(total * 0.65));
+          const left = total - sold;
+          const fruit = pickOne(['cerezas', 'manzanas', 'melocotones', 'peras']);
+          return {
+            id: 'g4-2pasos-frutero',
+            topic: 'Problema de 2 pasos (cajas y venta)',
+            lines: [`Un frutero recibe <strong>${boxes} cajas</strong> con <strong>${kgPer} kilos</strong> de ${fruit} en cada caja.`, `Durante la mañana vende <strong>${sold} kilos</strong>.`],
+            question: `¿Cuántos kilos de ${fruit} le quedan para la tarde?`,
+            chips: [
+              { text: `${boxes} cajas`, useful: true },
+              { text: `${kgPer} kilos por caja`, useful: true },
+              { text: `Vende ${sold} kilos`, useful: true }
+            ],
+            scheme: { type: 'two', stepA: `1.º Total ${fruit}: ${boxes} × ${kgPer}`, stepB: `2.º Quedan: total − ${sold}` },
+            op: '× y −',
+            opOptions: [
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+              { val: '÷ y −', sym: '÷ y −', desc: 'Dividir y luego restar' }
+            ],
+            steps: [
+              { label: 'Paso 1: ¿Cuántos kilos recibe en total?', expr: `${boxes} × ${kgPer} =`, ans: total },
+              { label: 'Paso 2: ¿Cuántos kilos le quedan?', expr: `${total} − ${sold} =`, ans: left }
+            ],
+            answer: left,
+            starter: 'SOLUCIÓN: Para la tarde le quedan ___',
+            unitCorrect: `${left} kilos de ${fruit}`,
+            unitOptions: [`${left} kilos de ${fruit}`, `${left} cajas`, `${left} euros`],
+            hint1: `Primero calcula todos los kilos recibidos (${boxes} × ${kgPer}) y luego resta los ${sold} vendidos.`,
+            hint2: `Paso 1: ${boxes} × ${kgPer} = ${total} kg. Paso 2: ${total} − ${sold} = ${left} kg.`
+          };
         },
-        {
-          id: 'g4-8',
-          topic: 'División (agrupamiento)',
-          lines: ['Tenemos <strong>84 cromos</strong> de fauna aragonesa para pegar en sobres.', 'En cada sobre caben exactamente <strong>7 cromos</strong>.'],
-          question: '¿Cuántos sobres completos podemos llenar?',
-          chips: [
-            { text: '84 cromos', useful: true },
-            { text: '7 cromos por sobre', useful: true },
-            { text: 'Fauna aragonesa', useful: false }
-          ],
-          scheme: { type: 'div', total: '84 cromos', groups: 7, each: '¿Sobres?' },
-          op: '÷',
-          opOptions: [
-            { val: '÷', sym: '÷', desc: 'Dividir' },
-            { val: '×', sym: '×', desc: 'Multiplicar' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: 'Agrupamos 84 cromos de 7 en 7', expr: '84 ÷ 7 =', ans: 12 }],
-          answer: 12,
-          starter: 'SOLUCIÓN: Podemos llenar ___',
-          unitCorrect: '12 sobres',
-          unitOptions: ['12 sobres', '12 cromos', '12 animales'],
-          hint1: 'Queremos saber cuántos grupos de 7 caben en 84. Dividimos 84 ÷ 7.',
-          hint2: '7 × 10 = 70; sobran 14, y 14 ÷ 7 = 2 → 10 + 2 = 12 sobres.'
+        () => {
+          const [total, d, q] = pickExactDiv(4, 9, 9, 24);
+          return {
+            id: 'g4-sobres-cromos',
+            topic: 'División (agrupamiento)',
+            lines: [`Tenemos <strong>${total} cromos</strong> de fauna aragonesa para guardar en sobres.`, `En cada sobre caben exactamente <strong>${d} cromos</strong>.`],
+            question: '¿Cuántos sobres completos podemos llenar?',
+            chips: [
+              { text: `${total} cromos`, useful: true },
+              { text: `${d} cromos por sobre`, useful: true },
+              { text: 'Fauna aragonesa', useful: false }
+            ],
+            scheme: { type: 'div', total: `${total} cromos`, groups: d, each: '¿Sobres?' },
+            op: '÷',
+            opOptions: [{ val: '÷', sym: '÷', desc: 'Dividir' }, { val: '×', sym: '×', desc: 'Multiplicar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Agrupamos ${total} cromos de ${d} en ${d}`, expr: `${total} ÷ ${d} =`, ans: q }],
+            answer: q,
+            starter: 'SOLUCIÓN: Podemos llenar ___',
+            unitCorrect: `${q} sobres`,
+            unitOptions: [`${q} sobres`, `${q} cromos`, `${q} animales`],
+            hint1: `Queremos saber cuántos grupos de ${d} caben en ${total}. Dividimos ${total} ÷ ${d}.`,
+            hint2: `${d} × ${q} = ${total}, así que salen ${q} sobres exactos.`
+          };
         },
-        {
-          id: 'g4-9',
-          topic: 'Problema de 2 pasos (doble y suma)',
-          lines: ['Daniel recoge <strong>24 bellotas</strong> en el paseo por el monte.', 'Su hermana recoge <strong>el doble</strong> que Daniel.'],
-          question: '¿Cuántas bellotas han recogido entre los dos?',
-          chips: [
-            { text: '24 bellotas (Daniel)', useful: true },
-            { text: 'Su hermana: el doble (× 2)', useful: true },
-            { text: 'Paseo por el monte', useful: false }
-          ],
-          scheme: { type: 'two', stepA: '1.º Hermana: 24 × 2', stepB: '2.º Entre los dos: 24 + hermana' },
-          op: '× y +',
-          opOptions: [
-            { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
-            { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
-            { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' }
-          ],
-          steps: [
-            { label: 'Paso 1: ¿Cuántas bellotas recoge su hermana?', expr: '24 × 2 =', ans: 48 },
-            { label: 'Paso 2: ¿Cuántas tienen entre los dos?', expr: '24 + 48 =', ans: 72 }
-          ],
-          answer: 72,
-          starter: 'SOLUCIÓN: Entre los dos han recogido ___',
-          unitCorrect: '72 bellotas',
-          unitOptions: ['72 bellotas', '72 árboles', '72 pasos'],
-          hint1: '¡Ojo! Pregunta por las de los dos juntos: primero halla las de la hermana y luego súmalas a las de Daniel.',
-          hint2: 'Paso 1: 24 × 2 = 48. Paso 2: 24 + 48 = 72 bellotas.'
+        () => {
+          const a = randInt(16, 45);
+          const dob = a * 2;
+          const total = a + dob;
+          const who = pickOne(NAMES);
+          const item = pickOne(['bellotas', 'castañas', 'piñas', 'hojas']);
+          return {
+            id: 'g4-2pasos-doble-suma',
+            topic: 'Problema de 2 pasos (doble y suma)',
+            lines: [`${who} recoge <strong>${a} ${item}</strong> en el paseo por el monte.`, `Su hermana recoge <strong>el doble</strong> que ${who}.`],
+            question: `¿Cuántas ${item} han recogido entre los dos?`,
+            chips: [
+              { text: `${a} ${item} (${who})`, useful: true },
+              { text: 'Su hermana: el doble (× 2)', useful: true },
+              { text: 'Paseo por el monte', useful: false }
+            ],
+            scheme: { type: 'two', stepA: `1.º Hermana: ${a} × 2`, stepB: `2.º Entre los dos: ${a} + hermana` },
+            op: '× y +',
+            opOptions: [
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' }
+            ],
+            steps: [
+              { label: `Paso 1: ¿Cuántas ${item} recoge su hermana?`, expr: `${a} × 2 =`, ans: dob },
+              { label: 'Paso 2: ¿Cuántas tienen entre los dos?', expr: `${a} + ${dob} =`, ans: total }
+            ],
+            answer: total,
+            starter: 'SOLUCIÓN: Entre los dos han recogido ___',
+            unitCorrect: `${total} ${item}`,
+            unitOptions: [`${total} ${item}`, `${total} árboles`, `${total} pasos`],
+            hint1: `¡Ojo! Pregunta por las de los dos juntos: primero halla las de la hermana (${a} × 2) y luego súmalas a las de ${who}.`,
+            hint2: `Paso 1: ${a} × 2 = ${dob}. Paso 2: ${a} + ${dob} = ${total}.`
+          };
         },
-        {
-          id: 'g4-10',
-          topic: 'División exacta',
-          lines: ['Un colegio compra <strong>135 balones</strong> nuevos para repartir en partes iguales entre <strong>5 pistas</strong> deportivas.'],
-          question: '¿Cuántos balones corresponden a cada pista?',
-          chips: [
-            { text: '135 balones', useful: true },
-            { text: '5 pistas iguales', useful: true },
-            { text: 'Balones nuevos', useful: false }
-          ],
-          scheme: { type: 'div', total: '135 balones', groups: 5, each: '¿Cada pista?' },
-          op: '÷',
-          opOptions: [
-            { val: '÷', sym: '÷', desc: 'Dividir' },
-            { val: '×', sym: '×', desc: 'Multiplicar' },
-            { val: '−', sym: '−', desc: 'Restar' }
-          ],
-          steps: [{ label: 'Repartimos 135 balones entre 5 pistas', expr: '135 ÷ 5 =', ans: 27 }],
-          answer: 27,
-          starter: 'SOLUCIÓN: A cada pista le corresponden ___',
-          unitCorrect: '27 balones',
-          unitOptions: ['27 balones', '27 pistas', '27 colegios'],
-          hint1: 'Repartimos 135 en 5 partes iguales: dividimos 135 ÷ 5.',
-          hint2: '100 ÷ 5 = 20 y 35 ÷ 5 = 7 → 20 + 7 = 27.'
+        () => {
+          const [total, d, q] = pickExactDiv(3, 8, 12, 34);
+          return {
+            id: 'g4-balones',
+            topic: 'División exacta',
+            lines: [`Un colegio compra <strong>${total} balones</strong> nuevos para repartir en partes iguales entre <strong>${d} pistas</strong> deportivas.`],
+            question: '¿Cuántos balones corresponden a cada pista?',
+            chips: [
+              { text: `${total} balones`, useful: true },
+              { text: `${d} pistas iguales`, useful: true },
+              { text: 'Balones nuevos', useful: false }
+            ],
+            scheme: { type: 'div', total: `${total} balones`, groups: d, each: '¿Cada pista?' },
+            op: '÷',
+            opOptions: [{ val: '÷', sym: '÷', desc: 'Dividir' }, { val: '×', sym: '×', desc: 'Multiplicar' }, { val: '−', sym: '−', desc: 'Restar' }],
+            steps: [{ label: `Repartimos ${total} balones entre ${d} pistas`, expr: `${total} ÷ ${d} =`, ans: q }],
+            answer: q,
+            starter: 'SOLUCIÓN: A cada pista le corresponden ___',
+            unitCorrect: `${q} balones`,
+            unitOptions: [`${q} balones`, `${q} pistas`, `${q} colegios`],
+            hint1: `Repartimos ${total} en ${d} partes iguales: dividimos ${total} ÷ ${d}.`,
+            hint2: `${total} ÷ ${d} = ${q}. Comprueba: ${d} × ${q} = ${total}.`
+          };
         },
-        {
-          id: 'g4-11',
-          topic: 'Problema de 2 pasos (compras)',
-          lines: ['En la papelería compramos <strong>4 cajas de ceras</strong> a <strong>6 euros</strong> cada una y un diccionario de <strong>15 euros</strong>.'],
-          question: '¿Cuánto pagamos en total por toda la compra?',
-          chips: [
-            { text: '4 cajas de ceras', useful: true },
-            { text: '6 euros cada caja', useful: true },
-            { text: 'Diccionario de 15 euros', useful: true }
-          ],
-          scheme: { type: 'two', stepA: '1.º Ceras: 4 × 6 €', stepB: '2.º Total: ceras + 15 €' },
-          op: '× y +',
-          opOptions: [
-            { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
-            { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
-            { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' }
-          ],
-          steps: [
-            { label: 'Paso 1: ¿Cuánto cuestan las 4 cajas de ceras?', expr: '4 × 6 =', ans: 24 },
-            { label: 'Paso 2: Añadimos el precio del diccionario', expr: '24 + 15 =', ans: 39 }
-          ],
-          answer: 39,
-          starter: 'SOLUCIÓN: Por toda la compra pagamos ___',
-          unitCorrect: '39 euros',
-          unitOptions: ['39 euros', '39 cajas', '39 diccionarios'],
-          hint1: 'Primero calcula lo que valen las 4 cajas (4 × 6) y luego suma los 15 euros del diccionario.',
-          hint2: 'Paso 1: 4 × 6 = 24 €. Paso 2: 24 + 15 = 39 €.'
+        () => {
+          const n = randInt(3, 7);
+          const price = randInt(4, 9);
+          const sub = n * price;
+          const extra = randInt(11, 28);
+          const total = sub + extra;
+          return {
+            id: 'g4-2pasos-papeleria',
+            topic: 'Problema de 2 pasos (compras)',
+            lines: [`En la papelería compramos <strong>${n} cajas de ceras</strong> a <strong>${price} euros</strong> cada una y un diccionario de <strong>${extra} euros</strong>.`],
+            question: '¿Cuánto pagamos en total por toda la compra?',
+            chips: [
+              { text: `${n} cajas de ceras`, useful: true },
+              { text: `${price} euros cada caja`, useful: true },
+              { text: `Diccionario de ${extra} euros`, useful: true }
+            ],
+            scheme: { type: 'two', stepA: `1.º Ceras: ${n} × ${price} €`, stepB: `2.º Total: ceras + ${extra} €` },
+            op: '× y +',
+            opOptions: [
+              { val: '× y +', sym: '× y +', desc: 'Multiplicar y luego sumar' },
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' },
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' }
+            ],
+            steps: [
+              { label: `Paso 1: ¿Cuánto cuestan las ${n} cajas de ceras?`, expr: `${n} × ${price} =`, ans: sub },
+              { label: 'Paso 2: Añadimos el precio del diccionario', expr: `${sub} + ${extra} =`, ans: total }
+            ],
+            answer: total,
+            starter: 'SOLUCIÓN: Por toda la compra pagamos ___',
+            unitCorrect: `${total} euros`,
+            unitOptions: [`${total} euros`, `${total} cajas`, `${total} diccionarios`],
+            hint1: `Primero calcula lo que valen las ${n} cajas (${n} × ${price}) y luego suma los ${extra} euros del diccionario.`,
+            hint2: `Paso 1: ${n} × ${price} = ${sub} €. Paso 2: ${sub} + ${extra} = ${total} €.`
+          };
         },
-        {
-          id: 'g4-12',
-          topic: 'Multiplicación (2 cifras × 2 cifras fácil)',
-          lines: ['En la sala de cine de Calatayud hay <strong>14 filas</strong> con <strong>10 butacas</strong> en cada fila.'],
-          question: '¿Cuántas butacas tiene la sala de cine?',
-          chips: [
-            { text: '14 filas', useful: true },
-            { text: '10 butacas por fila', useful: true },
-            { text: 'Cine de Calatayud', useful: false }
-          ],
-          scheme: { type: 'mul', groups: 14, each: '10 butacas', total: '¿Total?' },
-          op: '×',
-          opOptions: [
-            { val: '×', sym: '×', desc: 'Multiplicar' },
-            { val: '+', sym: '+', desc: 'Sumar' },
-            { val: '÷', sym: '÷', desc: 'Dividir' }
-          ],
-          steps: [{ label: 'Multiplicamos filas por butacas', expr: '14 × 10 =', ans: 140 }],
-          answer: 140,
-          starter: 'SOLUCIÓN: La sala de cine tiene ___',
-          unitCorrect: '140 butacas',
-          unitOptions: ['140 butacas', '140 filas', '140 entradas'],
-          hint1: 'Cada una de las 14 filas tiene 10 butacas: multiplicamos 14 × 10.',
-          hint2: 'Para multiplicar por 10, añadimos un cero al final: 14 × 10 = 140.'
+        () => {
+          const rows = randInt(12, 38);
+          const factor = pickOne([10, 20]);
+          const ans = rows * factor;
+          const city = pickOne(['Calatayud', 'Zaragoza', 'Huesca', 'Teruel']);
+          return {
+            id: 'g4-cine-decenas',
+            topic: 'Multiplicación por decenas',
+            lines: [`En la sala de cine de ${city} hay <strong>${rows} filas</strong> con <strong>${factor} butacas</strong> en cada fila.`],
+            question: '¿Cuántas butacas tiene la sala de cine?',
+            chips: [
+              { text: `${rows} filas`, useful: true },
+              { text: `${factor} butacas por fila`, useful: true },
+              { text: `Cine de ${city}`, useful: false }
+            ],
+            scheme: { type: 'mul', groups: rows, each: `${factor} butacas`, total: '¿Total?' },
+            op: '×',
+            opOptions: [{ val: '×', sym: '×', desc: 'Multiplicar' }, { val: '+', sym: '+', desc: 'Sumar' }, { val: '÷', sym: '÷', desc: 'Dividir' }],
+            steps: [{ label: 'Multiplicamos filas por butacas', expr: `${rows} × ${factor} =`, ans }],
+            answer: ans,
+            starter: 'SOLUCIÓN: La sala de cine tiene ___',
+            unitCorrect: `${ans} butacas`,
+            unitOptions: [`${ans} butacas`, `${ans} filas`, `${ans} entradas`],
+            hint1: `Cada una de las ${rows} filas tiene ${factor} butacas: multiplicamos ${rows} × ${factor}.`,
+            hint2: factor === 10
+              ? `Para multiplicar por 10, añadimos un cero al final: ${rows} × 10 = ${ans}.`
+              : `Multiplica primero ${rows} × 2 = ${rows * 2} y añade un cero al final → ${ans}.`
+          };
+        },
+        () => {
+          const boxes = randInt(3, 6);
+          const perBox = randInt(8, 18);
+          const good = boxes * perBox;
+          const broken = randInt(7, 19);
+          const total = good + broken;
+          return {
+            id: 'g4-2pasos-restar-repartir',
+            topic: 'Problema de 2 pasos (quitar y repartir)',
+            lines: [`En la huerta recogemos <strong>${total} tomates</strong>, pero <strong>${broken} tomates</strong> están estropeados.`, `El resto lo repartimos en partes iguales en <strong>${boxes} cajas</strong>.`],
+            question: '¿Cuántos tomates buenos ponemos en cada caja?',
+            chips: [
+              { text: `${total} tomates recogidos`, useful: true },
+              { text: `${broken} estropeados`, useful: true },
+              { text: `${boxes} cajas iguales`, useful: true }
+            ],
+            scheme: { type: 'two', stepA: `1.º Tomates buenos: ${total} − ${broken}`, stepB: `2.º Reparto: buenos ÷ ${boxes}` },
+            op: '− y ÷',
+            opOptions: [
+              { val: '− y ÷', sym: '− y ÷', desc: 'Restar y luego dividir' },
+              { val: '+ y ÷', sym: '+ y ÷', desc: 'Sumar y luego dividir' },
+              { val: '× y −', sym: '× y −', desc: 'Multiplicar y luego restar' }
+            ],
+            steps: [
+              { label: 'Paso 1: ¿Cuántos tomates buenos quedan?', expr: `${total} − ${broken} =`, ans: good },
+              { label: `Paso 2: Repartimos entre ${boxes} cajas`, expr: `${good} ÷ ${boxes} =`, ans: perBox }
+            ],
+            answer: perBox,
+            starter: 'SOLUCIÓN: Ponemos en cada caja ___',
+            unitCorrect: `${perBox} tomates`,
+            unitOptions: [`${perBox} tomates`, `${perBox} cajas`, `${perBox} huertas`],
+            hint1: `Primero quita los ${broken} tomates estropeados; después reparte los buenos entre las ${boxes} cajas.`,
+            hint2: `Paso 1: ${total} − ${broken} = ${good}. Paso 2: ${good} ÷ ${boxes} = ${perBox}.`
+          };
+        },
+        () => {
+          const third = randInt(14, 48);
+          const total = third * 3;
+          const who = pickOne(NAMES);
+          return {
+            id: 'g4-tercera-parte',
+            topic: 'La tercera parte (división entre 3)',
+            lines: [`El depósito del huerto escolar tiene <strong>${total} litros</strong> de agua.`, `${who} utiliza <strong>la tercera parte</strong> del agua para regar los árboles.`],
+            question: '¿Cuántos litros de agua ha utilizado?',
+            chips: [
+              { text: `${total} litros en total`, useful: true },
+              { text: 'La tercera parte (÷ 3)', useful: true },
+              { text: 'Huerto escolar', useful: false }
+            ],
+            scheme: { type: 'div', total: `${total} litros`, groups: 3, each: '¿Tercera parte?' },
+            op: '÷',
+            opOptions: [
+              { val: '÷', sym: '÷', desc: 'Dividir entre 3' },
+              { val: '×', sym: '×', desc: 'Multiplicar por 3' },
+              { val: '−', sym: '−', desc: 'Restar 3' }
+            ],
+            steps: [{ label: 'La tercera parte es dividir entre 3', expr: `${total} ÷ 3 =`, ans: third }],
+            answer: third,
+            starter: 'SOLUCIÓN: Ha utilizado ___',
+            unitCorrect: `${third} litros`,
+            unitOptions: [`${third} litros`, `${third} árboles`, `${third} depósitos`],
+            hint1: 'Calcular la tercera parte significa dividir en 3 partes iguales (÷ 3).',
+            hint2: `Divide ${total} ÷ 3 = ${third}. Comprueba: ${third} × 3 = ${total}.`
+          };
         }
       ]
     };
+
+    function generateDeck(lvl) {
+      return shuffle(PROBLEM_GENERATORS[lvl]).map(fn => fn());
+    }
 
     const LEVEL_LABELS = {
       inicial: 'Nivel inicial',
@@ -1603,6 +1903,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
     let guidedMode = true;
     let deck = [];
     let index = 0;
+    let totalShown = 0;
     let solvedCount = 0;
     let currentStep = 1; // 1..4 in guided mode
     let selectedChips = new Set();
@@ -1664,8 +1965,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
       });
       $('welcomeView').hidden = true;
       $('workView').hidden = false;
-      deck = shuffle(PROBLEMS[lvl]);
+      deck = generateDeck(lvl);
       index = 0;
+      totalShown = 1;
       solvedCount = 0;
       Aula.activate(aulaMode());
       loadProblem();
@@ -1689,7 +1991,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
       $('problemTag').textContent = `${LEVEL_LABELS[currentLevel]} · ${p.topic}`;
       $('problemLines').innerHTML = p.lines.map(l => `<p>${l}</p>`).join('');
       $('problemQuestion').textContent = p.question;
-      $('progressText').textContent = `Problema ${index + 1} de ${deck.length}`;
+      $('progressText').textContent = `Problema #${totalShown}`;
       $('solvedText').textContent = `${solvedCount} ${solvedCount === 1 ? 'resuelto' : 'resueltos'}`;
       $('stepper').hidden = !guidedMode;
 
@@ -2150,8 +2452,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
     function goNextProblem() {
       index++;
+      totalShown++;
       if (index >= deck.length) {
-        deck = shuffle(PROBLEMS[currentLevel]);
+        deck = generateDeck(currentLevel);
         index = 0;
       }
       loadProblem();
@@ -2182,6 +2485,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
     $('speakProblemBtn').addEventListener('click', () => {
       if (!currentLevel) return;
       speakText(plainTextProblem(currentProblem()));
+    });
+    $('newProblemBtn').addEventListener('click', () => {
+      if (!currentLevel) return;
+      goNextProblem();
     });
   })();
   </script>

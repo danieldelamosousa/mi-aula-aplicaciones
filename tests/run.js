@@ -89,36 +89,64 @@ async function runTests() {
     }
   }));
 
-  // 4. Verify arithmetic correctness of every problem in taller-problemas
-  suites.push(test('Taller de problemas bank arithmetic and structure verification (36 problems)', () => {
+  // 4. Stress-test procedural problem generator in taller-problemas (40 templates x 50 runs = 2,000 instances)
+  suites.push(test('Taller de problemas procedural generator verification (40 templates × 50 runs = 2,000 problems)', () => {
     const html = fs.readFileSync(path.join(ROOT, 'public/apps/taller-problemas/index.html'), 'utf8');
-    const m = html.match(/const PROBLEMS = (\{[\s\S]*?\n    \});/);
-    assert.ok(m, 'Could not locate PROBLEMS bank in taller-problemas');
-    const bank = vm.runInNewContext(`(${m[1]})`);
+    const startIdx = html.indexOf('const NAMES =');
+    const endIdx = html.indexOf('function generateDeck(lvl)');
+    assert.ok(startIdx > 0 && endIdx > startIdx, 'Could not locate PROBLEM_GENERATORS block');
+    const snippet = html.slice(startIdx, endIdx) + '\nPROBLEM_GENERATORS;';
+    const generators = vm.runInNewContext(snippet);
 
-    let count = 0;
-    for (const [lvl, list] of Object.entries(bank)) {
-      assert.ok(list.length >= 12, `Level ${lvl} should have at least 12 problems`);
-      for (const p of list) {
-        count++;
-        assert.ok(p.chips.some(c => c.useful), `${p.id} must have useful chips`);
-        assert.ok(p.opOptions.some(o => o.val === p.op), `${p.id} op ${p.op} must exist in opOptions`);
-        assert.ok(p.unitOptions.includes(p.unitCorrect), `${p.id} unitCorrect must exist in unitOptions`);
-        assert.strictEqual(p.steps[p.steps.length - 1].ans, p.answer, `${p.id} last step ans must match answer`);
+    let totalGenerated = 0;
+    let totalTemplates = 0;
+    for (const [lvl, fns] of Object.entries(generators)) {
+      assert.ok(fns.length >= 12, `Level ${lvl} should have at least 12 templates`);
+      totalTemplates += fns.length;
 
-        for (const st of p.steps) {
-          const jsExpr = st.expr
-            .replace(/=/g, '')
-            .replace(/×/g, '*')
-            .replace(/÷/g, '/')
-            .replace(/−/g, '-')
-            .trim();
-          const computed = vm.runInNewContext(jsExpr);
-          assert.strictEqual(computed, st.ans, `${p.id} step "${st.expr}" computed ${computed} !== ${st.ans}`);
+      for (const fn of fns) {
+        const distinctAnswers = new Set();
+        for (let run = 0; run < 50; run++) {
+          const p = fn();
+          totalGenerated++;
+          assert.ok(Number.isInteger(p.answer) && p.answer > 0, `${p.id} answer must be positive integer, got ${p.answer}`);
+          assert.ok(p.chips.some(c => c.useful), `${p.id} must have useful chips`);
+          assert.ok(p.opOptions.some(o => o.val === p.op), `${p.id} op ${p.op} must exist in opOptions`);
+          assert.ok(p.unitOptions.includes(p.unitCorrect), `${p.id} unitCorrect must exist in unitOptions`);
+          assert.strictEqual(new Set(p.unitOptions).size, p.unitOptions.length, `${p.id} unitOptions must be unique`);
+          assert.strictEqual(p.steps[p.steps.length - 1].ans, p.answer, `${p.id} last step ans must match answer`);
+
+          for (const st of p.steps) {
+            const jsExpr = st.expr
+              .replace(/=/g, '')
+              .replace(/×/g, '*')
+              .replace(/÷/g, '/')
+              .replace(/−/g, '-')
+              .trim();
+            const computed = vm.runInNewContext(jsExpr);
+            assert.strictEqual(computed, st.ans, `${p.id} step "${st.expr}" computed ${computed} !== ${st.ans}`);
+            assert.ok(Number.isInteger(computed) && computed > 0, `${p.id} step result must be positive integer`);
+          }
+
+          // Nivel inicial: verify no-carry / no-borrow on 2-digit + and −
+          if (lvl === 'inicial' && (p.op === '+' || p.op === '−')) {
+            const m = p.steps[0].expr.match(/(\d+)\s*([+−])\s*(\d+)/);
+            if (m) {
+              const a = Number(m[1]), b = Number(m[3]);
+              if (m[2] === '+') {
+                assert.ok((a % 10) + (b % 10) <= 9, `${p.id} inicial carry in ${a}+${b}`);
+              } else {
+                assert.ok((a % 10) >= (b % 10), `${p.id} inicial borrow in ${a}-${b}`);
+              }
+            }
+          }
+          distinctAnswers.add(p.answer);
         }
+        assert.ok(distinctAnswers.size >= 3, `Template in ${lvl} should produce varied answers across runs`);
       }
     }
-    assert.strictEqual(count, 36, 'Expected 36 verified math problems');
+    assert.strictEqual(totalTemplates, 40, 'Expected 40 problem templates');
+    assert.strictEqual(totalGenerated, 2000, 'Expected 2,000 verified generated problems');
   }));
 
   // 5. Unit tests for core.mjs analytics, pagination & student report
